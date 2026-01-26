@@ -1,4 +1,4 @@
-[QASMBench document](QASMBench.pdf)
+[QASMBench document](PDFs/QASMBench.pdf)
 
 [Quantum simulation frameworks list](https://github.com/bramathon/awesome-quantum-computing)
 
@@ -85,15 +85,36 @@ These are all the quantum algorithms and circuits that I'll be benchmarking, div
 
 ## Small-scale
 
-### Adder
-### Basis Change
-### Basis Trotter
+### Full Adder
+[Explanation](https://www.quantum-inspire.com/kbase/full-adder/)
+
+Uses qubits as regular bits with the purpose to add numbers together.
+
+<img src="Images/Full Adder.png">
+
+### ~~Basis Change~~ • Quantum chemistry benchmark
+### ~~Basis Trotter~~ • Quantum chemistry benchmark
 ### Bell State
-### Cat State
-### Deutsch
-### Deep Neural Networks (DNN)
-### Fredkin
-### Quantum Error Correction (QEC)
+[Explanation](https://en.wikipedia.org/wiki/Bell_state)
+
+Algorithm necessary to generate the Bell State, entangling the qubits involved.
+
+<img src= "Images/Bell State.png">
+
+### ~~Cat State~~ MAYBE • Just the Haddamard gate
+[Explanation](https://en.wikipedia.org/wiki/Cat_state)
+### Deutsch-Josza
+[Explanation](https://en.wikipedia.org/wiki/Deutsch%E2%80%93Jozsa_algorithm)
+
+Algorithm designed to test if an oracle's output is constant or balanced.
+
+<img src="Images/Deutsch-Josza.png">
+
+### ~~Deep Neural Networks (DNN)~~ • Non-applicable, not an algorithm
+### ~~Fredkin~~ MAYBE • Just the CSWAP gate
+[Explanation](https://en.wikipedia.org/wiki/Fredkin_gate)
+### ~~Quantum Error Correction (QEC)~~ MAYBE ADDED TO OTHERS • Not a circuit per se, more like extending other algorithms to introduce redundancy
+[Explanation](https://en.wikipedia.org/wiki/Quantum_error_correction)
 ### Grover
 ### Hidden subgroup problems (HS4)
 ### QFT & Inverse QFT
