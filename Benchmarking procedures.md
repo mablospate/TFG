@@ -116,6 +116,12 @@ Algorithm designed to test if an oracle's output is constant or balanced.
 ### ~~Quantum Error Correction (QEC)~~ MAYBE ADDED TO OTHERS • Not a circuit per se, more like extending other algorithms to introduce redundancy
 [Explanation](https://en.wikipedia.org/wiki/Quantum_error_correction)
 ### Grover
+[Explanation]()
+
+
+
+<img src="Images/Grover.png">
+
 ### Hidden subgroup problems (HS4)
 ### QFT & Inverse QFT
 ### iSWAP
