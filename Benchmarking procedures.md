@@ -18,7 +18,12 @@ It turns out that I have a list of different components that I don't know yet ho
 Full-stack software frameworks for constructing circuits and executing on quantum computing hardware.
 
 * [Qiskit](https://github.com/Qiskit) - IBM's open-source SDK for working with quantum computers at the level of extended quantum circuits, operators, and primitives.
+  * TEST THIS
+* QDisLib
+  * TEST THIS
+  * [CHECK IF IT RUNS LOCAL]
 * [Cirq](https://github.com/quantumlib/Cirq) - Google's python framework for creating, editing, and invoking Noisy Intermediate Scale Quantum (NISQ) circuits.
+  * [CHECK IF IT RUNS LOCAL]´
 * [Pyquil](https://github.com/rigetti/pyquil) - Rigetti's python library for constructing and executing programs using Quil.
 * [Pennylane](https://github.com/PennyLaneAI/pennylane) - Xanadu's cross-platform Python library for quantum computing, quantum machine learning, and quantum chemistry.
 * [qBraid](https://github.com/qBraid/qBraid) - A platform-agnostic quantum runtime framework
@@ -27,6 +32,7 @@ Full-stack software frameworks for constructing circuits and executing on quantu
 * [Qadence](https://github.com/pasqal-io/qadence) - Digital-analog quantum programming interface.
 * [Braket](https://github.com/amazon-braket/amazon-braket-sdk-python) - A Python SDK for interacting with quantum devices on Amazon Braket.
 * [Cuda-Q](https://github.com/NVIDIA/cuda-quantum) - C++ and Python support for the CUDA Quantum programming model for heterogeneous quantum-classical workflows.
+  * TEST THIS
 * [ProjectQ](https://github.com/ProjectQ-Framework/ProjectQ) - ProjectQ: An open source software framework for quantum computing.
   
 ## Simulators
