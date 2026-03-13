@@ -21,9 +21,9 @@ Full-stack software frameworks for constructing circuits and executing on quantu
   * TEST THIS
 * QDisLib
   * TEST THIS
-  * [CHECK IF IT RUNS LOCAL]
+  * Runs in local through Qiskit-Aer and CudaQ
 * [Cirq](https://github.com/quantumlib/Cirq) - Google's python framework for creating, editing, and invoking Noisy Intermediate Scale Quantum (NISQ) circuits.
-  * [CHECK IF IT RUNS LOCAL]´
+  * Runs in local![alt text](image.png)
 * [Pyquil](https://github.com/rigetti/pyquil) - Rigetti's python library for constructing and executing programs using Quil.
 * [Pennylane](https://github.com/PennyLaneAI/pennylane) - Xanadu's cross-platform Python library for quantum computing, quantum machine learning, and quantum chemistry.
 * [qBraid](https://github.com/qBraid/qBraid) - A platform-agnostic quantum runtime framework
