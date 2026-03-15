@@ -1,8 +1,7 @@
 # Libraries to benchmark
 ## Python
 - qiskit
-  - Dependencies
-    - 
+  - Sourced from https://github.com/benjamin-assel/qiskit-shor
 - cuda-q
 - CirQ
 - QDisLib

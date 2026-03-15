@@ -1,0 +1,328 @@
+[
+    {
+        "label": "runpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "runpy",
+        "description": "runpy",
+        "detail": "runpy",
+        "documentation": {}
+    },
+    {
+        "label": "annotations",
+        "importPath": "__future__",
+        "description": "__future__",
+        "isExtraImport": true,
+        "detail": "__future__",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "site",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "site",
+        "description": "site",
+        "detail": "site",
+        "documentation": {}
+    },
+    {
+        "label": "sys",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sys",
+        "description": "sys",
+        "detail": "sys",
+        "documentation": {}
+    },
+    {
+        "label": "math",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "math",
+        "description": "math",
+        "detail": "math",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumCircuit",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "Qubit",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "ClassicalRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "CPhaseGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "CXGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "PhaseGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "SwapGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "QFTGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "QFTGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
+        "label": "QFTFullGate",
+        "importPath": "shor.qft",
+        "description": "shor.qft",
+        "isExtraImport": true,
+        "detail": "shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "synth_qft_full",
+        "importPath": "qiskit.synthesis",
+        "description": "qiskit.synthesis",
+        "isExtraImport": true,
+        "detail": "qiskit.synthesis",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "AdderCircuit",
+        "importPath": "shor.adder",
+        "description": "shor.adder",
+        "isExtraImport": true,
+        "detail": "shor.adder",
+        "documentation": {}
+    },
+    {
+        "label": "bin_dir",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "bin_dir = os.path.dirname(abs_file)\nbase = bin_dir[: -len(\"bin\") - 1]  # strip away the bin part from the __file__, plus the path separator\n# prepend bin to PATH (this file is inside the bin directory)\nos.environ[\"PATH\"] = os.pathsep.join([bin_dir, *os.environ.get(\"PATH\", \"\").split(os.pathsep)])\nos.environ[\"VIRTUAL_ENV\"] = base  # virtual env is right above bin directory\nos.environ[\"VIRTUAL_ENV_PROMPT\"] = \"tfg\" or os.path.basename(base)  # noqa: SIM222\n# add the virtual environments libraries to the host python import mechanism\nprev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "base",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "base = bin_dir[: -len(\"bin\") - 1]  # strip away the bin part from the __file__, plus the path separator\n# prepend bin to PATH (this file is inside the bin directory)\nos.environ[\"PATH\"] = os.pathsep.join([bin_dir, *os.environ.get(\"PATH\", \"\").split(os.pathsep)])\nos.environ[\"VIRTUAL_ENV\"] = base  # virtual env is right above bin directory\nos.environ[\"VIRTUAL_ENV_PROMPT\"] = \"tfg\" or os.path.basename(base)  # noqa: SIM222\n# add the virtual environments libraries to the host python import mechanism\nprev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))\n    site.addsitedir(path)",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "os.environ[\"PATH\"]",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "os.environ[\"PATH\"] = os.pathsep.join([bin_dir, *os.environ.get(\"PATH\", \"\").split(os.pathsep)])\nos.environ[\"VIRTUAL_ENV\"] = base  # virtual env is right above bin directory\nos.environ[\"VIRTUAL_ENV_PROMPT\"] = \"tfg\" or os.path.basename(base)  # noqa: SIM222\n# add the virtual environments libraries to the host python import mechanism\nprev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))\n    site.addsitedir(path)\nsys.path[:] = sys.path[prev_length:] + sys.path[0:prev_length]\nsys.real_prefix = sys.prefix",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "os.environ[\"VIRTUAL_ENV\"]",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "os.environ[\"VIRTUAL_ENV\"] = base  # virtual env is right above bin directory\nos.environ[\"VIRTUAL_ENV_PROMPT\"] = \"tfg\" or os.path.basename(base)  # noqa: SIM222\n# add the virtual environments libraries to the host python import mechanism\nprev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))\n    site.addsitedir(path)\nsys.path[:] = sys.path[prev_length:] + sys.path[0:prev_length]\nsys.real_prefix = sys.prefix\nsys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "os.environ[\"VIRTUAL_ENV_PROMPT\"]",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "os.environ[\"VIRTUAL_ENV_PROMPT\"] = \"tfg\" or os.path.basename(base)  # noqa: SIM222\n# add the virtual environments libraries to the host python import mechanism\nprev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))\n    site.addsitedir(path)\nsys.path[:] = sys.path[prev_length:] + sys.path[0:prev_length]\nsys.real_prefix = sys.prefix\nsys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "prev_length",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "prev_length = len(sys.path)\nfor lib in \"../lib/python3.13/site-packages\".split(os.pathsep):\n    path = os.path.realpath(os.path.join(bin_dir, lib))\n    site.addsitedir(path)\nsys.path[:] = sys.path[prev_length:] + sys.path[0:prev_length]\nsys.real_prefix = sys.prefix\nsys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "sys.path[:]",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "sys.path[:] = sys.path[prev_length:] + sys.path[0:prev_length]\nsys.real_prefix = sys.prefix\nsys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "sys.real_prefix",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "sys.real_prefix = sys.prefix\nsys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "sys.prefix",
+        "kind": 5,
+        "importPath": ".venv.bin.activate_this",
+        "description": ".venv.bin.activate_this",
+        "peekOfCode": "sys.prefix = base",
+        "detail": ".venv.bin.activate_this",
+        "documentation": {}
+    },
+    {
+        "label": "AdderCircuit",
+        "kind": 6,
+        "importPath": "Implementations.Python.qiskit.shor.adder",
+        "description": "Implementations.Python.qiskit.shor.adder",
+        "peekOfCode": "class AdderCircuit(QuantumCircuit):\n    \"\"\"\n    Quantum circuit implementing modular arithmetics used in the order finding circuit of Shor algorithm.\n    Based on https://arxiv.org/abs/quant-ph/0205095 by Beauregard.\n    Conventions:\n    - classical integer X (capital letter): a Python integer.\n    - quantum integer x (small letter): quantum state |x> =|x_0>|x_1> ... |x_m>, with x_k in {0, 1},\n    where x = sum_k x_k 2^k. It corresponds to the binary string \"x_m ... x_1 x_0\" and it is ordered\n    in the qubit register as [qubit_0, qubit_1, ..., qubit_m], where qubit_k is in the state |x_k>.\n    Often the quantum register in the state representing x is called \"x_reg\".",
+        "detail": "Implementations.Python.qiskit.shor.adder",
+        "documentation": {}
+    },
+    {
+        "label": "QFTFullGate",
+        "kind": 6,
+        "importPath": "Implementations.Python.qiskit.shor.qft",
+        "description": "Implementations.Python.qiskit.shor.qft",
+        "peekOfCode": "class QFTFullGate(QFTGate):\n    \"\"\"QFTGate supporting all the arguments of synth_qft_full.\"\"\"\n    # Whether to add swap gates in the end, to obtain the full QFT transformation.\n    do_swaps: bool = True\n    # The degree of approximation 0 <= d < n (0 for no approximation). Phase rotations with angles smaller than π/2^{n-d} will be dropped.\n    # See https://arxiv.org/abs/quant-ph/9601018 and https://arxiv.org/abs/quant-ph/0403071.\n    approximation_degree: int = 0\n    # Whether to insert biarrier gates in the circuit for better visualization.\n    insert_barriers: bool = False\n    def __init__(",
+        "detail": "Implementations.Python.qiskit.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit",
+        "kind": 2,
+        "importPath": "Implementations.Python.qiskit.shor.shor",
+        "description": "Implementations.Python.qiskit.shor.shor",
+        "peekOfCode": "def order_finding_circuit(A: int, N: int, precision: int | None = None) -> AdderCircuit:\n    \"\"\"\n    Build circuit to find the order of A in Z_N, using 4n+2 qubits, with n = ceil(log2(N)).\n    Args:\n        A: int.\n        N: int.\n        precision: Number of qubits to use for phase estimation. If None, use default value: 2n.\n    Returns:\n        AdderCircuit: Order finding circuit.\n    \"\"\"",
+        "detail": "Implementations.Python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit_one_control",
+        "kind": 2,
+        "importPath": "Implementations.Python.qiskit.shor.shor",
+        "description": "Implementations.Python.qiskit.shor.shor",
+        "peekOfCode": "def order_finding_circuit_one_control(\n    A: int, N: int, precision: int | None = None\n) -> AdderCircuit:\n    \"\"\"\n    Build circuit to find the order of A in Z_N, using modular multiplication with a single control qubit\n    and repeated measurements. The circuit uses 2n + 3 qubits in total, with n = ceil(log2(N)).\n    Args:\n        A: int.\n        N: int.\n        precision: int. Number of qubits to use for phase estimation. If None, use default value: 2n.",
+        "detail": "Implementations.Python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "kind": 2,
+        "importPath": "Implementations.Python.qiskit.shor.shor",
+        "description": "Implementations.Python.qiskit.shor.shor",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    sampler,\n    pass_manager,\n    precision: int | None = None,\n    num_shots: int = 10,\n    one_control_circuit: bool = False,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"",
+        "detail": "Implementations.Python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "kind": 2,
+        "importPath": "Implementations.Python.qiskit.shor.shor",
+        "description": "Implementations.Python.qiskit.shor.shor",
+        "peekOfCode": "def find_factor(\n    N: int,\n    sampler,\n    pass_manager,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    one_control_circuit: bool = False,\n    seed: int | None = None,\n) -> int:\n    \"\"\"",
+        "detail": "Implementations.Python.qiskit.shor.shor",
+        "documentation": {}
+    }
+]
