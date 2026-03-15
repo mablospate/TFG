@@ -1,5 +1,7 @@
 /.DS_Store
 /.obsidian
+__pycache__/
+.pytest_cache/
 
 # Added by cargo
 

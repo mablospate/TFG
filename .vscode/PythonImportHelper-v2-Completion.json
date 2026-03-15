@@ -102,6 +102,38 @@
         "documentation": {}
     },
     {
+        "label": "QuantumCircuit",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "ClassicalRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
         "label": "CPhaseGate",
         "importPath": "qiskit.circuit.library",
         "description": "qiskit.circuit.library",
@@ -151,10 +183,66 @@
     },
     {
         "label": "QFTFullGate",
-        "importPath": "shor.qft",
-        "description": "shor.qft",
+        "importPath": "Python.qiskit.shor.qft",
+        "description": "Python.qiskit.shor.qft",
         "isExtraImport": true,
-        "detail": "shor.qft",
+        "detail": "Python.qiskit.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "QFTFullGate",
+        "importPath": "Python.qiskit.shor.qft",
+        "description": "Python.qiskit.shor.qft",
+        "isExtraImport": true,
+        "detail": "Python.qiskit.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "StatevectorSampler",
+        "importPath": "qiskit.primitives",
+        "description": "qiskit.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerPubResult",
+        "importPath": "qiskit.primitives.containers.sampler_pub_result",
+        "description": "qiskit.primitives.containers.sampler_pub_result",
+        "isExtraImport": true,
+        "detail": "qiskit.primitives.containers.sampler_pub_result",
+        "documentation": {}
+    },
+    {
+        "label": "generate_preset_pass_manager",
+        "importPath": "qiskit.transpiler.preset_passmanagers",
+        "description": "qiskit.transpiler.preset_passmanagers",
+        "isExtraImport": true,
+        "detail": "qiskit.transpiler.preset_passmanagers",
+        "documentation": {}
+    },
+    {
+        "label": "generate_preset_pass_manager",
+        "importPath": "qiskit.transpiler.preset_passmanagers",
+        "description": "qiskit.transpiler.preset_passmanagers",
+        "isExtraImport": true,
+        "detail": "qiskit.transpiler.preset_passmanagers",
+        "documentation": {}
+    },
+    {
+        "label": "AdderCircuit",
+        "importPath": "Python.qiskit.shor.adder",
+        "description": "Python.qiskit.shor.adder",
+        "isExtraImport": true,
+        "detail": "Python.qiskit.shor.adder",
+        "documentation": {}
+    },
+    {
+        "label": "AdderCircuit",
+        "importPath": "Python.qiskit.shor.adder",
+        "description": "Python.qiskit.shor.adder",
+        "isExtraImport": true,
+        "detail": "Python.qiskit.shor.adder",
         "documentation": {}
     },
     {
@@ -183,11 +271,35 @@
         "documentation": {}
     },
     {
-        "label": "AdderCircuit",
-        "importPath": "shor.adder",
-        "description": "shor.adder",
+        "label": "AerSimulator",
+        "importPath": "qiskit_aer",
+        "description": "qiskit_aer",
         "isExtraImport": true,
-        "detail": "shor.adder",
+        "detail": "qiskit_aer",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerV2",
+        "importPath": "qiskit_aer.primitives",
+        "description": "qiskit_aer.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit_aer.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "Python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "Python.qiskit.shor.shor",
         "documentation": {}
     },
     {
@@ -274,55 +386,199 @@
     {
         "label": "AdderCircuit",
         "kind": 6,
-        "importPath": "Implementations.Python.qiskit.shor.adder",
-        "description": "Implementations.Python.qiskit.shor.adder",
+        "importPath": "Python.qiskit.shor.adder",
+        "description": "Python.qiskit.shor.adder",
         "peekOfCode": "class AdderCircuit(QuantumCircuit):\n    \"\"\"\n    Quantum circuit implementing modular arithmetics used in the order finding circuit of Shor algorithm.\n    Based on https://arxiv.org/abs/quant-ph/0205095 by Beauregard.\n    Conventions:\n    - classical integer X (capital letter): a Python integer.\n    - quantum integer x (small letter): quantum state |x> =|x_0>|x_1> ... |x_m>, with x_k in {0, 1},\n    where x = sum_k x_k 2^k. It corresponds to the binary string \"x_m ... x_1 x_0\" and it is ordered\n    in the qubit register as [qubit_0, qubit_1, ..., qubit_m], where qubit_k is in the state |x_k>.\n    Often the quantum register in the state representing x is called \"x_reg\".",
-        "detail": "Implementations.Python.qiskit.shor.adder",
+        "detail": "Python.qiskit.shor.adder",
+        "documentation": {}
+    },
+    {
+        "label": "run_simulation",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def run_simulation(qc, num_shots: int = 1) -> SamplerPubResult:\n    pm = generate_preset_pass_manager(optimization_level=1)\n    qc_isa = pm.run(qc)\n    sampler = StatevectorSampler()\n    result = sampler.run([qc_isa], shots=num_shots).result()[0]\n    return result\ndef test_add_classical() -> None:\n    y_reg = QuantumRegister(3)\n    output_reg = ClassicalRegister(3, name=\"output\")\n    # 0 + 3 = 3 mod 8 = '011'",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_classical",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_add_classical() -> None:\n    y_reg = QuantumRegister(3)\n    output_reg = ClassicalRegister(3, name=\"output\")\n    # 0 + 3 = 3 mod 8 = '011'\n    qc = AdderCircuit(y_reg, output_reg)\n    qc.add_classical(3, y_reg)\n    qc.measure(y_reg, output_reg)\n    res = run_simulation(qc)\n    dist = res.data.output.get_counts()\n    assert dist[\"011\"] == 1",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_c_add_classical",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_c_add_classical() -> None:\n    y_reg = QuantumRegister(3)\n    output_reg = ClassicalRegister(3, name=\"output\")\n    c_reg = QuantumRegister(2)\n    # Control bit = |00>\n    qc = AdderCircuit(c_reg, y_reg, output_reg)\n    qc.c_add_classical(c_reg[:], 3, y_reg)\n    qc.measure(y_reg, output_reg)\n    res = run_simulation(qc)\n    dist = res.data.output.get_counts()",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_classical_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_add_classical_modulo() -> None:\n    y_reg = QuantumRegister(4)\n    output_reg = ClassicalRegister(4, name=\"output\")\n    anc_reg = QuantumRegister(1)\n    anc_ouput_reg = ClassicalRegister(1, name=\"anc_output\")\n    # With ancilla reset\n    qc = AdderCircuit(y_reg, output_reg, anc_reg, anc_ouput_reg)\n    # 0 + 3 + 2 = 5 mod 7 = '0101'\n    qc.add_classical(3, y_reg)\n    qc.add_classical_modulo(X=2, y_reg=y_reg, ancilla_bit=anc_reg[0], N=7)",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_c_add_classical_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_c_add_classical_modulo() -> None:\n    y_reg = QuantumRegister(4)\n    output_reg = ClassicalRegister(4, name=\"output\")\n    c_reg = QuantumRegister(1)\n    anc_reg = QuantumRegister(1)\n    anc_ouput_reg = ClassicalRegister(1, name=\"anc_output\")\n    # Perform modulo 7 operations.\n    N = 7\n    # Control bit = |0>\n    qc = AdderCircuit(c_reg, y_reg, output_reg, anc_reg, anc_ouput_reg)",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_quantum",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_add_quantum() -> None:\n    x_reg = QuantumRegister(3)\n    y_reg = QuantumRegister(4)\n    outpout_reg = ClassicalRegister(4, name=\"output\")\n    qc = AdderCircuit(x_reg, y_reg, outpout_reg)\n    # Add 3 in x register\n    qc.add_classical(3, x_reg)\n    # Add 6 in y register\n    qc.add_classical(6, y_reg)\n    # Add 10 times x register to y register",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_c_add_quantum",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_c_add_quantum() -> None:\n    x_reg = QuantumRegister(3)\n    y_reg = QuantumRegister(4)\n    outpout_reg = ClassicalRegister(4, name=\"output\")\n    c_reg = QuantumRegister(1)\n    # Control bit = |0>\n    qc = AdderCircuit(c_reg, x_reg, y_reg, outpout_reg)\n    # Add 3 in x register\n    qc.add_classical(3, x_reg)\n    # Add 6 in y register",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_quantum_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_add_quantum_modulo() -> None:\n    x_reg = QuantumRegister(3)\n    y_reg = QuantumRegister(4)\n    outpout_reg = ClassicalRegister(4, name=\"output\")\n    anc_reg = QuantumRegister(1)\n    anc_ouput_reg = ClassicalRegister(1, name=\"anc_output\")\n    qc = AdderCircuit(x_reg, y_reg, outpout_reg, anc_reg, anc_ouput_reg)\n    # Perform modulo 7 operations.\n    N = 7\n    # Add 4 in x register",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_c_add_quantum_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_c_add_quantum_modulo() -> None:\n    control_reg = QuantumRegister(1)\n    x_reg = QuantumRegister(3)\n    y_reg = QuantumRegister(4)\n    outpout_reg = ClassicalRegister(4, name=\"output\")\n    anc_reg = QuantumRegister(1)\n    anc_ouput_reg = ClassicalRegister(1, name=\"anc_output\")\n    # Perform modulo 7 operations.\n    N = 7\n    # Case 1: Control bit = |0>",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_multiply_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_multiply_modulo() -> None:\n    # Perform modulo 5 operations.\n    N = 5\n    n = math.ceil(math.log2(N))  # = 3\n    x_reg = QuantumRegister(n)\n    y_reg = QuantumRegister(n)\n    ancilla_reg = QuantumRegister(2)\n    outpout_reg = ClassicalRegister(2 * n + 2, name=\"output\")\n    o_bit = ancilla_reg[0]\n    a_bit = ancilla_reg[1]",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_c_multiply_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_c_multiply_modulo() -> None:\n    # Perform modulo 5 operations.\n    N = 5\n    n = math.ceil(math.log2(N))  # = 3\n    control_reg = QuantumRegister(2)\n    x_reg = QuantumRegister(n)\n    y_reg = QuantumRegister(n)\n    ancilla_reg = QuantumRegister(2)\n    outpout_reg = ClassicalRegister(2 * n + 2, name=\"output\")\n    o_bit = ancilla_reg[0]",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_exponentiate_modulo",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_exponentiate_modulo() -> None:\n    # Perform modulo 5 operations.\n    N = 5\n    n = math.ceil(math.log2(N))  # = 3\n    m = 6\n    x_reg = QuantumRegister(m)\n    y_reg = QuantumRegister(n)\n    ancilla_reg = QuantumRegister(n + 2)\n    outpout_reg = ClassicalRegister(m + 2 * n + 2, name=\"output\")\n    qc = AdderCircuit(x_reg, y_reg, ancilla_reg, outpout_reg)",
+        "detail": "Python.qiskit.shor.adder_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_approximation_degree",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.adder_test",
+        "description": "Python.qiskit.shor.adder_test",
+        "peekOfCode": "def test_approximation_degree():\n    qc = AdderCircuit(4, approx_QFT=True)\n    assert qc.approx_QFT\n    assert qc.qft_approx_degree(n=2) == 0\n    assert qc.qft_approx_degree(n=5) == 0\n    assert qc.qft_approx_degree(n=6) == 1\n    assert qc.qft_approx_degree(n=7) == 2\n    assert qc.qft_approx_degree(n=15) == 9",
+        "detail": "Python.qiskit.shor.adder_test",
         "documentation": {}
     },
     {
         "label": "QFTFullGate",
         "kind": 6,
-        "importPath": "Implementations.Python.qiskit.shor.qft",
-        "description": "Implementations.Python.qiskit.shor.qft",
+        "importPath": "Python.qiskit.shor.qft",
+        "description": "Python.qiskit.shor.qft",
         "peekOfCode": "class QFTFullGate(QFTGate):\n    \"\"\"QFTGate supporting all the arguments of synth_qft_full.\"\"\"\n    # Whether to add swap gates in the end, to obtain the full QFT transformation.\n    do_swaps: bool = True\n    # The degree of approximation 0 <= d < n (0 for no approximation). Phase rotations with angles smaller than π/2^{n-d} will be dropped.\n    # See https://arxiv.org/abs/quant-ph/9601018 and https://arxiv.org/abs/quant-ph/0403071.\n    approximation_degree: int = 0\n    # Whether to insert biarrier gates in the circuit for better visualization.\n    insert_barriers: bool = False\n    def __init__(",
-        "detail": "Implementations.Python.qiskit.shor.qft",
+        "detail": "Python.qiskit.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_qft",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.qft_test",
+        "description": "Python.qiskit.shor.qft_test",
+        "peekOfCode": "def test_qft():\n    q_reg = QuantumRegister(4)\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(4), q_reg)\n    expected_gate_counts = {\"h\": 4, \"cp\": 6, \"swap\": 2}\n    actual_gate_counts = qc.decompose().count_ops()\n    assert actual_gate_counts == expected_gate_counts\n    # No swap\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(4, do_swaps=False), q_reg)",
+        "detail": "Python.qiskit.shor.qft_test",
         "documentation": {}
     },
     {
         "label": "order_finding_circuit",
         "kind": 2,
-        "importPath": "Implementations.Python.qiskit.shor.shor",
-        "description": "Implementations.Python.qiskit.shor.shor",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
         "peekOfCode": "def order_finding_circuit(A: int, N: int, precision: int | None = None) -> AdderCircuit:\n    \"\"\"\n    Build circuit to find the order of A in Z_N, using 4n+2 qubits, with n = ceil(log2(N)).\n    Args:\n        A: int.\n        N: int.\n        precision: Number of qubits to use for phase estimation. If None, use default value: 2n.\n    Returns:\n        AdderCircuit: Order finding circuit.\n    \"\"\"",
-        "detail": "Implementations.Python.qiskit.shor.shor",
+        "detail": "Python.qiskit.shor.shor",
         "documentation": {}
     },
     {
         "label": "order_finding_circuit_one_control",
         "kind": 2,
-        "importPath": "Implementations.Python.qiskit.shor.shor",
-        "description": "Implementations.Python.qiskit.shor.shor",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
         "peekOfCode": "def order_finding_circuit_one_control(\n    A: int, N: int, precision: int | None = None\n) -> AdderCircuit:\n    \"\"\"\n    Build circuit to find the order of A in Z_N, using modular multiplication with a single control qubit\n    and repeated measurements. The circuit uses 2n + 3 qubits in total, with n = ceil(log2(N)).\n    Args:\n        A: int.\n        N: int.\n        precision: int. Number of qubits to use for phase estimation. If None, use default value: 2n.",
-        "detail": "Implementations.Python.qiskit.shor.shor",
+        "detail": "Python.qiskit.shor.shor",
         "documentation": {}
     },
     {
         "label": "find_order",
         "kind": 2,
-        "importPath": "Implementations.Python.qiskit.shor.shor",
-        "description": "Implementations.Python.qiskit.shor.shor",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
         "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    sampler,\n    pass_manager,\n    precision: int | None = None,\n    num_shots: int = 10,\n    one_control_circuit: bool = False,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"",
-        "detail": "Implementations.Python.qiskit.shor.shor",
+        "detail": "Python.qiskit.shor.shor",
         "documentation": {}
     },
     {
         "label": "find_factor",
         "kind": 2,
-        "importPath": "Implementations.Python.qiskit.shor.shor",
-        "description": "Implementations.Python.qiskit.shor.shor",
+        "importPath": "Python.qiskit.shor.shor",
+        "description": "Python.qiskit.shor.shor",
         "peekOfCode": "def find_factor(\n    N: int,\n    sampler,\n    pass_manager,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    one_control_circuit: bool = False,\n    seed: int | None = None,\n) -> int:\n    \"\"\"",
-        "detail": "Implementations.Python.qiskit.shor.shor",
+        "detail": "Python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.shor_test",
+        "description": "Python.qiskit.shor.shor_test",
+        "peekOfCode": "def test_find_order() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)  # Seed the sampler for deterministic test\n    N = 15\n    A = 2\n    # 2^4 = 16 = 15*1 + 1\n    want_order = 4\n    # Case: Default circuit\n    got_order, _ = find_order(A, N, aer_sampler, pm, num_shots=10)",
+        "detail": "Python.qiskit.shor.shor_test",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor",
+        "kind": 2,
+        "importPath": "Python.qiskit.shor.shor_test",
+        "description": "Python.qiskit.shor.shor_test",
+        "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)  # Seed the sampler for deterministic test\n    N = 15\n    want_factor = 3\n    got_factor = find_factor(\n        N, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == want_factor, f\"Got {got_factor}, want {want_factor}\"",
+        "detail": "Python.qiskit.shor.shor_test",
         "documentation": {}
     }
 ]
