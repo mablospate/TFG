@@ -8,7 +8,7 @@
 ## Rust
 - QCGPU
 - Quantrs
-- quatr
+- quantr
 - q1tsim
 
 # Roadmap
