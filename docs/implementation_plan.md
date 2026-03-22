@@ -44,6 +44,7 @@ def find_factor(
 ```
 
 ### Reglas
+- **Shor debe estar en un subdirectorio separado** (como en Qiskit: `shor/shor.py`, `shor/adder.py`, `shor/qft.py`, etc.), no en un unico fichero. Esto aplica a todos los frameworks, tanto Python como Rust.
 - **Todo debe correr en local** (sin cloud, sin hardware cuantico real)
 - `sampler` y `pass_manager` son especificos de cada framework (ver seccion de ejecucion local por framework)
 - En frameworks sin transpiler (Rust, ProjectQ con emulacion), `pass_manager` puede ser `None` o una funcion identidad
@@ -212,7 +213,7 @@ result = sim.run(circuit, repetitions=1024)
 
 **Ventaja competitiva:** qsim + GPU para simulaciones grandes. Moment-based scheduling para minimizar profundidad.
 
-**Ficheros:** `python/cirq/grover.py`, `python/cirq/shor.py`
+**Ficheros:** `python/cirq/grover.py`, `python/cirq/shor/` (directorio con modulos separados como en Qiskit: `shor.py`, `adder.py`, `qft.py`, etc.)
 
 ---
 
@@ -266,7 +267,7 @@ print(result)  # dict-like con counts
 - Tensor network backends no soportan mid-circuit measurement
 - No hay aritmetica modular built-in, hay que implementarla
 
-**Ficheros:** `python/cudaq/grover.py`, `python/cudaq/shor.py`
+**Ficheros:** `python/cudaq/grover.py`, `python/cudaq/shor/` (directorio con modulos separados como en Qiskit: `shor.py`, `adder.py`, `qft.py`, etc.)
 
 ---
 
@@ -318,7 +319,7 @@ results = [int(q) for q in qureg]
 - Para benchmarking justo, usar `InstructionFilter` para forzar descomposicion completa
 - O usar `ResourceCounter` para contar las puertas que SE USARIAN
 
-**Ficheros:** `python/projectq/grover.py`, `python/projectq/shor.py`
+**Ficheros:** `python/projectq/grover.py`, `python/projectq/shor/` (directorio con modulos separados como en Qiskit: `shor.py`, `adder.py`, `qft.py`, etc.)
 
 ---
 
@@ -365,7 +366,7 @@ backend = AerSimulator()
 - Requiere PyCOMPSs para paralelismo real (sin PyCOMPSs, ejecucion secuencial)
 - Actualmente solo soporta Qiskit y Qibo como input
 
-**Ficheros:** `python/qdislib/grover.py`, `python/qdislib/shor.py`
+**Ficheros:** `python/qdislib/grover.py`, `python/qdislib/shor/` (directorio con modulos separados como en Qiskit: `shor.py`, `adder.py`, `qft.py`, etc.)
 
 ---
 
@@ -405,7 +406,7 @@ let hist = circuit.histogram_string().unwrap();
 
 **Limitaciones:** Proyecto inactivo (2019). Sin GPU. Sin optimizacion de circuitos.
 
-**Ficheros:** `rust/q1tsim/src/bin/grover.rs`, `rust/q1tsim/src/bin/shor.rs`
+**Ficheros:** `rust/q1tsim/src/bin/grover.rs`, `rust/q1tsim/src/bin/shor/` (directorio con modulos separados como en Qiskit: `shor.rs`, `adder.rs`, `qft.rs`, etc.)
 
 ---
 
@@ -442,7 +443,7 @@ let result = state.measure_many(1024); // 1024 shots
 
 **Limitaciones:** Precision f32 (no f64). API imperativa sin abstraccion de circuito. Proyecto inactivo (2018). Solo single-control nativo.
 
-**Ficheros:** `rust/qcgpu/src/bin/grover.rs`, `rust/qcgpu/src/bin/shor.rs`
+**Ficheros:** `rust/qcgpu/src/bin/grover.rs`, `rust/qcgpu/src/bin/shor/` (directorio con modulos separados como en Qiskit: `shor.rs`, `adder.rs`, `qft.rs`, etc.)
 
 ---
 
@@ -481,7 +482,7 @@ let measurements = simulated.measure_all(1024);
 
 **Limitaciones:** Limite practico de ~16 qubits. Single-threaded. Sin GPU. Sin ruido. Inestable (los autores recomiendan validar resultados).
 
-**Ficheros:** `rust/quantr/src/bin/grover.rs`, `rust/quantr/src/bin/shor.rs`
+**Ficheros:** `rust/quantr/src/bin/grover.rs`, `rust/quantr/src/bin/shor/` (directorio con modulos separados como en Qiskit: `shor.rs`, `adder.rs`, `qft.rs`, etc.)
 
 ---
 
@@ -494,7 +495,7 @@ let measurements = simulated.measure_all(1024);
 
 **Recomendacion:** Verificar cual es el proyecto correcto antes de implementar. Si es cool-japan/quantrs, investigar si realmente funciona antes de invertir tiempo.
 
-**Ficheros:** `rust/quantrs/src/bin/grover.rs`, `rust/quantrs/src/bin/shor.rs`
+**Ficheros:** `rust/quantrs/src/bin/grover.rs`, `rust/quantrs/src/bin/shor/` (directorio con modulos separados como en Qiskit: `shor.rs`, `adder.rs`, `qft.rs`, etc.)
 
 ---
 
