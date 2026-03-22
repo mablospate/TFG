@@ -37,11 +37,84 @@
 - **CUDA-Q.** NVIDIA. *Quantum-classical programming model.* [github.com/NVIDIA/cuda-quantum](https://github.com/NVIDIA/cuda-quantum) | [docs](https://nvidia.github.io/cuda-quantum)
 - **Cirq.** Google Quantum AI. *Python framework for NISQ circuits.* [github.com/quantumlib/Cirq](https://github.com/quantumlib/Cirq) | [docs](https://quantumai.google/cirq)
 - **ProjectQ.** ETH Zurich. *Open-source quantum computing framework.* [github.com/ProjectQ-Framework/ProjectQ](https://github.com/ProjectQ-Framework/ProjectQ) | [docs](https://projectq.readthedocs.io)
-- **QDisLib.** *Distributed quantum computing library.* (Internal documentation)
+- **QDisLib.** BSC. *Distributed quantum circuit cutting.* [github.com/bsc-wdc/qdislib](https://github.com/bsc-wdc/qdislib) | arXiv: [2505.01184](https://arxiv.org/abs/2505.01184)
 - **QCGPU.** Kelly, A. (2018). *Simulating quantum computers using OpenCL.* [github.com/QCGPU/qcgpu-rust](https://github.com/QCGPU/qcgpu-rust) | arXiv: [1805.00988](https://arxiv.org/abs/1805.00988)
 - **quantrs.** *Quantum computing library in Rust.* [github.com/Entropy-Foundation/quantrs](https://github.com/Entropy-Foundation/quantrs) | [docs.rs](https://docs.rs/quantrs)
-- **quantr.** *Quantum circuit simulator in Rust.* [github.com/CQCL/quantr](https://github.com/a-lipson/quantr) | [docs.rs](https://docs.rs/quantr)
+- **quantr.** *Quantum circuit simulator in Rust.* [github.com/a-barlow/quantr](https://github.com/a-barlow/quantr) | [docs.rs](https://docs.rs/quantr) | [book](https://a-barlow.github.io/quantr-book)
 - **q1tsim.** *Quantum simulator in Rust.* [github.com/Q1tBV/q1tsim](https://github.com/Q1tBV/q1tsim) | [docs.rs](https://docs.rs/q1tsim)
+
+## Framework documentation sources
+
+### Cirq
+- [Gates and operations](https://quantumai.google/cirq/build/gates)
+- [Gate Zoo](https://quantumai.google/cirq/gatezoo)
+- [Cirq basics](https://quantumai.google/cirq/start/basics)
+- [Simulation](https://quantumai.google/cirq/simulate/simulation)
+- [Noisy simulation](https://quantumai.google/cirq/simulate/noisy_simulation)
+- [Circuit transformers](https://quantumai.google/cirq/transform/transformers)
+- [Custom gates](https://quantumai.google/cirq/build/custom_gates)
+- [Shor's algorithm example](https://quantumai.google/cirq/experiments/shor)
+- [Textbook algorithms (Grover)](https://quantumai.google/cirq/experiments/textbook_algorithms)
+- [Grover example (GitHub)](https://github.com/quantumlib/Cirq/blob/main/examples/grover.py)
+- [qsim Cirq interface](https://quantumai.google/qsim/cirq_interface)
+- [qsim GitHub](https://github.com/quantumlib/qsim)
+- [cirq.ControlledGate reference](https://quantumai.google/reference/python/cirq/ControlledGate)
+- [Representing noise](https://quantumai.google/cirq/noise/representing_noise)
+- [Cirq on NVIDIA cuQuantum](https://docs.nvidia.com/cuda/cuquantum/latest/appliance/cirq.html)
+
+### CUDA-Q
+- [Quantum operations API](https://nvidia.github.io/cuda-quantum/latest/api/default_ops.html)
+- [Quantum intrinsic operations spec](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/operations.html)
+- [Quantum kernels spec](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/kernels.html)
+- [Simulation backends](https://nvidia.github.io/cuda-quantum/latest/using/backends/simulators.html)
+- [Multi-GPU workflows](https://nvidia.github.io/cuda-quantum/latest/using/examples/multi_gpu_workflows.html)
+- [Shor's algorithm example](https://nvidia.github.io/cuda-quantum/latest/applications/python/shors.html)
+- [Example programs (Grover, QPE)](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/examples.html)
+- [QFT implementation](https://nvidia.github.io/cuda-quantum/latest/applications/python/quantum_fourier_transform.html)
+- [Building kernels](https://nvidia.github.io/cuda-quantum/latest/using/examples/building_kernels.html)
+- [Common quantum programming patterns](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/patterns.html)
+- [Dynamic kernels](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/dynamic_kernels.html)
+- [Algorithmic primitives](https://nvidia.github.io/cuda-quantum/latest/specification/cudaq/algorithmic_primitives.html)
+- [Noisy simulators](https://nvidia.github.io/cuda-quantum/latest/using/backends/sims/noisy.html)
+
+### ProjectQ
+- [ProjectQ ops module](https://projectq.readthedocs.io/en/latest/_doc_gen/projectq.ops.html)
+- [ProjectQ backends](https://projectq.readthedocs.io/en/latest/_doc_gen/projectq.backends.html)
+- [ProjectQ compiler engines](https://projectq.readthedocs.io/en/latest/_doc_gen/projectq.cengines.html)
+- [Decomposition rules](https://projectq.readthedocs.io/en/fix-docs/projectq.setups.decompositions.html)
+- [Tutorials](https://projectq.readthedocs.io/en/latest/tutorials.html)
+- [Examples](https://projectq.readthedocs.io/en/latest/examples.html)
+- [Shor's algorithm source](https://github.com/ProjectQ-Framework/ProjectQ/blob/develop/examples/shor.py)
+- [Simulator tutorial](https://notebook.community/ProjectQ-Framework/ProjectQ/examples/simulator_tutorial)
+- [Meta module (Control, Compute, Dagger)](https://projectq.readthedocs.io/en/v0.3.6/projectq.meta.html)
+- [ProjectQ paper](https://arxiv.org/abs/1612.08091) (arXiv: 1612.08091)
+
+### QDisLib
+- [GitHub repository](https://github.com/bsc-wdc/qdislib)
+- [Paper: Distributed Quantum Circuit Cutting](https://arxiv.org/abs/2505.01184) (arXiv: 2505.01184)
+
+### q1tsim
+- [docs.rs/q1tsim](https://docs.rs/q1tsim/0.5.0/q1tsim/)
+- [GitHub: Q1tBV/q1tsim](https://github.com/Q1tBV/q1tsim)
+
+### qcgpu
+- [docs.rs/qcgpu](https://docs.rs/qcgpu/0.1.0/qcgpu/)
+- [GitHub: QCGPU/qcgpu-rust](https://github.com/QCGPU/qcgpu-rust)
+- [Paper: Simulating Quantum Computers Using OpenCL](https://arxiv.org/abs/1805.00988) (arXiv: 1805.00988)
+
+### quantr
+- [docs.rs/quantr](https://docs.rs/quantr/0.6.0/quantr/)
+- [GitHub: a-barlow/quantr](https://github.com/a-barlow/quantr)
+- [quantr book](https://a-barlow.github.io/quantr-book)
+
+### quantrs
+- [GitHub: Entropy-Foundation/quantrs](https://github.com/Entropy-Foundation/quantrs) (NOTE: repo may not exist, verify)
+- [docs.rs/quantrs](https://docs.rs/quantrs)
+
+### Other references
+- [Benchmarking Quantum Simulators (2024)](https://arxiv.org/html/2401.09076v2)
+- [cuStateVec blog (NVIDIA)](https://developer.nvidia.com/blog/accelerating-quantum-circuit-simulation-with-nvidia-custatevec/)
+- [Awesome Quantum Computing list](https://github.com/bramathon/awesome-quantum-computing)
 
 # Roadmap
 ## Investigation 1
