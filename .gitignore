@@ -18,3 +18,6 @@ __pycache__/
 
 # uv
 uv.lock
+
+# Local docs
+docs/pending_documentation.md
