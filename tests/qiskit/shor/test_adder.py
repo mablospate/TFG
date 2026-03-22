@@ -5,7 +5,7 @@ from qiskit.primitives import StatevectorSampler
 from qiskit.primitives.containers.sampler_pub_result import SamplerPubResult
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
-from Python.qiskit.shor.adder import AdderCircuit
+from python.qiskit.shor.adder import AdderCircuit
 
 
 def run_simulation(qc, num_shots: int = 1) -> SamplerPubResult:

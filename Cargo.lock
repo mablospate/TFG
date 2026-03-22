@@ -3,5 +3,17 @@
 version = 4
 
 [[package]]
-name = "TFG"
+name = "q1tsim-bench"
+version = "0.1.0"
+
+[[package]]
+name = "qcgpu-bench"
+version = "0.1.0"
+
+[[package]]
+name = "quantr-bench"
+version = "0.1.0"
+
+[[package]]
+name = "quantrs-bench"
 version = "0.1.0"

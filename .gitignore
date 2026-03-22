@@ -1,8 +1,20 @@
-/.DS_Store
-/.obsidian
+# OS
+.DS_Store
+
+# Editor / IDE
+.obsidian/
+.vscode/
+
+# Python
 __pycache__/
+*.pyc
 .pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
 
-# Added by cargo
-
+# Rust
 /target
+
+# uv
+uv.lock

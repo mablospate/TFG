@@ -5,7 +5,7 @@ from fractions import Fraction
 from qiskit.circuit import ClassicalRegister, QuantumRegister
 from qiskit.circuit.library import QFTGate
 
-from Python.qiskit.shor.adder import AdderCircuit
+from python.qiskit.shor.adder import AdderCircuit
 
 
 def order_finding_circuit(A: int, N: int, precision: int | None = None) -> AdderCircuit:

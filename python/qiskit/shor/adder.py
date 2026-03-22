@@ -4,7 +4,7 @@ import numpy as np
 from qiskit.circuit import QuantumCircuit, QuantumRegister, Qubit
 from qiskit.circuit.library import CPhaseGate, CXGate, PhaseGate, SwapGate
 
-from Python.qiskit.shor.qft import QFTFullGate
+from python.qiskit.shor.qft import QFTFullGate
 
 
 class AdderCircuit(QuantumCircuit):

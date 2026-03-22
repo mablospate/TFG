@@ -2,7 +2,7 @@ from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import SamplerV2 as AerSampler
 
-from Python.qiskit.shor.shor import find_factor, find_order
+from python.qiskit.shor.shor import find_factor, find_order
 
 
 def test_find_order() -> None:

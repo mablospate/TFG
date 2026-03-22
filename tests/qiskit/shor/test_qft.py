@@ -1,6 +1,6 @@
 from qiskit.circuit import QuantumCircuit, QuantumRegister
 
-from Python.qiskit.shor.qft import QFTFullGate
+from python.qiskit.shor.qft import QFTFullGate
 
 
 def test_qft():
