@@ -1,9 +1,9 @@
-[QASMBench document](PDFs/QASMBench.pdf)
+[QASMBench document](PDFs/QASMBench.pdf) ([Li, 2020])
 
 [Quantum simulation frameworks list](https://github.com/bramathon/awesome-quantum-computing)
 
 # Benchmarking variables / measures
-Since I'm implementing the same algorithms and circuits in every simulator, inherent characteristics of the algorithms such as gate density or circuit depth won't be benchmarked. Instead I'll benchmark other metrics that may vary with each simulator:
+Since I'm implementing the same algorithms and circuits in every simulator, inherent characteristics of the algorithms such as gate density or circuit depth won't be benchmarked. Instead I'll benchmark other metrics that may vary with each simulator ([Lubinski, 2023]):
 - CPU usage over time
 - GPU usage over time
 - Time
@@ -87,14 +87,14 @@ Libraries for controling quantum systems and realizing gates.
 * [Qibo](https://github.com/qiboteam/qibo) - Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
   
 # Benchmarking procedures
-These are all the quantum algorithms and circuits that I'll be benchmarking, divided in scale, as per the QASMBench document because I thought it was a good idea to divide it that way.
+These are all the quantum algorithms and circuits that I'll be benchmarking, divided in scale, as per [QASMBench] ([Li, 2020]).
 
 ## Small-scale
 
 ### Full Adder
 [Explanation](https://www.quantum-inspire.com/kbase/full-adder/)
 
-Uses qubits as regular bits with the purpose to add numbers together.
+Uses qubits as regular bits with the purpose to add numbers together. ([Draper, 2000] for QFT-based adder; [Vedral, 1996] for ripple-carry adder)
 
 <img src="Images/Full Adder.png">
 
@@ -122,24 +122,24 @@ Algorithm designed to test if an oracle's output is constant or balanced.
 ### ~~Quantum Error Correction (QEC)~~ MAYBE ADDED TO OTHERS • Not a circuit per se, more like extending other algorithms to introduce redundancy
 [Explanation](https://en.wikipedia.org/wiki/Quantum_error_correction)
 ### Grover
-[Explanation]()
+[Explanation](https://en.wikipedia.org/wiki/Grover%27s_algorithm)
 
-
+Oracle-based quantum search algorithm. ([Grover, 1996]; MCZ decomposition via [Barenco, 1995])
 
 <img src="Images/Grover.png">
 
 ### Hidden subgroup problems (HS4)
-### QFT & Inverse QFT
+### QFT & Inverse QFT ([Draper, 2000])
 ### iSWAP
 ### LinearSolver
 ### Learning parity with noise (LPN)
-### Quantum phase-estimation (QPE / Pea)
+### Quantum phase-estimation (QPE / Pea) ([Shor, 1995])
 ### Quantum approximate optimization algorithm (QAOA)
 ### QuantumWalks
 ### Quantum error corrections (QEC) SM & EN
 ### Quantum random number generation (QRNG)
-### Shor
-### Toffoli
+### Shor ([Shor, 1995]; circuit: [Beauregard, 2002]; arithmetic: [Draper, 2000], [Vedral, 1996])
+### Toffoli ([Barenco, 1995])
 ### Teleportation
 ### Variational quantum (VQE)
 ### W state
@@ -149,7 +149,7 @@ Algorithm designed to test if an oracle's output is constant or balanced.
 ### BB84
 ### Bernstein-Vazirani (BV)
 ### Ising
-### Multiplier
+### Multiplier ([Vedral, 1996]; [Beauregard, 2002])
 ### Boolean Satisfiability Problem (SAT)
 ### Simon
 
@@ -159,3 +159,17 @@ Algorithm designed to test if an oracle's output is constant or balanced.
 ### Greenberger-Horne-Zeilinger (GHZ) state
 ### Squarer root
 ### Swap test
+
+---
+
+# Reference keys
+
+- [Shor, 1995]: Shor, P. W. — *Polynomial-time algorithms for prime factorization and discrete logarithms on a quantum computer.* SIAM Review. arXiv: [quant-ph/9508027](https://arxiv.org/abs/quant-ph/9508027)
+- [Grover, 1996]: Grover, L. K. — *A fast quantum mechanical algorithm for database search.* STOC. arXiv: [quant-ph/9605043](https://arxiv.org/abs/quant-ph/9605043)
+- [Beauregard, 2002]: Beauregard, S. — *Circuit for Shor's algorithm using 2n+3 qubits.* QIC. arXiv: [quant-ph/0205095](https://arxiv.org/abs/quant-ph/0205095)
+- [Draper, 2000]: Draper, T. G. — *Addition on a quantum computer.* arXiv: [quant-ph/0008033](https://arxiv.org/abs/quant-ph/0008033)
+- [Vedral, 1996]: Vedral, V., Barenco, A. & Ekert, A. — *Quantum networks for elementary arithmetic operations.* Phys. Rev. A. arXiv: [quant-ph/9511018](https://arxiv.org/abs/quant-ph/9511018)
+- [Barenco, 1995]: Barenco, A. et al. — *Elementary gates for quantum computation.* Phys. Rev. A. arXiv: [quant-ph/9503016](https://arxiv.org/abs/quant-ph/9503016)
+- [Lubinski, 2023]: Lubinski, T. et al. — *Application-oriented performance benchmarks for quantum computing.* IEEE TQE. arXiv: [2110.03137](https://arxiv.org/abs/2110.03137)
+- [Li, 2020]: Li, A. et al. — *QASMBench: A low-level QASM benchmark suite for NISQ evaluation and simulation.* arXiv: [2005.13018](https://arxiv.org/abs/2005.13018)
+- [QASMBench]: See [Li, 2020]
