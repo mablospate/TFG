@@ -44,6 +44,15 @@
         "documentation": {}
     },
     {
+        "label": "cirq",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cirq",
+        "description": "cirq",
+        "detail": "cirq",
+        "documentation": {}
+    },
+    {
         "label": "math",
         "kind": 6,
         "isExtraImport": true,
@@ -53,12 +62,285 @@
         "documentation": {}
     },
     {
-        "label": "numpy",
+        "label": "random",
         "kind": 6,
         "isExtraImport": true,
-        "importPath": "numpy",
-        "description": "numpy",
-        "detail": "numpy",
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "Fraction",
+        "importPath": "fractions",
+        "description": "fractions",
+        "isExtraImport": true,
+        "detail": "fractions",
+        "documentation": {}
+    },
+    {
+        "label": "ModularExp",
+        "importPath": "python.cirq.shor.modular_exp",
+        "description": "python.cirq.shor.modular_exp",
+        "isExtraImport": true,
+        "detail": "python.cirq.shor.modular_exp",
+        "documentation": {}
+    },
+    {
+        "label": "cudaq",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "cudaq",
+        "description": "cudaq",
+        "detail": "cudaq",
+        "documentation": {}
+    },
+    {
+        "label": "build_mod_exp_permutation",
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "controlled_swap_permutation",
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "apply_inverse_qft",
+        "importPath": "python.cudaq.shor.qft",
+        "description": "python.cudaq.shor.qft",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "MainEngine",
+        "importPath": "projectq",
+        "description": "projectq",
+        "isExtraImport": true,
+        "detail": "projectq",
+        "documentation": {}
+    },
+    {
+        "label": "MainEngine",
+        "importPath": "projectq",
+        "description": "projectq",
+        "isExtraImport": true,
+        "detail": "projectq",
+        "documentation": {}
+    },
+    {
+        "label": "H",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "X",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "R",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "All",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "Measure",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "H",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "X",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "Z",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "All",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "Measure",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "All",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "Measure",
+        "importPath": "projectq.ops",
+        "description": "projectq.ops",
+        "isExtraImport": true,
+        "detail": "projectq.ops",
+        "documentation": {}
+    },
+    {
+        "label": "Control",
+        "importPath": "projectq.meta",
+        "description": "projectq.meta",
+        "isExtraImport": true,
+        "detail": "projectq.meta",
+        "documentation": {}
+    },
+    {
+        "label": "Control",
+        "importPath": "projectq.meta",
+        "description": "projectq.meta",
+        "isExtraImport": true,
+        "detail": "projectq.meta",
+        "documentation": {}
+    },
+    {
+        "label": "Simulator",
+        "importPath": "projectq.backends",
+        "description": "projectq.backends",
+        "isExtraImport": true,
+        "detail": "projectq.backends",
+        "documentation": {}
+    },
+    {
+        "label": "Simulator",
+        "importPath": "projectq.backends",
+        "description": "projectq.backends",
+        "isExtraImport": true,
+        "detail": "projectq.backends",
+        "documentation": {}
+    },
+    {
+        "label": "MultiplyByConstantModN",
+        "importPath": "projectq.libs.math",
+        "description": "projectq.libs.math",
+        "isExtraImport": true,
+        "detail": "projectq.libs.math",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit",
+        "importPath": "python.qiskit.shor.shor",
+        "description": "python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "_get_order_from_dist",
+        "importPath": "python.qiskit.shor.shor",
+        "description": "python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "python.qiskit.shor.shor",
+        "description": "python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "python.qiskit.shor.shor",
+        "description": "python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumCircuit",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
         "documentation": {}
     },
     {
@@ -110,6 +392,30 @@
         "documentation": {}
     },
     {
+        "label": "QuantumCircuit",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "QuantumRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "ClassicalRegister",
+        "importPath": "qiskit.circuit",
+        "description": "qiskit.circuit",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
         "label": "QuantumRegister",
         "importPath": "qiskit.circuit",
         "description": "qiskit.circuit",
@@ -131,6 +437,39 @@
         "description": "qiskit.circuit",
         "isExtraImport": true,
         "detail": "qiskit.circuit",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "isExtraImport": true,
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "isExtraImport": true,
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "isExtraImport": true,
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
         "documentation": {}
     },
     {
@@ -182,6 +521,14 @@
         "documentation": {}
     },
     {
+        "label": "ZGate",
+        "importPath": "qiskit.circuit.library",
+        "description": "qiskit.circuit.library",
+        "isExtraImport": true,
+        "detail": "qiskit.circuit.library",
+        "documentation": {}
+    },
+    {
         "label": "QFTFullGate",
         "importPath": "python.qiskit.shor.qft",
         "description": "python.qiskit.shor.qft",
@@ -206,23 +553,6 @@
         "documentation": {}
     },
     {
-        "label": "random",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "random",
-        "description": "random",
-        "detail": "random",
-        "documentation": {}
-    },
-    {
-        "label": "Fraction",
-        "importPath": "fractions",
-        "description": "fractions",
-        "isExtraImport": true,
-        "detail": "fractions",
-        "documentation": {}
-    },
-    {
         "label": "AdderCircuit",
         "importPath": "python.qiskit.shor.adder",
         "description": "python.qiskit.shor.adder",
@@ -236,6 +566,54 @@
         "description": "python.qiskit.shor.adder",
         "isExtraImport": true,
         "detail": "python.qiskit.shor.adder",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "isExtraImport": true,
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "isExtraImport": true,
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "isExtraImport": true,
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "isExtraImport": true,
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "python.projectq.shor",
+        "description": "python.projectq.shor",
+        "isExtraImport": true,
+        "detail": "python.projectq.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "python.projectq.shor",
+        "description": "python.projectq.shor",
+        "isExtraImport": true,
+        "detail": "python.projectq.shor",
         "documentation": {}
     },
     {
@@ -284,22 +662,6 @@
         "description": "qiskit_aer.primitives",
         "isExtraImport": true,
         "detail": "qiskit_aer.primitives",
-        "documentation": {}
-    },
-    {
-        "label": "find_factor",
-        "importPath": "python.qiskit.shor.shor",
-        "description": "python.qiskit.shor.shor",
-        "isExtraImport": true,
-        "detail": "python.qiskit.shor.shor",
-        "documentation": {}
-    },
-    {
-        "label": "find_order",
-        "importPath": "python.qiskit.shor.shor",
-        "description": "python.qiskit.shor.shor",
-        "isExtraImport": true,
-        "detail": "python.qiskit.shor.shor",
         "documentation": {}
     },
     {
@@ -384,6 +746,267 @@
         "documentation": {}
     },
     {
+        "label": "ModularExp",
+        "kind": 6,
+        "importPath": "python.cirq.shor.modular_exp",
+        "description": "python.cirq.shor.modular_exp",
+        "peekOfCode": "class ModularExp(cirq.ArithmeticGate):\n    \"\"\"\n    Modular exponentiation gate that computes |x>|y> -> |x>|y * base^x mod modulus>.\n    This is the key quantum operation for Shor's algorithm: it performs controlled\n    modular exponentiation using Cirq's ArithmeticGate abstraction, which defines\n    the mathematical semantics and lets the simulator compute the result classically.\n    Args:\n        target_size: Number of qubits in the target register.\n        exponent_size: Number of qubits in the exponent register.\n        base: The base for modular exponentiation (A in A^x mod N).",
+        "detail": "python.cirq.shor.modular_exp",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit",
+        "kind": 2,
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
+        "peekOfCode": "def order_finding_circuit(\n    A: int, N: int, precision: int | None = None\n) -> cirq.Circuit:\n    \"\"\"\n    Build circuit to find the order of A in Z_N using quantum phase estimation\n    with modular exponentiation.\n    Args:\n        A: Base integer (must be coprime to N).\n        N: Modulus.\n        precision: Number of qubits for the exponent (phase estimation) register.",
+        "detail": "python.cirq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "kind": 2,
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    simulator,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Carry out the quantum order-finding algorithm: find the integer r such that",
+        "detail": "python.cirq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "kind": 2,
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
+        "peekOfCode": "def find_factor(\n    N: int,\n    simulator,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"\n    Carry out Shor's algorithm for finding a non-trivial factor of N.",
+        "detail": "python.cirq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "kind": 2,
+        "importPath": "python.cirq.grover",
+        "description": "python.cirq.grover",
+        "peekOfCode": "def build_oracle(n: int, target: int) -> cirq.Circuit:\n    \"\"\"\n    Build a phase oracle that flips the phase of the target state |target>.\n    Uses a multi-controlled Z gate decomposed following Barenco et al. (1995).\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n    Returns:\n        cirq.Circuit: Oracle circuit on n qubits.\n    \"\"\"",
+        "detail": "python.cirq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "kind": 2,
+        "importPath": "python.cirq.grover",
+        "description": "python.cirq.grover",
+        "peekOfCode": "def build_diffuser(n: int) -> cirq.Circuit:\n    \"\"\"\n    Build the Grover diffusion operator (inversion about the mean): 2|s><s| - I,\n    where |s> is the uniform superposition state. Based on Grover (1996).\n    Args:\n        n: Number of qubits.\n    Returns:\n        cirq.Circuit: Diffuser circuit on n qubits.\n    \"\"\"\n    qubits = cirq.LineQubit.range(n)",
+        "detail": "python.cirq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "kind": 2,
+        "importPath": "python.cirq.grover",
+        "description": "python.cirq.grover",
+        "peekOfCode": "def grover_circuit(\n    n: int, target: int, num_iterations: int | None = None\n) -> cirq.Circuit:\n    \"\"\"\n    Build the full Grover search circuit for n qubits searching for state |target>.\n    Uses floor(pi/4 * sqrt(2^n)) iterations by default, as per Grover (1996).\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n        num_iterations: Number of Grover iterations. If None, uses the optimal value.",
+        "detail": "python.cirq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "kind": 2,
+        "importPath": "python.cirq.grover",
+        "description": "python.cirq.grover",
+        "peekOfCode": "def search(\n    n: int,\n    target: int,\n    simulator,\n    pass_manager=None,\n    num_iterations: int | None = None,\n    num_shots: int = 1024,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Execute Grover's search algorithm on a simulator.",
+        "detail": "python.cirq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "controlled_transposition",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "peekOfCode": "def controlled_transposition(\n    kernel: cudaq.Kernel,\n    ctrl,\n    target_qubits: list,\n    a: int,\n    b: int,\n) -> None:\n    \"\"\"\n    Implement a controlled transposition |a> <-> |b> on the target register.\n    Uses recursive decomposition into single-bit transpositions.",
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "controlled_swap_permutation",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "peekOfCode": "def controlled_swap_permutation(\n    kernel: cudaq.Kernel,\n    ctrl,\n    target_qubits: list,\n    permutation: dict[int, int],\n) -> None:\n    \"\"\"\n    Implement a controlled permutation of basis states on the target register.\n    Decomposed into disjoint cycles, then into transpositions.\n    Args:",
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "build_mod_exp_permutation",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "peekOfCode": "def build_mod_exp_permutation(A: int, N: int, power: int) -> dict[int, int]:\n    \"\"\"\n    Build the permutation that maps |y> -> |A^power * y mod N> for 0 <= y < N.\n    Args:\n        A: Base for modular exponentiation.\n        N: Modulus.\n        power: Exponent.\n    Returns:\n        dict mapping input state to output state.\n    \"\"\"",
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "apply_qft",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.qft",
+        "description": "python.cudaq.shor.qft",
+        "peekOfCode": "def apply_qft(kernel: cudaq.Kernel, qubits: list, n: int) -> None:\n    \"\"\"\n    Apply the Quantum Fourier Transform on the first n qubits.\n    Args:\n        kernel: CUDA-Q kernel being built.\n        qubits: List of qubit references.\n        n: Number of qubits to apply QFT on.\n    \"\"\"\n    for i in range(n):\n        kernel.h(qubits[i])",
+        "detail": "python.cudaq.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "apply_inverse_qft",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.qft",
+        "description": "python.cudaq.shor.qft",
+        "peekOfCode": "def apply_inverse_qft(kernel: cudaq.Kernel, qubits: list, n: int) -> None:\n    \"\"\"\n    Apply the inverse Quantum Fourier Transform on the first n qubits.\n    Args:\n        kernel: CUDA-Q kernel being built.\n        qubits: List of qubit references.\n        n: Number of qubits to apply inverse QFT on.\n    \"\"\"\n    for i in range(n // 2):\n        kernel.swap(qubits[i], qubits[n - 1 - i])",
+        "detail": "python.cudaq.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.shor",
+        "description": "python.cudaq.shor.shor",
+        "peekOfCode": "def order_finding_circuit(\n    A: int, N: int, precision: int | None = None\n) -> cudaq.Kernel:\n    \"\"\"\n    Build circuit to find the order of A in Z_N using phase estimation.\n    Uses a swap-based permutation network for modular exponentiation.\n    Args:\n        A: Base integer (must be coprime to N).\n        N: Modulus.\n        precision: Number of qubits for phase estimation. If None, uses 2*ceil(log2(N)).",
+        "detail": "python.cudaq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.shor",
+        "description": "python.cudaq.shor.shor",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Find the order of the integer A in Z_N on a CUDA-Q simulator.",
+        "detail": "python.cudaq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "kind": 2,
+        "importPath": "python.cudaq.shor.shor",
+        "description": "python.cudaq.shor.shor",
+        "peekOfCode": "def find_factor(\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"\n    Find a factor of N using Shor's algorithm.",
+        "detail": "python.cudaq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "kind": 2,
+        "importPath": "python.cudaq.grover",
+        "description": "python.cudaq.grover",
+        "peekOfCode": "def build_oracle(n: int, target: int) -> cudaq.Kernel:\n    \"\"\"\n    Build a phase oracle that flips the phase of the target state |target>.\n    Uses a multi-controlled Z gate decomposed following Barenco et al. (1995).\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n    Returns:\n        cudaq.Kernel: Oracle kernel on n qubits.\n    \"\"\"",
+        "detail": "python.cudaq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "kind": 2,
+        "importPath": "python.cudaq.grover",
+        "description": "python.cudaq.grover",
+        "peekOfCode": "def build_diffuser(n: int) -> cudaq.Kernel:\n    \"\"\"\n    Build the Grover diffusion operator (inversion about the mean): 2|s><s| - I,\n    where |s> is the uniform superposition state. Based on Grover (1996).\n    Args:\n        n: Number of qubits.\n    Returns:\n        cudaq.Kernel: Diffuser kernel on n qubits.\n    \"\"\"\n    kernel = cudaq.make_kernel()",
+        "detail": "python.cudaq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "kind": 2,
+        "importPath": "python.cudaq.grover",
+        "description": "python.cudaq.grover",
+        "peekOfCode": "def grover_circuit(\n    n: int, target: int, num_iterations: int | None = None\n) -> cudaq.Kernel:\n    \"\"\"\n    Build the full Grover search circuit for n qubits searching for state |target>.\n    Uses floor(pi/4 * sqrt(2^n)) iterations by default, as per Grover (1996).\n    Since CUDA-Q kernels cannot easily compose sub-kernels dynamically,\n    the full circuit (superposition + oracle + diffuser + measurement) is\n    built inline in a single kernel.\n    Args:",
+        "detail": "python.cudaq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "kind": 2,
+        "importPath": "python.cudaq.grover",
+        "description": "python.cudaq.grover",
+        "peekOfCode": "def search(\n    n: int,\n    target: int,\n    simulator=None,\n    pass_manager=None,\n    num_iterations: int | None = None,\n    num_shots: int = 1024,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Execute Grover's search algorithm on a CUDA-Q simulator.",
+        "detail": "python.cudaq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "kind": 2,
+        "importPath": "python.projectq.shor.shor",
+        "description": "python.projectq.shor.shor",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Find the order of the integer A in Z_N, i.e. the integer r such that",
+        "detail": "python.projectq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "kind": 2,
+        "importPath": "python.projectq.shor.shor",
+        "description": "python.projectq.shor.shor",
+        "peekOfCode": "def find_factor(\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"\n    Find a non-trivial factor of N using Shor's algorithm.",
+        "detail": "python.projectq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "kind": 2,
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "peekOfCode": "def build_oracle(n: int, target: int, eng, qureg) -> None:\n    \"\"\"\n    Apply a phase oracle that flips the phase of the target state |target>.\n    Uses a multi-controlled Z gate, following Barenco et al. (1995).\n    Gates are applied in-place to the given qubit register.\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n        eng: ProjectQ MainEngine.\n        qureg: Qubit register of size n.",
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "kind": 2,
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "peekOfCode": "def build_diffuser(n: int, eng, qureg) -> None:\n    \"\"\"\n    Apply the Grover diffusion operator (inversion about the mean): 2|s><s| - I,\n    where |s> is the uniform superposition state. Based on Grover (1996).\n    Gates are applied in-place to the given qubit register.\n    Args:\n        n: Number of qubits.\n        eng: ProjectQ MainEngine.\n        qureg: Qubit register of size n.\n    \"\"\"",
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "kind": 2,
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "peekOfCode": "def grover_circuit(\n    n: int, target: int, num_iterations: int | None = None\n) -> tuple:\n    \"\"\"\n    Build and apply the full Grover search circuit for n qubits searching for\n    state |target>. Uses floor(pi/4 * sqrt(2^n)) iterations by default, as per\n    Grover (1996).\n    In ProjectQ, gates are applied imperatively. This function creates a fresh\n    engine and qubit register, applies all gates (superposition, oracle+diffuser\n    iterations), but does NOT measure. Measurement is left to the caller.",
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "kind": 2,
+        "importPath": "python.projectq.grover",
+        "description": "python.projectq.grover",
+        "peekOfCode": "def search(\n    n: int,\n    target: int,\n    simulator=None,\n    pass_manager=None,\n    num_iterations: int | None = None,\n    num_shots: int = 1024,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Execute Grover's search algorithm on a simulator.",
+        "detail": "python.projectq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "kind": 2,
+        "importPath": "python.qdislib.shor.shor",
+        "description": "python.qdislib.shor.shor",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    sampler=None,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Find the order of *A* in Z_N using the quantum order-finding circuit.",
+        "detail": "python.qdislib.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "kind": 2,
+        "importPath": "python.qdislib.shor.shor",
+        "description": "python.qdislib.shor.shor",
+        "peekOfCode": "def find_factor(\n    N: int,\n    sampler=None,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"\n    Find a non-trivial factor of *N* using Shor's algorithm.",
+        "detail": "python.qdislib.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "kind": 2,
+        "importPath": "python.qdislib.grover",
+        "description": "python.qdislib.grover",
+        "peekOfCode": "def search(\n    n: int,\n    target: int,\n    sampler=None,\n    pass_manager=None,\n    num_iterations: int | None = None,\n    num_shots: int = 1024,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Execute Grover's search algorithm.",
+        "detail": "python.qdislib.grover",
+        "documentation": {}
+    },
+    {
         "label": "AdderCircuit",
         "kind": 6,
         "importPath": "python.qiskit.shor.adder",
@@ -435,6 +1058,132 @@
         "description": "python.qiskit.shor.shor",
         "peekOfCode": "def find_factor(\n    N: int,\n    sampler,\n    pass_manager,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    one_control_circuit: bool = False,\n    seed: int | None = None,\n) -> int:\n    \"\"\"",
         "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "build_oracle",
+        "kind": 2,
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "peekOfCode": "def build_oracle(n: int, target: int) -> QuantumCircuit:\n    \"\"\"\n    Build a phase oracle that flips the phase of the target state |target>.\n    Uses a multi-controlled Z gate decomposed following Barenco et al. (1995).\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n    Returns:\n        QuantumCircuit: Oracle circuit on n qubits.\n    \"\"\"",
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "build_diffuser",
+        "kind": 2,
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "peekOfCode": "def build_diffuser(n: int) -> QuantumCircuit:\n    \"\"\"\n    Build the Grover diffusion operator (inversion about the mean): 2|s><s| - I,\n    where |s> is the uniform superposition state. Based on Grover (1996).\n    Args:\n        n: Number of qubits.\n    Returns:\n        QuantumCircuit: Diffuser circuit on n qubits.\n    \"\"\"\n    qr = QuantumRegister(n)",
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "grover_circuit",
+        "kind": 2,
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "peekOfCode": "def grover_circuit(\n    n: int, target: int, num_iterations: int | None = None\n) -> QuantumCircuit:\n    \"\"\"\n    Build the full Grover search circuit for n qubits searching for state |target>.\n    Uses floor(pi/4 * sqrt(2^n)) iterations by default, as per Grover (1996).\n    Args:\n        n: Number of qubits.\n        target: Integer representation of the target state (0 <= target < 2^n).\n        num_iterations: Number of Grover iterations. If None, uses the optimal value.",
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "kind": 2,
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "peekOfCode": "def search(\n    n: int,\n    target: int,\n    sampler,\n    pass_manager,\n    num_iterations: int | None = None,\n    num_shots: int = 1024,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Execute Grover's search algorithm on a simulator.",
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_3_qubits",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_grover_search_3_qubits() -> None:\n    \"\"\"Grover search in a 3-qubit space finds the correct target.\"\"\"\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    # The target should appear with high probability (> 80%)\n    target_count = dist.get(\"101\", 0)\n    assert target_count > 80, f\"Target probability too low: {target_count}/100\"\ndef test_grover_search_4_qubits() -> None:\n    \"\"\"Grover search in a 4-qubit space finds the correct target.\"\"\"\n    found, dist = search(4, 11, num_shots=100)",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_4_qubits",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_grover_search_4_qubits() -> None:\n    \"\"\"Grover search in a 4-qubit space finds the correct target.\"\"\"\n    found, dist = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    \"\"\"Grover search for target 0 works correctly.\"\"\"\n    found, dist = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_target_zero",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    \"\"\"Grover search for target 0 works correctly.\"\"\"\n    found, dist = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"\n    eng, qureg = grover_circuit(3, 5)\n    assert len(qureg) == 3\n    All(Measure) | qureg\n    eng.flush()",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_circuit_returns_eng_and_qureg",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"\n    eng, qureg = grover_circuit(3, 5)\n    assert len(qureg) == 3\n    All(Measure) | qureg\n    eng.flush()\n    bits = [int(q) for q in qureg]\n    val = sum(b * 2**i for i, b in enumerate(bits))\n    # With optimal iterations, we should get the target most of the time\n    assert val == 5, f\"Expected 5 from grover_circuit, got {val}\"",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_build_oracle_and_diffuser",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_build_oracle_and_diffuser() -> None:\n    \"\"\"build_oracle and build_diffuser apply gates in-place without error.\"\"\"\n    from projectq import MainEngine\n    from projectq.ops import H\n    from projectq.backends import Simulator\n    eng = MainEngine(backend=Simulator(), engine_list=[])\n    qureg = eng.allocate_qureg(3)\n    All(H) | qureg\n    build_oracle(3, 5, eng, qureg)\n    build_diffuser(3, eng, qureg)",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_2_mod_15",
+        "kind": 2,
+        "importPath": "tests.projectq.test_shor",
+        "description": "tests.projectq.test_shor",
+        "peekOfCode": "def test_find_order_2_mod_15() -> None:\n    \"\"\"Order of 2 in Z_15 is 4 (2^4 = 16 = 15*1 + 1).\"\"\"\n    r, dist = find_order(2, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_order_7_mod_15() -> None:\n    \"\"\"Order of 7 in Z_15 is 4 (7^4 = 2401 = 15*160 + 1).\"\"\"\n    r, dist = find_order(7, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"",
+        "detail": "tests.projectq.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_7_mod_15",
+        "kind": 2,
+        "importPath": "tests.projectq.test_shor",
+        "description": "tests.projectq.test_shor",
+        "peekOfCode": "def test_find_order_7_mod_15() -> None:\n    \"\"\"Order of 7 in Z_15 is 4 (7^4 = 2401 = 15*160 + 1).\"\"\"\n    r, dist = find_order(7, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"\n    factor = find_factor(15, seed=13)\n    assert factor in [3, 5], f\"Expected 3 or 5, got {factor}\"\ndef test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"",
+        "detail": "tests.projectq.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_15",
+        "kind": 2,
+        "importPath": "tests.projectq.test_shor",
+        "description": "tests.projectq.test_shor",
+        "peekOfCode": "def test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"\n    factor = find_factor(15, seed=13)\n    assert factor in [3, 5], f\"Expected 3 or 5, got {factor}\"\ndef test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"\n    factor = find_factor(6)\n    assert factor == 2, f\"Expected 2, got {factor}\"\ndef test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"",
+        "detail": "tests.projectq.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.projectq.test_shor",
+        "description": "tests.projectq.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"\n    factor = find_factor(6)\n    assert factor == 2, f\"Expected 2, got {factor}\"\ndef test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"\n    factor = find_factor(35, seed=7, num_shots_per_trial=20, num_tries=5)\n    assert factor in [5, 7], f\"Expected 5 or 7, got {factor}\"",
+        "detail": "tests.projectq.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_35",
+        "kind": 2,
+        "importPath": "tests.projectq.test_shor",
+        "description": "tests.projectq.test_shor",
+        "peekOfCode": "def test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"\n    factor = find_factor(35, seed=7, num_shots_per_trial=20, num_tries=5)\n    assert factor in [5, 7], f\"Expected 5 or 7, got {factor}\"",
+        "detail": "tests.projectq.test_shor",
         "documentation": {}
     },
     {
