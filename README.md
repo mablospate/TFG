@@ -1,16 +1,16 @@
 # Libraries to benchmark
 ## Python
-- qiskit
+- [Qiskit] — IBM's open-source SDK for quantum computing
   - Shor implementation sourced from https://github.com/benjamin-assel/qiskit-shor (based on [Beauregard, 2002])
-- cuda-q
-- CirQ
-- QDisLib ([QDisLib docs])
-- ProjectQ
+- [CUDA-Q] — NVIDIA's quantum-classical programming model
+- [Cirq] — Google's quantum computing framework
+- [QDisLib][QDisLib docs] — Distributed quantum computing library
+- [ProjectQ] — Open-source quantum computing framework (ETH Zurich)
 ## Rust
-- QCGPU ([Kelly, 2018])
-- Quantrs
-- quantr
-- q1tsim
+- [QCGPU] — GPU-accelerated quantum simulator ([Kelly, 2018])
+- [quantrs] — Quantum computing library in Rust
+- [quantr] — Quantum circuit simulator in Rust
+- [q1tsim] — Quantum simulator in Rust
 
 # References
 
@@ -31,10 +31,17 @@
 - **Lubinski, T. et al.** (2023). *Application-oriented performance benchmarks for quantum computing.* IEEE Transactions on Quantum Engineering, 4, 1–32. arXiv: [2110.03137](https://arxiv.org/abs/2110.03137)
 - **Li, A. et al.** (2020). *QASMBench: A low-level QASM benchmark suite for NISQ evaluation and simulation.* arXiv: [2005.13018](https://arxiv.org/abs/2005.13018)
 
-## Frameworks
+## Frameworks and simulators
 
-- **Kelly, A.** (2018). *Simulating quantum computers using OpenCL (QCGPU).* arXiv: [1805.00988](https://arxiv.org/abs/1805.00988)
+- **Qiskit.** IBM. *Open-source SDK for quantum computing.* [github.com/Qiskit](https://github.com/Qiskit) | [docs](https://docs.quantum.ibm.com)
+- **CUDA-Q.** NVIDIA. *Quantum-classical programming model.* [github.com/NVIDIA/cuda-quantum](https://github.com/NVIDIA/cuda-quantum) | [docs](https://nvidia.github.io/cuda-quantum)
+- **Cirq.** Google Quantum AI. *Python framework for NISQ circuits.* [github.com/quantumlib/Cirq](https://github.com/quantumlib/Cirq) | [docs](https://quantumai.google/cirq)
+- **ProjectQ.** ETH Zurich. *Open-source quantum computing framework.* [github.com/ProjectQ-Framework/ProjectQ](https://github.com/ProjectQ-Framework/ProjectQ) | [docs](https://projectq.readthedocs.io)
 - **QDisLib.** *Distributed quantum computing library.* (Internal documentation)
+- **QCGPU.** Kelly, A. (2018). *Simulating quantum computers using OpenCL.* [github.com/QCGPU/qcgpu-rust](https://github.com/QCGPU/qcgpu-rust) | arXiv: [1805.00988](https://arxiv.org/abs/1805.00988)
+- **quantrs.** *Quantum computing library in Rust.* [github.com/Entropy-Foundation/quantrs](https://github.com/Entropy-Foundation/quantrs) | [docs.rs](https://docs.rs/quantrs)
+- **quantr.** *Quantum circuit simulator in Rust.* [github.com/CQCL/quantr](https://github.com/a-lipson/quantr) | [docs.rs](https://docs.rs/quantr)
+- **q1tsim.** *Quantum simulator in Rust.* [github.com/Q1tBV/q1tsim](https://github.com/Q1tBV/q1tsim) | [docs.rs](https://docs.rs/q1tsim)
 
 # Roadmap
 ## Investigation 1
@@ -81,3 +88,11 @@
 [QASMBench]: https://arxiv.org/abs/2005.13018 "QASMBench: A low-level QASM benchmark suite"
 [Kelly, 2018]: https://arxiv.org/abs/1805.00988 "Simulating quantum computers using OpenCL (QCGPU)"
 [QDisLib docs]: docs/papers/QDisLib%20-%20Distributed%20Quantum%20Computing%20Library.pdf "QDisLib documentation"
+[Qiskit]: https://github.com/Qiskit "Qiskit — IBM quantum SDK"
+[CUDA-Q]: https://github.com/NVIDIA/cuda-quantum "CUDA-Q — NVIDIA quantum-classical programming"
+[Cirq]: https://github.com/quantumlib/Cirq "Cirq — Google quantum framework"
+[ProjectQ]: https://github.com/ProjectQ-Framework/ProjectQ "ProjectQ — ETH Zurich quantum framework"
+[QCGPU]: https://github.com/QCGPU/qcgpu-rust "QCGPU — GPU-accelerated quantum simulator"
+[quantrs]: https://github.com/Entropy-Foundation/quantrs "quantrs — Quantum computing in Rust"
+[quantr]: https://docs.rs/quantr "quantr — Quantum circuit simulator in Rust"
+[q1tsim]: https://docs.rs/q1tsim "q1tsim — Quantum simulator in Rust"
