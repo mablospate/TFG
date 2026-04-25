@@ -879,6 +879,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
+    { name = "pytest" },
     { name = "qiskit" },
     { name = "qiskit-aer" },
     { name = "qiskit-ibm-runtime" },
@@ -899,6 +900,7 @@ requires-dist = [
     { name = "ipykernel", marker = "extra == 'dev'", specifier = "==6.29.5" },
     { name = "ipython", marker = "extra == 'dev'", specifier = "==9.2.0" },
     { name = "numpy", specifier = "==2.2.4" },
+    { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==8.3.5" },
     { name = "qiskit", specifier = "==2.0.0" },
     { name = "qiskit-aer", specifier = "==0.17.0" },

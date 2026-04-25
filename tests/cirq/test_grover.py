@@ -1,19 +1,23 @@
 import pytest
 
-pytest.importorskip("projectq")
+cirq = pytest.importorskip("cirq")
 
-from python.projectq.grover import search
+from python.cirq.grover import search
 
 
 def test_grover_search() -> None:
-    found, dist = search(3, 5, num_shots=100)
+    simulator = cirq.Simulator(seed=5)
+
+    found, dist = search(3, 5, simulator, num_shots=100)
     assert found == 5, f"Expected target 5, got {found}"
     assert dist.get("101", 0) > 80, f"Target probability too low: {dist.get('101', 0)}/100"
 
-    found, _ = search(4, 11, num_shots=100)
+    found, _ = search(4, 11, simulator, num_shots=100)
     assert found == 11, f"Expected target 11, got {found}"
 
 
 def test_grover_search_target_zero() -> None:
-    found, _ = search(3, 0, num_shots=100)
+    simulator = cirq.Simulator(seed=5)
+
+    found, _ = search(3, 0, simulator, num_shots=100)
     assert found == 0, f"Expected target 0, got {found}"

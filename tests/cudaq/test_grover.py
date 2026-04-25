@@ -1,8 +1,8 @@
 import pytest
 
-pytest.importorskip("projectq")
+pytest.importorskip("cudaq")
 
-from python.projectq.grover import search
+from python.cudaq.grover import search
 
 
 def test_grover_search() -> None:
