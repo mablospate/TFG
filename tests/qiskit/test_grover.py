@@ -28,3 +28,14 @@ def test_grover_search_target_zero() -> None:
 
     found, _ = search(3, 0, aer_sampler, pm, num_shots=100)
     assert found == 0, f"Expected target 0, got {found}"
+
+
+def test_grover_search_explicit_iterations() -> None:
+    aer_sampler, pm = make_backend()
+
+    # n=3, target=5: optimal is 2, but we override with 2 explicitly here.
+    found, dist = search(3, 5, aer_sampler, pm, num_iterations=2, num_shots=100)
+    assert found == 5, f"Expected target 5, got {found}"
+    assert dist.get("101", 0) > 80, (
+        f"Target probability too low: {dist.get('101', 0)}/100"
+    )

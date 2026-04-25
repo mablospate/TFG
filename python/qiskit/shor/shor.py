@@ -162,6 +162,8 @@ def find_order(
         qc = order_finding_circuit_one_control(A, N, precision=m)
     else:
         qc = order_finding_circuit(A, N, precision=m)
+    if qc == 0:
+        return 0, {}
     qc_isa = pass_manager.run(qc)
 
     print(f"Start search for the order of {A} in Z_{N}")

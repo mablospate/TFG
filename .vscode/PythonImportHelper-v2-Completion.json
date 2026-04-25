@@ -360,6 +360,14 @@
         "documentation": {}
     },
     {
+        "label": "order_finding_circuit",
+        "importPath": "python.qiskit.shor.shor",
+        "description": "python.qiskit.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qiskit.shor.shor",
+        "documentation": {}
+    },
+    {
         "label": "QuantumCircuit",
         "importPath": "qiskit.circuit",
         "description": "qiskit.circuit",
@@ -619,6 +627,14 @@
     },
     {
         "label": "find_order",
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.cirq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "order_finding_circuit",
         "importPath": "python.cirq.shor.shor",
         "description": "python.cirq.shor.shor",
         "isExtraImport": true,
@@ -1072,7 +1088,7 @@
         "kind": 2,
         "importPath": "python.cudaq.shor.shor",
         "description": "python.cudaq.shor.shor",
-        "peekOfCode": "def order_finding_circuit(\n    A: int, N: int, precision: int | None = None\n) -> cudaq.Kernel:\n    \"\"\"\n    Build circuit to find the order of A in Z_N using phase estimation.\n    Uses a swap-based permutation network for modular exponentiation.\n    Args:\n        A: Base integer (must be coprime to N).\n        N: Modulus.\n        precision: Number of qubits for phase estimation. If None, uses 2*ceil(log2(N)).",
+        "peekOfCode": "def order_finding_circuit(\n    A: int, N: int, precision: int | None = None\n) -> cudaq.Kernel:\n    \"\"\"Build phase-estimation circuit for order finding using a swap-based permutation network.\"\"\"\n    if math.gcd(A, N) > 1:\n        print(f\"Error: gcd({A},{N}) > 1\")\n        return None\n    n = math.ceil(math.log2(N))\n    m = precision if precision is not None else 2 * n\n    total_qubits = m + n",
         "detail": "python.cudaq.shor.shor",
         "documentation": {}
     },
@@ -1081,7 +1097,7 @@
         "kind": 2,
         "importPath": "python.cudaq.shor.shor",
         "description": "python.cudaq.shor.shor",
-        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"\n    Find the order of the integer A in Z_N on a CUDA-Q simulator.",
+        "peekOfCode": "def find_order(\n    A: int,\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    precision: int | None = None,\n    num_shots: int = 10,\n) -> tuple[int, dict[str, int]]:\n    \"\"\"Run the order-finding circuit on a CUDA-Q target and return the order with its measurement distribution.\"\"\"\n    if simulator is not None:",
         "detail": "python.cudaq.shor.shor",
         "documentation": {}
     },
@@ -1090,7 +1106,7 @@
         "kind": 2,
         "importPath": "python.cudaq.shor.shor",
         "description": "python.cudaq.shor.shor",
-        "peekOfCode": "def find_factor(\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"\n    Find a factor of N using Shor's algorithm.",
+        "peekOfCode": "def find_factor(\n    N: int,\n    simulator=None,\n    pass_manager=None,\n    num_tries: int = 3,\n    num_shots_per_trial: int = 10,\n    seed: int | None = None,\n) -> int:\n    \"\"\"Factor N using Shor's algorithm; returns 1 if no non-trivial factor is found within num_tries.\"\"\"\n    if N % 2 == 0:",
         "detail": "python.cudaq.shor.shor",
         "documentation": {}
     },
@@ -1333,7 +1349,52 @@
         "kind": 2,
         "importPath": "tests.cirq.shor.test_shor",
         "description": "tests.cirq.shor.test_shor",
-        "peekOfCode": "def test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    # Classical pre-check: even N -> returns 2 without invoking the simulator.\n    assert find_factor(14, None) == 2\n    assert find_factor(100, None) == 2",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    # Classical pre-check: even N -> returns 2 without invoking the simulator.\n    assert find_factor(14, None) == 2\n    assert find_factor(100, None) == 2\ndef test_find_factor_prime_power() -> None:\n    # Classical pre-check: prime power N = d^k -> returns d without quantum.\n    assert find_factor(9, None) == 3\n    assert find_factor(25, None) == 5\n    assert find_factor(27, None) == 3\ndef test_find_factor_multiple_tries() -> None:",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_prime_power",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_prime_power() -> None:\n    # Classical pre-check: prime power N = d^k -> returns d without quantum.\n    assert find_factor(9, None) == 3\n    assert find_factor(25, None) == 5\n    assert find_factor(27, None) == 3\ndef test_find_factor_multiple_tries() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=3, num_shots_per_trial=5, seed=42\n    )",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_multiple_tries",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_multiple_tries() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=3, num_shots_per_trial=5, seed=42\n    )\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_order_finding_circuit_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the circuit isn't built and an empty Circuit is returned.\n    qc = order_finding_circuit(6, 15)\n    assert isinstance(qc, cirq.Circuit)",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_order_finding_circuit_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_order_finding_circuit_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the circuit isn't built and an empty Circuit is returned.\n    qc = order_finding_circuit(6, 15)\n    assert isinstance(qc, cirq.Circuit)\n    assert len(qc) == 0  # Empty sentinel circuit, no operations.\ndef test_find_order_gcd_not_one() -> None:\n    # find_order should short-circuit when gcd(A, N) > 1, without touching the simulator.\n    result = find_order(6, 15, simulator=None)\n    assert result == (0, {})",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_order_gcd_not_one() -> None:\n    # find_order should short-circuit when gcd(A, N) > 1, without touching the simulator.\n    result = find_order(6, 15, simulator=None)\n    assert result == (0, {})",
         "detail": "tests.cirq.shor.test_shor",
         "documentation": {}
     },
@@ -1342,7 +1403,7 @@
         "kind": 5,
         "importPath": "tests.cirq.shor.test_shor",
         "description": "tests.cirq.shor.test_shor",
-        "peekOfCode": "cirq = pytest.importorskip(\"cirq\")\nfrom python.cirq.shor.shor import find_factor, find_order\ndef test_find_order() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_order, _ = find_order(2, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)",
+        "peekOfCode": "cirq = pytest.importorskip(\"cirq\")\nfrom python.cirq.shor.shor import find_factor, find_order, order_finding_circuit\ndef test_find_order() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_order, _ = find_order(2, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)",
         "detail": "tests.cirq.shor.test_shor",
         "documentation": {}
     },
@@ -1360,7 +1421,16 @@
         "kind": 2,
         "importPath": "tests.cirq.test_grover",
         "description": "tests.cirq.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, _ = search(3, 0, simulator, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, _ = search(3, 0, simulator, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, dist = search(3, 5, simulator, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"",
+        "detail": "tests.cirq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_explicit_iterations",
+        "kind": 2,
+        "importPath": "tests.cirq.test_grover",
+        "description": "tests.cirq.test_grover",
+        "peekOfCode": "def test_grover_search_explicit_iterations() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, dist = search(3, 5, simulator, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )",
         "detail": "tests.cirq.test_grover",
         "documentation": {}
     },
@@ -1405,7 +1475,25 @@
         "kind": 2,
         "importPath": "tests.cudaq.shor.test_permutation",
         "description": "tests.cudaq.shor.test_permutation",
-        "peekOfCode": "def test_build_mod_exp_permutation() -> None:\n    assert build_mod_exp_permutation(2, 5, 2) == {1: 4, 2: 3, 3: 2, 4: 1}",
+        "peekOfCode": "def test_build_mod_exp_permutation() -> None:\n    assert build_mod_exp_permutation(2, 5, 2) == {1: 4, 2: 3, 3: 2, 4: 1}\ndef test_build_mod_exp_permutation_power_zero() -> None:\n    # A^0 mod N = 1, so the map is y -> y for every y < N.\n    # All entries are fixed points, so the returned dict is empty\n    # (only non-fixed points are included by build_mod_exp_permutation).\n    assert build_mod_exp_permutation(2, 5, 0) == {}\n    assert build_mod_exp_permutation(3, 7, 0) == {}\n    assert build_mod_exp_permutation(7, 15, 0) == {}\ndef test_controlled_swap_permutation_three_cycle(monkeypatch) -> None:",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "test_build_mod_exp_permutation_power_zero",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "def test_build_mod_exp_permutation_power_zero() -> None:\n    # A^0 mod N = 1, so the map is y -> y for every y < N.\n    # All entries are fixed points, so the returned dict is empty\n    # (only non-fixed points are included by build_mod_exp_permutation).\n    assert build_mod_exp_permutation(2, 5, 0) == {}\n    assert build_mod_exp_permutation(3, 7, 0) == {}\n    assert build_mod_exp_permutation(7, 15, 0) == {}\ndef test_controlled_swap_permutation_three_cycle(monkeypatch) -> None:\n    # A 3-cycle {1 -> 2 -> 3 -> 1} is decomposed into two transpositions\n    # against the cycle base: (1, 2) and (1, 3).",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "test_controlled_swap_permutation_three_cycle",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "def test_controlled_swap_permutation_three_cycle(monkeypatch) -> None:\n    # A 3-cycle {1 -> 2 -> 3 -> 1} is decomposed into two transpositions\n    # against the cycle base: (1, 2) and (1, 3).\n    calls = []\n    def fake_controlled_transposition(kernel, ctrl, target_qubits, a, b) -> None:\n        calls.append((ctrl, tuple(target_qubits), a, b))\n    monkeypatch.setattr(permutation, \"controlled_transposition\", fake_controlled_transposition)\n    permutation.controlled_swap_permutation(\n        object(),\n        \"c\",",
         "detail": "tests.cudaq.shor.test_permutation",
         "documentation": {}
     },
@@ -1441,7 +1529,7 @@
         "kind": 2,
         "importPath": "tests.cudaq.shor.test_shor",
         "description": "tests.cudaq.shor.test_shor",
-        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    assert find_factor(14) == 2",
         "detail": "tests.cudaq.shor.test_shor",
         "documentation": {}
     },
@@ -1450,7 +1538,43 @@
         "kind": 2,
         "importPath": "tests.cudaq.shor.test_shor",
         "description": "tests.cudaq.shor.test_shor",
-        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    assert find_factor(14) == 2\n    assert find_factor(100) == 2\ndef test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    assert find_factor(14) == 2\n    assert find_factor(100) == 2\ndef test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_prime_power",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_multiple_tries",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.\n    r, dist = find_order(6, 15, num_shots=10)\n    assert r == 0\n    assert dist == {}",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.\n    r, dist = find_order(6, 15, num_shots=10)\n    assert r == 0\n    assert dist == {}",
         "detail": "tests.cudaq.shor.test_shor",
         "documentation": {}
     },
@@ -1459,7 +1583,7 @@
         "kind": 2,
         "importPath": "tests.cudaq.test_grover",
         "description": "tests.cudaq.test_grover",
-        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:",
         "detail": "tests.cudaq.test_grover",
         "documentation": {}
     },
@@ -1468,7 +1592,25 @@
         "kind": 2,
         "importPath": "tests.cudaq.test_grover",
         "description": "tests.cudaq.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:\n    found, dist = search(3, 5, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )\ndef test_grover_search_n1() -> None:",
+        "detail": "tests.cudaq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_explicit_iterations",
+        "kind": 2,
+        "importPath": "tests.cudaq.test_grover",
+        "description": "tests.cudaq.test_grover",
+        "peekOfCode": "def test_grover_search_explicit_iterations() -> None:\n    found, dist = search(3, 5, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )\ndef test_grover_search_n1() -> None:\n    # The CUDA-Q Grover kernel has an explicit n==1 branch (single Z instead\n    # of a multi-controlled Z). On a 1-qubit space Grover does not amplify\n    # to certainty (the oracle phase is global), but the kernel must still",
+        "detail": "tests.cudaq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_n1",
+        "kind": 2,
+        "importPath": "tests.cudaq.test_grover",
+        "description": "tests.cudaq.test_grover",
+        "peekOfCode": "def test_grover_search_n1() -> None:\n    # The CUDA-Q Grover kernel has an explicit n==1 branch (single Z instead\n    # of a multi-controlled Z). On a 1-qubit space Grover does not amplify\n    # to certainty (the oracle phase is global), but the kernel must still\n    # build, run, and produce a valid 1-qubit distribution without raising.\n    found, dist = search(1, 1, num_iterations=1, num_shots=50)\n    assert found in (0, 1), f\"Expected a 1-qubit outcome, got {found}\"\n    # Distribution must only contain valid 1-qubit bitstrings and sum to num_shots.\n    assert set(dist.keys()).issubset({\"0\", \"1\"})\n    assert sum(dist.values()) == 50",
         "detail": "tests.cudaq.test_grover",
         "documentation": {}
     },
@@ -1477,7 +1619,7 @@
         "kind": 2,
         "importPath": "tests.projectq.shor.test_shor",
         "description": "tests.projectq.shor.test_shor",
-        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    assert find_factor(14) == 2",
         "detail": "tests.projectq.shor.test_shor",
         "documentation": {}
     },
@@ -1486,7 +1628,43 @@
         "kind": 2,
         "importPath": "tests.projectq.shor.test_shor",
         "description": "tests.projectq.shor.test_shor",
-        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    assert find_factor(14) == 2\n    assert find_factor(100) == 2\ndef test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    assert find_factor(14) == 2\n    assert find_factor(100) == 2\ndef test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_prime_power",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_prime_power() -> None:\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_multiple_tries",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_factor_multiple_tries() -> None:\n    got_factor = find_factor(15, num_tries=3, num_shots_per_trial=5, seed=42)\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.\n    r, dist = find_order(6, 15, num_shots=10)\n    assert r == 0\n    assert dist == {}",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and find_order\n    # returns the (0, {}) sentinel without raising.\n    r, dist = find_order(6, 15, num_shots=10)\n    assert r == 0\n    assert dist == {}",
         "detail": "tests.projectq.shor.test_shor",
         "documentation": {}
     },
@@ -1495,7 +1673,7 @@
         "kind": 2,
         "importPath": "tests.projectq.test_grover",
         "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:",
         "detail": "tests.projectq.test_grover",
         "documentation": {}
     },
@@ -1504,7 +1682,16 @@
         "kind": 2,
         "importPath": "tests.projectq.test_grover",
         "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:\n    found, dist = search(3, 5, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )",
+        "detail": "tests.projectq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_explicit_iterations",
+        "kind": 2,
+        "importPath": "tests.projectq.test_grover",
+        "description": "tests.projectq.test_grover",
+        "peekOfCode": "def test_grover_search_explicit_iterations() -> None:\n    found, dist = search(3, 5, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )",
         "detail": "tests.projectq.test_grover",
         "documentation": {}
     },
@@ -1522,7 +1709,43 @@
         "kind": 2,
         "importPath": "tests.qdislib.shor.test_shor",
         "description": "tests.qdislib.shor.test_shor",
-        "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(\n        15, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(\n        15, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"\ndef test_find_factor_even() -> None:\n    # Classical pre-check: even N -> returns 2 without invoking the sampler.",
+        "detail": "tests.qdislib.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    # Classical pre-check: even N -> returns 2 without invoking the sampler.\n    assert find_factor(14) == 2\n    assert find_factor(100) == 2\ndef test_find_factor_prime_power() -> None:\n    # Classical pre-check: prime power N = d^k -> returns d without quantum.\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:",
+        "detail": "tests.qdislib.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_prime_power",
+        "kind": 2,
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_factor_prime_power() -> None:\n    # Classical pre-check: prime power N = d^k -> returns d without quantum.\n    assert find_factor(9) == 3\n    assert find_factor(25) == 5\n    assert find_factor(27) == 3\ndef test_find_factor_multiple_tries() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(",
+        "detail": "tests.qdislib.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_multiple_tries",
+        "kind": 2,
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_factor_multiple_tries() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(\n        15, aer_sampler, pm, num_tries=3, num_shots_per_trial=5, seed=42\n    )\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"\ndef test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built. The qdislib",
+        "detail": "tests.qdislib.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_order_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built. The qdislib\n    # find_order function checks the sentinel from order_finding_circuit\n    # and returns the (0, {}) tuple without raising.\n    r, dist = find_order(6, 15, num_shots=10)\n    assert r == 0\n    assert dist == {}",
         "detail": "tests.qdislib.shor.test_shor",
         "documentation": {}
     },
@@ -1549,7 +1772,16 @@
         "kind": 2,
         "importPath": "tests.qdislib.test_grover",
         "description": "tests.qdislib.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"",
+        "detail": "tests.qdislib.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_explicit_iterations",
+        "kind": 2,
+        "importPath": "tests.qdislib.test_grover",
+        "description": "tests.qdislib.test_grover",
+        "peekOfCode": "def test_grover_search_explicit_iterations() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )",
         "detail": "tests.qdislib.test_grover",
         "documentation": {}
     },
@@ -1666,7 +1898,34 @@
         "kind": 2,
         "importPath": "tests.qiskit.shor.test_adder",
         "description": "tests.qiskit.shor.test_adder",
-        "peekOfCode": "def test_approximation_degree():\n    qc = AdderCircuit(4, approx_QFT=True)\n    assert qc.approx_QFT\n    assert qc.qft_approx_degree(n=2) == 0\n    assert qc.qft_approx_degree(n=5) == 0\n    assert qc.qft_approx_degree(n=6) == 1\n    assert qc.qft_approx_degree(n=7) == 2\n    assert qc.qft_approx_degree(n=15) == 9",
+        "peekOfCode": "def test_approximation_degree():\n    qc = AdderCircuit(4, approx_QFT=True)\n    assert qc.approx_QFT\n    assert qc.qft_approx_degree(n=2) == 0\n    assert qc.qft_approx_degree(n=5) == 0\n    assert qc.qft_approx_degree(n=6) == 1\n    assert qc.qft_approx_degree(n=7) == 2\n    assert qc.qft_approx_degree(n=15) == 9\ndef test_add_classical_no_qft() -> None:\n    # When include_QFT=False the circuit only contains the phase gates",
+        "detail": "tests.qiskit.shor.test_adder",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_classical_no_qft",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_adder",
+        "description": "tests.qiskit.shor.test_adder",
+        "peekOfCode": "def test_add_classical_no_qft() -> None:\n    # When include_QFT=False the circuit only contains the phase gates\n    # (no surrounding QFT/inverse-QFT), so the gate count drops dramatically.\n    y_reg = QuantumRegister(3)\n    output_reg = ClassicalRegister(3, name=\"output\")\n    qc_with = AdderCircuit(y_reg, output_reg)\n    qc_with.add_classical(3, y_reg, include_QFT=True)\n    qc_no = AdderCircuit(y_reg, output_reg)\n    qc_no.add_classical(3, y_reg, include_QFT=False)\n    ops_with = qc_with.decompose().count_ops()",
+        "detail": "tests.qiskit.shor.test_adder",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_quantum_no_qft",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_adder",
+        "description": "tests.qiskit.shor.test_adder",
+        "peekOfCode": "def test_add_quantum_no_qft() -> None:\n    # Same gate-count check for the quantum (controlled) adder variant.\n    x_reg = QuantumRegister(3)\n    y_reg = QuantumRegister(4)\n    output_reg = ClassicalRegister(4, name=\"output\")\n    qc_with = AdderCircuit(x_reg, y_reg, output_reg)\n    qc_with.add_quantum(x_reg, y_reg, A=10, include_QFT=True)\n    qc_no = AdderCircuit(x_reg, y_reg, output_reg)\n    qc_no.add_quantum(x_reg, y_reg, A=10, include_QFT=False)\n    ops_with = qc_with.decompose().count_ops()",
+        "detail": "tests.qiskit.shor.test_adder",
+        "documentation": {}
+    },
+    {
+        "label": "test_add_classical_modulo_wraparound",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_adder",
+        "description": "tests.qiskit.shor.test_adder",
+        "peekOfCode": "def test_add_classical_modulo_wraparound() -> None:\n    # 5 + 4 mod 7 = 9 mod 7 = 2 = '0010', exercising the wrap-around branch\n    # (the intermediate sum 9 exceeds N and triggers the subtract-N path).\n    y_reg = QuantumRegister(4)\n    output_reg = ClassicalRegister(4, name=\"output\")\n    anc_reg = QuantumRegister(1)\n    anc_ouput_reg = ClassicalRegister(1, name=\"anc_output\")\n    qc = AdderCircuit(y_reg, output_reg, anc_reg, anc_ouput_reg)\n    qc.add_classical(5, y_reg)\n    qc.add_classical_modulo(X=4, y_reg=y_reg, ancilla_bit=anc_reg[0], N=7)",
         "detail": "tests.qiskit.shor.test_adder",
         "documentation": {}
     },
@@ -1676,6 +1935,24 @@
         "importPath": "tests.qiskit.shor.test_qft",
         "description": "tests.qiskit.shor.test_qft",
         "peekOfCode": "def test_qft():\n    q_reg = QuantumRegister(4)\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(4), q_reg)\n    expected_gate_counts = {\"h\": 4, \"cp\": 6, \"swap\": 2}\n    actual_gate_counts = qc.decompose().count_ops()\n    assert actual_gate_counts == expected_gate_counts\n    # No swap\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(4, do_swaps=False), q_reg)",
+        "detail": "tests.qiskit.shor.test_qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_qft_approximation_degree_invalid",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_qft",
+        "description": "tests.qiskit.shor.test_qft",
+        "peekOfCode": "def test_qft_approximation_degree_invalid():\n    # The constructor enforces 0 <= approximation_degree < num_qubits.\n    with pytest.raises(AssertionError):\n        QFTFullGate(4, approximation_degree=4)\n    with pytest.raises(AssertionError):\n        QFTFullGate(4, approximation_degree=5)\n    with pytest.raises(AssertionError):\n        QFTFullGate(2, approximation_degree=2)\ndef test_qft_n1_degenerate():\n    # The 1-qubit QFT degenerates to a single Hadamard (no controlled-phase, no swap).",
+        "detail": "tests.qiskit.shor.test_qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_qft_n1_degenerate",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_qft",
+        "description": "tests.qiskit.shor.test_qft",
+        "peekOfCode": "def test_qft_n1_degenerate():\n    # The 1-qubit QFT degenerates to a single Hadamard (no controlled-phase, no swap).\n    q_reg = QuantumRegister(1)\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(1), q_reg)\n    actual_gate_counts = qc.decompose().count_ops()\n    assert actual_gate_counts == {\"h\": 1}\n    # Same when swaps are disabled.\n    qc = QuantumCircuit(q_reg)\n    qc.append(QFTFullGate(1, do_swaps=False), q_reg)",
         "detail": "tests.qiskit.shor.test_qft",
         "documentation": {}
     },
@@ -1694,6 +1971,51 @@
         "importPath": "tests.qiskit.shor.test_shor",
         "description": "tests.qiskit.shor.test_shor",
         "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)  # Seed the sampler for deterministic test\n    N = 15\n    want_factor = 3\n    got_factor = find_factor(\n        N, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == want_factor, f\"Got {got_factor}, want {want_factor}\"",
+        "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_even",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_shor",
+        "description": "tests.qiskit.shor.test_shor",
+        "peekOfCode": "def test_find_factor_even() -> None:\n    # Classical pre-check: N even -> returns 2 without invoking the quantum circuit.\n    assert find_factor(14, None, None) == 2\n    assert find_factor(100, None, None) == 2\ndef test_find_factor_prime_power() -> None:\n    # Classical pre-check: N = d^k -> returns d without invoking the quantum circuit.\n    assert find_factor(9, None, None) == 3\n    assert find_factor(25, None, None) == 5\n    assert find_factor(27, None, None) == 3\ndef test_find_factor_multiple_tries() -> None:",
+        "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_prime_power",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_shor",
+        "description": "tests.qiskit.shor.test_shor",
+        "peekOfCode": "def test_find_factor_prime_power() -> None:\n    # Classical pre-check: N = d^k -> returns d without invoking the quantum circuit.\n    assert find_factor(9, None, None) == 3\n    assert find_factor(25, None, None) == 5\n    assert find_factor(27, None, None) == 3\ndef test_find_factor_multiple_tries() -> None:\n    # With num_tries=3 the algorithm gets multiple chances to land on a base\n    # whose order leads to a non-trivial factor.\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)",
+        "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor_multiple_tries",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_shor",
+        "description": "tests.qiskit.shor.test_shor",
+        "peekOfCode": "def test_find_factor_multiple_tries() -> None:\n    # With num_tries=3 the algorithm gets multiple chances to land on a base\n    # whose order leads to a non-trivial factor.\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(\n        15, aer_sampler, pm, num_tries=3, num_shots_per_trial=5, seed=42\n    )\n    assert got_factor in (3, 5), f\"Expected a non-trivial factor of 15, got {got_factor}\"",
+        "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_order_finding_circuit_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_shor",
+        "description": "tests.qiskit.shor.test_shor",
+        "peekOfCode": "def test_order_finding_circuit_gcd_not_one() -> None:\n    # gcd(6, 15) = 3, so the quantum circuit is not built and a sentinel (0) is returned.\n    assert order_finding_circuit(6, 15) == 0\n    assert order_finding_circuit(10, 15) == 0\ndef test_find_order_gcd_not_one() -> None:\n    # find_order should short-circuit when gcd(A, N) > 1, without touching the sampler/pm.\n    result = find_order(6, 15, sampler=None, pass_manager=None)\n    assert result == (0, {})",
+        "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order_gcd_not_one",
+        "kind": 2,
+        "importPath": "tests.qiskit.shor.test_shor",
+        "description": "tests.qiskit.shor.test_shor",
+        "peekOfCode": "def test_find_order_gcd_not_one() -> None:\n    # find_order should short-circuit when gcd(A, N) > 1, without touching the sampler/pm.\n    result = find_order(6, 15, sampler=None, pass_manager=None)\n    assert result == (0, {})",
         "detail": "tests.qiskit.shor.test_shor",
         "documentation": {}
     },
@@ -1720,7 +2042,16 @@
         "kind": 2,
         "importPath": "tests.qiskit.test_grover",
         "description": "tests.qiskit.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_search_explicit_iterations() -> None:\n    aer_sampler, pm = make_backend()\n    # n=3, target=5: optimal is 2, but we override with 2 explicitly here.\n    found, dist = search(3, 5, aer_sampler, pm, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (",
+        "detail": "tests.qiskit.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_explicit_iterations",
+        "kind": 2,
+        "importPath": "tests.qiskit.test_grover",
+        "description": "tests.qiskit.test_grover",
+        "peekOfCode": "def test_grover_search_explicit_iterations() -> None:\n    aer_sampler, pm = make_backend()\n    # n=3, target=5: optimal is 2, but we override with 2 explicitly here.\n    found, dist = search(3, 5, aer_sampler, pm, num_iterations=2, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, (\n        f\"Target probability too low: {dist.get('101', 0)}/100\"\n    )",
         "detail": "tests.qiskit.test_grover",
         "documentation": {}
     }

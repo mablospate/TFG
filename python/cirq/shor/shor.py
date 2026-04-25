@@ -116,6 +116,9 @@ def find_order(
     m = precision if precision is not None else 2 * math.ceil(math.log2(N))
     qc = order_finding_circuit(A, N, precision=m)
 
+    if not qc:
+        return 0, {}
+
     if pass_manager is not None:
         qc = pass_manager(qc)
 

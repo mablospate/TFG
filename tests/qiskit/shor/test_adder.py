@@ -488,3 +488,70 @@ def test_approximation_degree():
     assert qc.qft_approx_degree(n=6) == 1
     assert qc.qft_approx_degree(n=7) == 2
     assert qc.qft_approx_degree(n=15) == 9
+
+
+def test_add_classical_no_qft() -> None:
+    # When include_QFT=False the circuit only contains the phase gates
+    # (no surrounding QFT/inverse-QFT), so the gate count drops dramatically.
+    y_reg = QuantumRegister(3)
+    output_reg = ClassicalRegister(3, name="output")
+
+    qc_with = AdderCircuit(y_reg, output_reg)
+    qc_with.add_classical(3, y_reg, include_QFT=True)
+    qc_no = AdderCircuit(y_reg, output_reg)
+    qc_no.add_classical(3, y_reg, include_QFT=False)
+
+    ops_with = qc_with.decompose().count_ops()
+    ops_no = qc_no.decompose().count_ops()
+
+    # No QFT-related gates should be present when include_QFT=False.
+    assert "h" not in ops_no
+    assert "swap" not in ops_no
+    assert "cp" not in ops_no
+    # The QFT version must contain Hadamards from the QFT.
+    assert ops_with.get("h", 0) > 0
+    # And the total gate count is strictly smaller without QFT.
+    assert sum(ops_no.values()) < sum(ops_with.values())
+
+
+def test_add_quantum_no_qft() -> None:
+    # Same gate-count check for the quantum (controlled) adder variant.
+    x_reg = QuantumRegister(3)
+    y_reg = QuantumRegister(4)
+    output_reg = ClassicalRegister(4, name="output")
+
+    qc_with = AdderCircuit(x_reg, y_reg, output_reg)
+    qc_with.add_quantum(x_reg, y_reg, A=10, include_QFT=True)
+    qc_no = AdderCircuit(x_reg, y_reg, output_reg)
+    qc_no.add_quantum(x_reg, y_reg, A=10, include_QFT=False)
+
+    ops_with = qc_with.decompose().count_ops()
+    ops_no = qc_no.decompose().count_ops()
+
+    # No Hadamard or swap gates when include_QFT=False.
+    assert "h" not in ops_no
+    assert "swap" not in ops_no
+    assert ops_with.get("h", 0) > 0
+    assert sum(ops_no.values()) < sum(ops_with.values())
+
+
+def test_add_classical_modulo_wraparound() -> None:
+    # 5 + 4 mod 7 = 9 mod 7 = 2 = '0010', exercising the wrap-around branch
+    # (the intermediate sum 9 exceeds N and triggers the subtract-N path).
+    y_reg = QuantumRegister(4)
+    output_reg = ClassicalRegister(4, name="output")
+    anc_reg = QuantumRegister(1)
+    anc_ouput_reg = ClassicalRegister(1, name="anc_output")
+
+    qc = AdderCircuit(y_reg, output_reg, anc_reg, anc_ouput_reg)
+    qc.add_classical(5, y_reg)
+    qc.add_classical_modulo(X=4, y_reg=y_reg, ancilla_bit=anc_reg[0], N=7)
+    qc.measure(y_reg, output_reg)
+    qc.measure(anc_reg, anc_ouput_reg)
+    res = run_simulation(qc)
+    dist = res.data.output.get_counts()
+    a_dist = res.data.anc_output.get_counts()
+
+    assert dist["0010"] == 1
+    # Ancilla must be reset back to |0> after the wrap-around correction.
+    assert a_dist["0"] == 1
