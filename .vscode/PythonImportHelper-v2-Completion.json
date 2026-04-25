@@ -119,6 +119,14 @@
         "documentation": {}
     },
     {
+        "label": "ModularExp",
+        "importPath": "python.cirq.shor.modular_exp",
+        "description": "python.cirq.shor.modular_exp",
+        "isExtraImport": true,
+        "detail": "python.cirq.shor.modular_exp",
+        "documentation": {}
+    },
+    {
         "label": "cudaq",
         "kind": 6,
         "isExtraImport": true,
@@ -144,7 +152,39 @@
         "documentation": {}
     },
     {
+        "label": "_controlled_single_bit_transposition",
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
+        "label": "build_mod_exp_permutation",
+        "importPath": "python.cudaq.shor.permutation",
+        "description": "python.cudaq.shor.permutation",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.permutation",
+        "documentation": {}
+    },
+    {
         "label": "apply_inverse_qft",
+        "importPath": "python.cudaq.shor.qft",
+        "description": "python.cudaq.shor.qft",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "apply_inverse_qft",
+        "importPath": "python.cudaq.shor.qft",
+        "description": "python.cudaq.shor.qft",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.qft",
+        "documentation": {}
+    },
+    {
+        "label": "apply_qft",
         "importPath": "python.cudaq.shor.qft",
         "description": "python.cudaq.shor.qft",
         "isExtraImport": true,
@@ -225,22 +265,6 @@
     },
     {
         "label": "Z",
-        "importPath": "projectq.ops",
-        "description": "projectq.ops",
-        "isExtraImport": true,
-        "detail": "projectq.ops",
-        "documentation": {}
-    },
-    {
-        "label": "All",
-        "importPath": "projectq.ops",
-        "description": "projectq.ops",
-        "isExtraImport": true,
-        "detail": "projectq.ops",
-        "documentation": {}
-    },
-    {
-        "label": "Measure",
         "importPath": "projectq.ops",
         "description": "projectq.ops",
         "isExtraImport": true,
@@ -464,6 +488,14 @@
         "documentation": {}
     },
     {
+        "label": "search",
+        "importPath": "python.qiskit.grover",
+        "description": "python.qiskit.grover",
+        "isExtraImport": true,
+        "detail": "python.qiskit.grover",
+        "documentation": {}
+    },
+    {
         "label": "numpy",
         "kind": 6,
         "isExtraImport": true,
@@ -569,27 +601,84 @@
         "documentation": {}
     },
     {
-        "label": "build_diffuser",
-        "importPath": "python.projectq.grover",
-        "description": "python.projectq.grover",
+        "label": "pytest",
+        "kind": 6,
         "isExtraImport": true,
-        "detail": "python.projectq.grover",
+        "importPath": "pytest",
+        "description": "pytest",
+        "detail": "pytest",
         "documentation": {}
     },
     {
-        "label": "build_oracle",
-        "importPath": "python.projectq.grover",
-        "description": "python.projectq.grover",
+        "label": "find_factor",
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
         "isExtraImport": true,
-        "detail": "python.projectq.grover",
+        "detail": "python.cirq.shor.shor",
         "documentation": {}
     },
     {
-        "label": "grover_circuit",
-        "importPath": "python.projectq.grover",
-        "description": "python.projectq.grover",
+        "label": "find_order",
+        "importPath": "python.cirq.shor.shor",
+        "description": "python.cirq.shor.shor",
         "isExtraImport": true,
-        "detail": "python.projectq.grover",
+        "detail": "python.cirq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "importPath": "python.cirq.grover",
+        "description": "python.cirq.grover",
+        "isExtraImport": true,
+        "detail": "python.cirq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "permutation",
+        "importPath": "python.cudaq.shor",
+        "description": "python.cudaq.shor",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "python.cudaq.shor.shor",
+        "description": "python.cudaq.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "python.cudaq.shor.shor",
+        "description": "python.cudaq.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.cudaq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "importPath": "python.cudaq.grover",
+        "description": "python.cudaq.grover",
+        "isExtraImport": true,
+        "detail": "python.cudaq.grover",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "python.projectq.shor.shor",
+        "description": "python.projectq.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.projectq.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "python.projectq.shor.shor",
+        "description": "python.projectq.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.projectq.shor.shor",
         "documentation": {}
     },
     {
@@ -601,35 +690,27 @@
         "documentation": {}
     },
     {
-        "label": "find_factor",
-        "importPath": "python.projectq.shor",
-        "description": "python.projectq.shor",
+        "label": "generate_preset_pass_manager",
+        "importPath": "qiskit.transpiler.preset_passmanagers",
+        "description": "qiskit.transpiler.preset_passmanagers",
         "isExtraImport": true,
-        "detail": "python.projectq.shor",
+        "detail": "qiskit.transpiler.preset_passmanagers",
         "documentation": {}
     },
     {
-        "label": "find_order",
-        "importPath": "python.projectq.shor",
-        "description": "python.projectq.shor",
+        "label": "generate_preset_pass_manager",
+        "importPath": "qiskit.transpiler.preset_passmanagers",
+        "description": "qiskit.transpiler.preset_passmanagers",
         "isExtraImport": true,
-        "detail": "python.projectq.shor",
+        "detail": "qiskit.transpiler.preset_passmanagers",
         "documentation": {}
     },
     {
-        "label": "StatevectorSampler",
-        "importPath": "qiskit.primitives",
-        "description": "qiskit.primitives",
+        "label": "generate_preset_pass_manager",
+        "importPath": "qiskit.transpiler.preset_passmanagers",
+        "description": "qiskit.transpiler.preset_passmanagers",
         "isExtraImport": true,
-        "detail": "qiskit.primitives",
-        "documentation": {}
-    },
-    {
-        "label": "SamplerPubResult",
-        "importPath": "qiskit.primitives.containers.sampler_pub_result",
-        "description": "qiskit.primitives.containers.sampler_pub_result",
-        "isExtraImport": true,
-        "detail": "qiskit.primitives.containers.sampler_pub_result",
+        "detail": "qiskit.transpiler.preset_passmanagers",
         "documentation": {}
     },
     {
@@ -657,11 +738,99 @@
         "documentation": {}
     },
     {
+        "label": "AerSimulator",
+        "importPath": "qiskit_aer",
+        "description": "qiskit_aer",
+        "isExtraImport": true,
+        "detail": "qiskit_aer",
+        "documentation": {}
+    },
+    {
+        "label": "AerSimulator",
+        "importPath": "qiskit_aer",
+        "description": "qiskit_aer",
+        "isExtraImport": true,
+        "detail": "qiskit_aer",
+        "documentation": {}
+    },
+    {
+        "label": "AerSimulator",
+        "importPath": "qiskit_aer",
+        "description": "qiskit_aer",
+        "isExtraImport": true,
+        "detail": "qiskit_aer",
+        "documentation": {}
+    },
+    {
         "label": "SamplerV2",
         "importPath": "qiskit_aer.primitives",
         "description": "qiskit_aer.primitives",
         "isExtraImport": true,
         "detail": "qiskit_aer.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerV2",
+        "importPath": "qiskit_aer.primitives",
+        "description": "qiskit_aer.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit_aer.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerV2",
+        "importPath": "qiskit_aer.primitives",
+        "description": "qiskit_aer.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit_aer.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerV2",
+        "importPath": "qiskit_aer.primitives",
+        "description": "qiskit_aer.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit_aer.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "find_factor",
+        "importPath": "python.qdislib.shor.shor",
+        "description": "python.qdislib.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qdislib.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "find_order",
+        "importPath": "python.qdislib.shor.shor",
+        "description": "python.qdislib.shor.shor",
+        "isExtraImport": true,
+        "detail": "python.qdislib.shor.shor",
+        "documentation": {}
+    },
+    {
+        "label": "search",
+        "importPath": "python.qdislib.grover",
+        "description": "python.qdislib.grover",
+        "isExtraImport": true,
+        "detail": "python.qdislib.grover",
+        "documentation": {}
+    },
+    {
+        "label": "StatevectorSampler",
+        "importPath": "qiskit.primitives",
+        "description": "qiskit.primitives",
+        "isExtraImport": true,
+        "detail": "qiskit.primitives",
+        "documentation": {}
+    },
+    {
+        "label": "SamplerPubResult",
+        "importPath": "qiskit.primitives.containers.sampler_pub_result",
+        "description": "qiskit.primitives.containers.sampler_pub_result",
+        "isExtraImport": true,
+        "detail": "qiskit.primitives.containers.sampler_pub_result",
         "documentation": {}
     },
     {
@@ -1133,20 +1302,200 @@
         "documentation": {}
     },
     {
-        "label": "test_grover_search_3_qubits",
+        "label": "test_modular_exp_apply",
         "kind": 2,
-        "importPath": "tests.projectq.test_grover",
-        "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_search_3_qubits() -> None:\n    \"\"\"Grover search in a 3-qubit space finds the correct target.\"\"\"\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    # The target should appear with high probability (> 80%)\n    target_count = dist.get(\"101\", 0)\n    assert target_count > 80, f\"Target probability too low: {target_count}/100\"\ndef test_grover_search_4_qubits() -> None:\n    \"\"\"Grover search in a 4-qubit space finds the correct target.\"\"\"\n    found, dist = search(4, 11, num_shots=100)",
-        "detail": "tests.projectq.test_grover",
+        "importPath": "tests.cirq.shor.test_modular_exp",
+        "description": "tests.cirq.shor.test_modular_exp",
+        "peekOfCode": "def test_modular_exp_apply() -> None:\n    gate = ModularExp(target_size=3, exponent_size=2, base=2, modulus=5)\n    assert gate.apply(3, 1) == (1, 1)\n    assert gate.apply(4, 2) == (1, 2)\n    assert gate.apply(5, 3) == (5, 3)\ndef test_modular_exp_metadata() -> None:\n    gate = ModularExp(target_size=3, exponent_size=2, base=2, modulus=5)\n    assert gate.registers() == [[2, 2, 2], [2, 2]]\n    assert gate.with_registers([0, 1, 2], [0, 1]) == gate\n    assert repr(gate) == \"ModularExp(base=2, modulus=5)\"",
+        "detail": "tests.cirq.shor.test_modular_exp",
         "documentation": {}
     },
     {
-        "label": "test_grover_search_4_qubits",
+        "label": "test_modular_exp_metadata",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_modular_exp",
+        "description": "tests.cirq.shor.test_modular_exp",
+        "peekOfCode": "def test_modular_exp_metadata() -> None:\n    gate = ModularExp(target_size=3, exponent_size=2, base=2, modulus=5)\n    assert gate.registers() == [[2, 2, 2], [2, 2]]\n    assert gate.with_registers([0, 1, 2], [0, 1]) == gate\n    assert repr(gate) == \"ModularExp(base=2, modulus=5)\"\n    assert hash(gate) == hash(ModularExp(3, 2, 2, 5))",
+        "detail": "tests.cirq.shor.test_modular_exp",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_order() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_order, _ = find_order(2, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=1, num_shots_per_trial=1, seed=13",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor",
+        "kind": 2,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "def test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_factor = find_factor(\n        15, simulator, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "cirq",
+        "kind": 5,
+        "importPath": "tests.cirq.shor.test_shor",
+        "description": "tests.cirq.shor.test_shor",
+        "peekOfCode": "cirq = pytest.importorskip(\"cirq\")\nfrom python.cirq.shor.shor import find_factor, find_order\ndef test_find_order() -> None:\n    simulator = cirq.Simulator(seed=5)\n    got_order, _ = find_order(2, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, simulator, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    simulator = cirq.Simulator(seed=5)",
+        "detail": "tests.cirq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search",
+        "kind": 2,
+        "importPath": "tests.cirq.test_grover",
+        "description": "tests.cirq.test_grover",
+        "peekOfCode": "def test_grover_search() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, dist = search(3, 5, simulator, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, simulator, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, _ = search(3, 0, simulator, num_shots=100)",
+        "detail": "tests.cirq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_target_zero",
+        "kind": 2,
+        "importPath": "tests.cirq.test_grover",
+        "description": "tests.cirq.test_grover",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, _ = search(3, 0, simulator, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "detail": "tests.cirq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "cirq",
+        "kind": 5,
+        "importPath": "tests.cirq.test_grover",
+        "description": "tests.cirq.test_grover",
+        "peekOfCode": "cirq = pytest.importorskip(\"cirq\")\nfrom python.cirq.grover import search\ndef test_grover_search() -> None:\n    simulator = cirq.Simulator(seed=5)\n    found, dist = search(3, 5, simulator, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, simulator, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:",
+        "detail": "tests.cirq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "RecordingKernel",
+        "kind": 6,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "class RecordingKernel:\n    def __init__(self) -> None:\n        self.calls = []\n    def x(self, qubit) -> None:\n        self.calls.append((\"x\", qubit))\n    def cx(self, controls, target) -> None:\n        self.calls.append((\"cx\", tuple(controls), target))\ndef test_controlled_single_bit_transposition() -> None:\n    kernel = RecordingKernel()\n    _controlled_single_bit_transposition(kernel, \"c\", [\"q0\", \"q1\", \"q2\"], 0b001, 0b101)",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "test_controlled_single_bit_transposition",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "def test_controlled_single_bit_transposition() -> None:\n    kernel = RecordingKernel()\n    _controlled_single_bit_transposition(kernel, \"c\", [\"q0\", \"q1\", \"q2\"], 0b001, 0b101)\n    assert kernel.calls == [\n        (\"x\", \"q1\"),\n        (\"cx\", (\"c\", \"q0\", \"q1\"), \"q2\"),\n        (\"x\", \"q1\"),\n    ]\ndef test_controlled_swap_permutation(monkeypatch) -> None:\n    calls = []",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "test_controlled_swap_permutation",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "def test_controlled_swap_permutation(monkeypatch) -> None:\n    calls = []\n    def fake_controlled_transposition(kernel, ctrl, target_qubits, a, b) -> None:\n        calls.append((ctrl, tuple(target_qubits), a, b))\n    monkeypatch.setattr(permutation, \"controlled_transposition\", fake_controlled_transposition)\n    permutation.controlled_swap_permutation(\n        object(),\n        \"c\",\n        [\"q0\", \"q1\", \"q2\"],\n        {1: 2, 2: 1, 3: 4, 4: 3},",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "test_build_mod_exp_permutation",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_permutation",
+        "description": "tests.cudaq.shor.test_permutation",
+        "peekOfCode": "def test_build_mod_exp_permutation() -> None:\n    assert build_mod_exp_permutation(2, 5, 2) == {1: 4, 2: 3, 3: 2, 4: 1}",
+        "detail": "tests.cudaq.shor.test_permutation",
+        "documentation": {}
+    },
+    {
+        "label": "RecordingKernel",
+        "kind": 6,
+        "importPath": "tests.cudaq.shor.test_qft",
+        "description": "tests.cudaq.shor.test_qft",
+        "peekOfCode": "class RecordingKernel:\n    def __init__(self) -> None:\n        self.calls = []\n    def h(self, qubit) -> None:\n        self.calls.append((\"h\", qubit))\n    def cr1(self, angle, control, target) -> None:\n        self.calls.append((\"cr1\", angle, control, target))\n    def swap(self, left, right) -> None:\n        self.calls.append((\"swap\", left, right))\ndef test_apply_qft() -> None:",
+        "detail": "tests.cudaq.shor.test_qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_apply_qft",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_qft",
+        "description": "tests.cudaq.shor.test_qft",
+        "peekOfCode": "def test_apply_qft() -> None:\n    kernel = RecordingKernel()\n    apply_qft(kernel, [\"q0\", \"q1\", \"q2\"], 3)\n    assert kernel.calls == [\n        (\"h\", \"q0\"),\n        (\"cr1\", math.pi / 2, \"q1\", \"q0\"),\n        (\"cr1\", math.pi / 4, \"q2\", \"q0\"),\n        (\"h\", \"q1\"),\n        (\"cr1\", math.pi / 2, \"q2\", \"q1\"),\n        (\"h\", \"q2\"),",
+        "detail": "tests.cudaq.shor.test_qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_apply_inverse_qft",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_qft",
+        "description": "tests.cudaq.shor.test_qft",
+        "peekOfCode": "def test_apply_inverse_qft() -> None:\n    kernel = RecordingKernel()\n    apply_inverse_qft(kernel, [\"q0\", \"q1\", \"q2\"], 3)\n    assert kernel.calls == [\n        (\"swap\", \"q0\", \"q2\"),\n        (\"h\", \"q2\"),\n        (\"cr1\", -math.pi / 2, \"q2\", \"q1\"),\n        (\"h\", \"q1\"),\n        (\"cr1\", -math.pi / 4, \"q2\", \"q0\"),\n        (\"cr1\", -math.pi / 2, \"q1\", \"q0\"),",
+        "detail": "tests.cudaq.shor.test_qft",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor",
+        "kind": 2,
+        "importPath": "tests.cudaq.shor.test_shor",
+        "description": "tests.cudaq.shor.test_shor",
+        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.cudaq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search",
+        "kind": 2,
+        "importPath": "tests.cudaq.test_grover",
+        "description": "tests.cudaq.test_grover",
+        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "detail": "tests.cudaq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_target_zero",
+        "kind": 2,
+        "importPath": "tests.cudaq.test_grover",
+        "description": "tests.cudaq.test_grover",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "detail": "tests.cudaq.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_order",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_order() -> None:\n    got_order, _ = find_order(2, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_find_factor",
+        "kind": 2,
+        "importPath": "tests.projectq.shor.test_shor",
+        "description": "tests.projectq.shor.test_shor",
+        "peekOfCode": "def test_find_factor() -> None:\n    got_factor = find_factor(15, num_tries=1, num_shots_per_trial=1, seed=13)\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.projectq.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search",
         "kind": 2,
         "importPath": "tests.projectq.test_grover",
         "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_search_4_qubits() -> None:\n    \"\"\"Grover search in a 4-qubit space finds the correct target.\"\"\"\n    found, dist = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    \"\"\"Grover search for target 0 works correctly.\"\"\"\n    found, dist = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"",
+        "peekOfCode": "def test_grover_search() -> None:\n    found, dist = search(3, 5, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
         "detail": "tests.projectq.test_grover",
         "documentation": {}
     },
@@ -1155,71 +1504,53 @@
         "kind": 2,
         "importPath": "tests.projectq.test_grover",
         "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    \"\"\"Grover search for target 0 works correctly.\"\"\"\n    found, dist = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"\ndef test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"\n    eng, qureg = grover_circuit(3, 5)\n    assert len(qureg) == 3\n    All(Measure) | qureg\n    eng.flush()",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    found, _ = search(3, 0, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
         "detail": "tests.projectq.test_grover",
         "documentation": {}
     },
     {
-        "label": "test_grover_circuit_returns_eng_and_qureg",
+        "label": "test_find_order",
         "kind": 2,
-        "importPath": "tests.projectq.test_grover",
-        "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_grover_circuit_returns_eng_and_qureg() -> None:\n    \"\"\"grover_circuit returns a (engine, qubit register) tuple that can be measured.\"\"\"\n    eng, qureg = grover_circuit(3, 5)\n    assert len(qureg) == 3\n    All(Measure) | qureg\n    eng.flush()\n    bits = [int(q) for q in qureg]\n    val = sum(b * 2**i for i, b in enumerate(bits))\n    # With optimal iterations, we should get the target most of the time\n    assert val == 5, f\"Expected 5 from grover_circuit, got {val}\"",
-        "detail": "tests.projectq.test_grover",
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_order() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_order, _ = find_order(2, 15, aer_sampler, pm, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\n    got_order, _ = find_order(7, 15, aer_sampler, pm, num_shots=10)\n    assert got_order == 4, f\"Got {got_order}, want 4\"\ndef test_find_factor() -> None:\n    aer_sim = AerSimulator()",
+        "detail": "tests.qdislib.shor.test_shor",
         "documentation": {}
     },
     {
-        "label": "test_build_oracle_and_diffuser",
+        "label": "test_find_factor",
         "kind": 2,
-        "importPath": "tests.projectq.test_grover",
-        "description": "tests.projectq.test_grover",
-        "peekOfCode": "def test_build_oracle_and_diffuser() -> None:\n    \"\"\"build_oracle and build_diffuser apply gates in-place without error.\"\"\"\n    from projectq import MainEngine\n    from projectq.ops import H\n    from projectq.backends import Simulator\n    eng = MainEngine(backend=Simulator(), engine_list=[])\n    qureg = eng.allocate_qureg(3)\n    All(H) | qureg\n    build_oracle(3, 5, eng, qureg)\n    build_diffuser(3, eng, qureg)",
-        "detail": "tests.projectq.test_grover",
+        "importPath": "tests.qdislib.shor.test_shor",
+        "description": "tests.qdislib.shor.test_shor",
+        "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    got_factor = find_factor(\n        15, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == 3, f\"Got {got_factor}, want 3\"",
+        "detail": "tests.qdislib.shor.test_shor",
         "documentation": {}
     },
     {
-        "label": "test_find_order_2_mod_15",
+        "label": "make_backend",
         "kind": 2,
-        "importPath": "tests.projectq.test_shor",
-        "description": "tests.projectq.test_shor",
-        "peekOfCode": "def test_find_order_2_mod_15() -> None:\n    \"\"\"Order of 2 in Z_15 is 4 (2^4 = 16 = 15*1 + 1).\"\"\"\n    r, dist = find_order(2, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_order_7_mod_15() -> None:\n    \"\"\"Order of 7 in Z_15 is 4 (7^4 = 2401 = 15*160 + 1).\"\"\"\n    r, dist = find_order(7, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"",
-        "detail": "tests.projectq.test_shor",
+        "importPath": "tests.qdislib.test_grover",
+        "description": "tests.qdislib.test_grover",
+        "peekOfCode": "def make_backend():\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    return aer_sampler, pm\ndef test_grover_search() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"",
+        "detail": "tests.qdislib.test_grover",
         "documentation": {}
     },
     {
-        "label": "test_find_order_7_mod_15",
+        "label": "test_grover_search",
         "kind": 2,
-        "importPath": "tests.projectq.test_shor",
-        "description": "tests.projectq.test_shor",
-        "peekOfCode": "def test_find_order_7_mod_15() -> None:\n    \"\"\"Order of 7 in Z_15 is 4 (7^4 = 2401 = 15*160 + 1).\"\"\"\n    r, dist = find_order(7, 15, num_shots=10)\n    assert r == 4, f\"Expected order 4, got {r}\"\ndef test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"\n    factor = find_factor(15, seed=13)\n    assert factor in [3, 5], f\"Expected 3 or 5, got {factor}\"\ndef test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"",
-        "detail": "tests.projectq.test_shor",
+        "importPath": "tests.qdislib.test_grover",
+        "description": "tests.qdislib.test_grover",
+        "peekOfCode": "def test_grover_search() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, aer_sampler, pm, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)",
+        "detail": "tests.qdislib.test_grover",
         "documentation": {}
     },
     {
-        "label": "test_find_factor_15",
+        "label": "test_grover_search_target_zero",
         "kind": 2,
-        "importPath": "tests.projectq.test_shor",
-        "description": "tests.projectq.test_shor",
-        "peekOfCode": "def test_find_factor_15() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 15.\"\"\"\n    factor = find_factor(15, seed=13)\n    assert factor in [3, 5], f\"Expected 3 or 5, got {factor}\"\ndef test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"\n    factor = find_factor(6)\n    assert factor == 2, f\"Expected 2, got {factor}\"\ndef test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"",
-        "detail": "tests.projectq.test_shor",
-        "documentation": {}
-    },
-    {
-        "label": "test_find_factor_even",
-        "kind": 2,
-        "importPath": "tests.projectq.test_shor",
-        "description": "tests.projectq.test_shor",
-        "peekOfCode": "def test_find_factor_even() -> None:\n    \"\"\"Even numbers are handled classically (factor = 2).\"\"\"\n    factor = find_factor(6)\n    assert factor == 2, f\"Expected 2, got {factor}\"\ndef test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"\n    factor = find_factor(35, seed=7, num_shots_per_trial=20, num_tries=5)\n    assert factor in [5, 7], f\"Expected 5 or 7, got {factor}\"",
-        "detail": "tests.projectq.test_shor",
-        "documentation": {}
-    },
-    {
-        "label": "test_find_factor_35",
-        "kind": 2,
-        "importPath": "tests.projectq.test_shor",
-        "description": "tests.projectq.test_shor",
-        "peekOfCode": "def test_find_factor_35() -> None:\n    \"\"\"Shor's algorithm finds a non-trivial factor of 35.\"\"\"\n    factor = find_factor(35, seed=7, num_shots_per_trial=20, num_tries=5)\n    assert factor in [5, 7], f\"Expected 5 or 7, got {factor}\"",
-        "detail": "tests.projectq.test_shor",
+        "importPath": "tests.qdislib.test_grover",
+        "description": "tests.qdislib.test_grover",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "detail": "tests.qdislib.test_grover",
         "documentation": {}
     },
     {
@@ -1364,6 +1695,33 @@
         "description": "tests.qiskit.shor.test_shor",
         "peekOfCode": "def test_find_factor() -> None:\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)  # Seed the sampler for deterministic test\n    N = 15\n    want_factor = 3\n    got_factor = find_factor(\n        N, aer_sampler, pm, num_tries=1, num_shots_per_trial=1, seed=13\n    )\n    assert got_factor == want_factor, f\"Got {got_factor}, want {want_factor}\"",
         "detail": "tests.qiskit.shor.test_shor",
+        "documentation": {}
+    },
+    {
+        "label": "make_backend",
+        "kind": 2,
+        "importPath": "tests.qiskit.test_grover",
+        "description": "tests.qiskit.test_grover",
+        "peekOfCode": "def make_backend():\n    aer_sim = AerSimulator()\n    pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)\n    aer_sampler = AerSampler(seed=5)\n    return aer_sampler, pm\ndef test_grover_search() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"",
+        "detail": "tests.qiskit.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search",
+        "kind": 2,
+        "importPath": "tests.qiskit.test_grover",
+        "description": "tests.qiskit.test_grover",
+        "peekOfCode": "def test_grover_search() -> None:\n    aer_sampler, pm = make_backend()\n    found, dist = search(3, 5, aer_sampler, pm, num_shots=100)\n    assert found == 5, f\"Expected target 5, got {found}\"\n    assert dist.get(\"101\", 0) > 80, f\"Target probability too low: {dist.get('101', 0)}/100\"\n    found, _ = search(4, 11, aer_sampler, pm, num_shots=100)\n    assert found == 11, f\"Expected target 11, got {found}\"\ndef test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)",
+        "detail": "tests.qiskit.test_grover",
+        "documentation": {}
+    },
+    {
+        "label": "test_grover_search_target_zero",
+        "kind": 2,
+        "importPath": "tests.qiskit.test_grover",
+        "description": "tests.qiskit.test_grover",
+        "peekOfCode": "def test_grover_search_target_zero() -> None:\n    aer_sampler, pm = make_backend()\n    found, _ = search(3, 0, aer_sampler, pm, num_shots=100)\n    assert found == 0, f\"Expected target 0, got {found}\"",
+        "detail": "tests.qiskit.test_grover",
         "documentation": {}
     }
 ]

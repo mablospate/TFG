@@ -11,17 +11,7 @@ from python.cudaq.shor.qft import apply_inverse_qft
 def order_finding_circuit(
     A: int, N: int, precision: int | None = None
 ) -> cudaq.Kernel:
-    """
-    Build circuit to find the order of A in Z_N using phase estimation.
-    Uses a swap-based permutation network for modular exponentiation.
-
-    Args:
-        A: Base integer (must be coprime to N).
-        N: Modulus.
-        precision: Number of qubits for phase estimation. If None, uses 2*ceil(log2(N)).
-    Returns:
-        cudaq.Kernel: Order finding circuit.
-    """
+    """Build phase-estimation circuit for order finding using a swap-based permutation network."""
     if math.gcd(A, N) > 1:
         print(f"Error: gcd({A},{N}) > 1")
         return None
@@ -37,18 +27,28 @@ def order_finding_circuit(
     ctrl_qubits = [qubits[i] for i in range(m)]
     tgt_qubits = [qubits[m + i] for i in range(n)]
 
+    # cudaq uses big-endian qubit ordering: tgt_qubits[0] is the MSB (bit n-1).
+    # The permutation algorithm treats tgt_qubits[k] as bit k (LSB convention).
+    # Reverse the qubit list so that index k maps to bit k of the integer.
+    tgt_qubits_lsb = list(reversed(tgt_qubits))
+
     # Prepare control register in superposition
     for i in range(m):
         kernel.h(ctrl_qubits[i])
 
-    # Prepare target register in |1> state
-    kernel.x(tgt_qubits[0])
+    # Prepare target register in |1> state: set bit 0 (LSB) = tgt_qubits_lsb[0]
+    kernel.x(tgt_qubits_lsb[0])
 
-    # Controlled modular exponentiation
+    # Controlled modular exponentiation.
+    # ctrl_qubits[0] is the MSB in cudaq's output bitstring, so it should control
+    # the highest power A^(2^(m-1)). We iterate i from 0 to m-1 assigning
+    # ctrl_qubits[i] to A^(2^(m-1-i)) so that after the IQFT the MSB of the
+    # phase estimate lands in ctrl_qubits[0].
     for i in range(m):
-        perm = build_mod_exp_permutation(A, N, 2**i)
+        power = 2 ** (m - 1 - i)
+        perm = build_mod_exp_permutation(A, N, power)
         if perm:
-            controlled_swap_permutation(kernel, ctrl_qubits[i], tgt_qubits, perm)
+            controlled_swap_permutation(kernel, ctrl_qubits[i], tgt_qubits_lsb, perm)
 
     # Apply inverse QFT on control register
     apply_inverse_qft(kernel, ctrl_qubits, m)
@@ -72,6 +72,25 @@ def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
     Returns:
         int: The order r if found, 0 otherwise.
     """
+    def _reduce_to_min_order(r: int, A: int, N: int) -> int:
+        """Reduce r to the minimal order by dividing out prime factors."""
+        # Collect all prime factors (with repetition) of r
+        temp = r
+        primes = []
+        d = 2
+        while d * d <= temp:
+            while temp % d == 0:
+                primes.append(d)
+                temp //= d
+            d += 1
+        if temp > 1:
+            primes.append(temp)
+        # Try to divide r by each prime factor and still satisfy A^(r/p) ≡ 1 mod N
+        for p in primes:
+            if r % p == 0 and pow(A, r // p, N) == 1:
+                r = r // p
+        return r
+
     sorted_outputs = sorted(dist, key=dist.get, reverse=True)
     for i in range(min(10, len(sorted_outputs))):
         bitstring = sorted_outputs[i]
@@ -80,6 +99,7 @@ def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
         x = int(bitstring, 2)
         r = Fraction(x / 2**precision).limit_denominator(N - 1).denominator
         if pow(A, r, N) == 1:
+            r = _reduce_to_min_order(r, A, N)
             print(
                 f"Found value {r} for the order of {A} in Z_{N}. If running on "
                 f"noisy quantum hardware, {r} might be a multiple of the order instead."
@@ -122,12 +142,13 @@ def find_order(
     print(f"Start search for the order of {A} in Z_{N}")
     result = cudaq.sample(kernel, shots_count=num_shots)
 
-    n = math.ceil(math.log2(N))
     dist = {}
     for bitstring, count in result.items():
+        # cudaq returns qubits in order: qubit 0 is leftmost (MSB).
+        # ctrl_qubits[0] holds the most significant phase bit after inverse QFT.
+        # Take the first m characters directly — no reversal needed.
         ctrl_bits = bitstring[:m] if len(bitstring) > m else bitstring
-        key = ctrl_bits[::-1]
-        dist[key] = dist.get(key, 0) + count
+        dist[ctrl_bits] = dist.get(ctrl_bits, 0) + count
 
     r = _get_order_from_dist(dist, A, N, precision=m)
     return r, dist
