@@ -27,33 +27,23 @@ def order_finding_circuit(
     ctrl_qubits = [qubits[i] for i in range(m)]
     tgt_qubits = [qubits[m + i] for i in range(n)]
 
-    # cudaq uses big-endian qubit ordering: tgt_qubits[0] is the MSB (bit n-1).
-    # The permutation algorithm treats tgt_qubits[k] as bit k (LSB convention).
-    # Reverse the qubit list so that index k maps to bit k of the integer.
+    # cudaq allocates qubits big-endian (index 0 = MSB); reverse so index k maps to bit k for the permutation.
     tgt_qubits_lsb = list(reversed(tgt_qubits))
 
-    # Prepare control register in superposition
     for i in range(m):
         kernel.h(ctrl_qubits[i])
 
-    # Prepare target register in |1> state: set bit 0 (LSB) = tgt_qubits_lsb[0]
     kernel.x(tgt_qubits_lsb[0])
 
-    # Controlled modular exponentiation.
-    # ctrl_qubits[0] is the MSB in cudaq's output bitstring, so it should control
-    # the highest power A^(2^(m-1)). We iterate i from 0 to m-1 assigning
-    # ctrl_qubits[i] to A^(2^(m-1-i)) so that after the IQFT the MSB of the
-    # phase estimate lands in ctrl_qubits[0].
+    # ctrl_qubits[0] is the MSB in the output bitstring, so it must control A^(2^(m-1)) for the IQFT to reconstruct the phase correctly.
     for i in range(m):
         power = 2 ** (m - 1 - i)
         perm = build_mod_exp_permutation(A, N, power)
         if perm:
             controlled_swap_permutation(kernel, ctrl_qubits[i], tgt_qubits_lsb, perm)
 
-    # Apply inverse QFT on control register
     apply_inverse_qft(kernel, ctrl_qubits, m)
 
-    # Measure control register
     for i in range(m):
         kernel.mz(ctrl_qubits[i])
 
@@ -61,20 +51,8 @@ def order_finding_circuit(
 
 
 def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
-    """
-    Extract the order r from measurement distribution using continued fractions.
-
-    Args:
-        dist: Measurement distribution {bitstring: count}.
-        A: Base integer.
-        N: Modulus.
-        precision: Number of precision qubits used.
-    Returns:
-        int: The order r if found, 0 otherwise.
-    """
+    """Extract the order r from a measurement distribution using continued fractions."""
     def _reduce_to_min_order(r: int, A: int, N: int) -> int:
-        """Reduce r to the minimal order by dividing out prime factors."""
-        # Collect all prime factors (with repetition) of r
         temp = r
         primes = []
         d = 2
@@ -85,7 +63,6 @@ def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
             d += 1
         if temp > 1:
             primes.append(temp)
-        # Try to divide r by each prime factor and still satisfy A^(r/p) ≡ 1 mod N
         for p in primes:
             if r % p == 0 and pow(A, r // p, N) == 1:
                 r = r // p
@@ -117,19 +94,7 @@ def find_order(
     precision: int | None = None,
     num_shots: int = 10,
 ) -> tuple[int, dict[str, int]]:
-    """
-    Find the order of the integer A in Z_N on a CUDA-Q simulator.
-
-    Args:
-        A: Base integer.
-        N: Modulus.
-        simulator: CUDA-Q target name (e.g. "qpp-cpu", "nvidia"). If None, uses default.
-        pass_manager: Unused in CUDA-Q. Kept for interface compatibility.
-        precision: Number of qubits for phase estimation.
-        num_shots: Number of circuit sampling runs. Default value: 10.
-    Returns:
-        tuple[int, dict[str, int]]: Order (or 0) and measurement distribution.
-    """
+    """Run the order-finding circuit on a CUDA-Q target and return the order with its measurement distribution."""
     if simulator is not None:
         cudaq.set_target(simulator)
 
@@ -144,9 +109,7 @@ def find_order(
 
     dist = {}
     for bitstring, count in result.items():
-        # cudaq returns qubits in order: qubit 0 is leftmost (MSB).
-        # ctrl_qubits[0] holds the most significant phase bit after inverse QFT.
-        # Take the first m characters directly — no reversal needed.
+        # cudaq bitstrings are MSB-first; ctrl_qubits[0] is already the MSB, so slice directly without reversal.
         ctrl_bits = bitstring[:m] if len(bitstring) > m else bitstring
         dist[ctrl_bits] = dist.get(ctrl_bits, 0) + count
 
@@ -162,19 +125,7 @@ def find_factor(
     num_shots_per_trial: int = 10,
     seed: int | None = None,
 ) -> int:
-    """
-    Find a factor of N using Shor's algorithm.
-
-    Args:
-        N: Integer to factor.
-        simulator: CUDA-Q target name. If None, uses default.
-        pass_manager: Unused in CUDA-Q. Kept for interface compatibility.
-        num_tries: Number of trials.
-        num_shots_per_trial: Number of order finding circuit runs per trial.
-        seed: Random seed.
-    Returns:
-        int: Found factor or 1 if no success.
-    """
+    """Factor N using Shor's algorithm; returns 1 if no non-trivial factor is found within num_tries."""
     if N % 2 == 0:
         print("Even number")
         return 2
