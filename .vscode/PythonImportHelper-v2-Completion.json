@@ -746,6 +746,42 @@
         "documentation": {}
     },
     {
+        "label": "all_unique",
+        "kind": 2,
+        "importPath": "memory.UPM_Report_Template.build.sources.snippets",
+        "description": "memory.UPM_Report_Template.build.sources.snippets",
+        "peekOfCode": "def all_unique(l):\n    return len(l) == len(set(l))\ndef is_palindrome(l):\n    return l == l[::-1]",
+        "detail": "memory.UPM_Report_Template.build.sources.snippets",
+        "documentation": {}
+    },
+    {
+        "label": "is_palindrome",
+        "kind": 2,
+        "importPath": "memory.UPM_Report_Template.build.sources.snippets",
+        "description": "memory.UPM_Report_Template.build.sources.snippets",
+        "peekOfCode": "def is_palindrome(l):\n    return l == l[::-1]",
+        "detail": "memory.UPM_Report_Template.build.sources.snippets",
+        "documentation": {}
+    },
+    {
+        "label": "all_unique",
+        "kind": 2,
+        "importPath": "memory.UPM_Report_Template.sources.snippets",
+        "description": "memory.UPM_Report_Template.sources.snippets",
+        "peekOfCode": "def all_unique(l):\n    return len(l) == len(set(l))\ndef is_palindrome(l):\n    return l == l[::-1]",
+        "detail": "memory.UPM_Report_Template.sources.snippets",
+        "documentation": {}
+    },
+    {
+        "label": "is_palindrome",
+        "kind": 2,
+        "importPath": "memory.UPM_Report_Template.sources.snippets",
+        "description": "memory.UPM_Report_Template.sources.snippets",
+        "peekOfCode": "def is_palindrome(l):\n    return l == l[::-1]",
+        "detail": "memory.UPM_Report_Template.sources.snippets",
+        "documentation": {}
+    },
+    {
         "label": "ModularExp",
         "kind": 6,
         "importPath": "python.cirq.shor.modular_exp",
