@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir uv
 
 # Python deps: x86only extra for amd64 (projectq + cudaq), base only for arm64
 COPY pyproject.toml uv.lock ./
-RUN if [ "$TARGETARCH" = "amd64" ] || [ "$(uname -m)" = "x86_64" ]; then \
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv sync --no-dev --extra x86only; \
     else \
         uv sync --no-dev; \
