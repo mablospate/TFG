@@ -1,3 +1,3 @@
 fn main() {
-    println!("q1tsim - grover: TODO");
+    q1tsim_bench::grover::run();
 }

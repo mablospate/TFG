@@ -6,3 +6,13 @@ members = [
     "rust/q1tsim",
 ]
 resolver = "2"
+
+# ocl-core 0.9.0 (transitive dep of qcgpu 0.1.0) has three lines that the
+# modern Rust compiler rejects: a `*mut c_void as fn(...)` cast and two
+# dereferences of a function pointer. We vendor a patched copy locally so the
+# qcgpu crate at least *compiles* on modern toolchains. OpenCL is still required
+# at runtime, but on platforms where OpenCL is missing or deprecated (e.g.
+# macOS) the binaries gracefully report the error in their JSON output.
+[patch.crates-io]
+ocl-core = { path = "rust/qcgpu/vendor/ocl-core" }
+ocl = { path = "rust/qcgpu/vendor/ocl" }

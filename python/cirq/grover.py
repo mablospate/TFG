@@ -129,8 +129,10 @@ def search(
                                     distribution of measurement outcomes as
                                     {bitstring: count}.
     """
-    iters = num_iterations if num_iterations is not None else math.floor(
-        math.pi / 4 * math.sqrt(2**n)
+    iters = (
+        num_iterations
+        if num_iterations is not None
+        else math.floor(math.pi / 4 * math.sqrt(2**n))
     )
 
     qc = grover_circuit(n, target, num_iterations=iters)

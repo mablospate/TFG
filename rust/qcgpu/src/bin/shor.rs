@@ -1,3 +1,5 @@
+//! Thin binary wrapper. Implementation lives in `qcgpu_bench::shor`.
+
 fn main() {
-    println!("qcgpu - shor: TODO");
+    qcgpu_bench::shor::run();
 }

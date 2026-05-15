@@ -4,13 +4,14 @@ from fractions import Fraction
 
 import cudaq
 
-from python.cudaq.shor.permutation import build_mod_exp_permutation, controlled_swap_permutation
+from python.cudaq.shor.permutation import (
+    build_mod_exp_permutation,
+    controlled_swap_permutation,
+)
 from python.cudaq.shor.qft import apply_inverse_qft
 
 
-def order_finding_circuit(
-    A: int, N: int, precision: int | None = None
-) -> cudaq.Kernel:
+def order_finding_circuit(A: int, N: int, precision: int | None = None) -> cudaq.Kernel:
     """Build phase-estimation circuit for order finding using a swap-based permutation network."""
     if math.gcd(A, N) > 1:
         print(f"Error: gcd({A},{N}) > 1")
@@ -52,6 +53,7 @@ def order_finding_circuit(
 
 def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
     """Extract the order r from a measurement distribution using continued fractions."""
+
     def _reduce_to_min_order(r: int, A: int, N: int) -> int:
         temp = r
         primes = []
@@ -71,7 +73,7 @@ def _get_order_from_dist(dist: dict, A: int, N: int, precision: int) -> int:
     sorted_outputs = sorted(dist, key=dist.get, reverse=True)
     for i in range(min(10, len(sorted_outputs))):
         bitstring = sorted_outputs[i]
-        if all(c == '0' for c in bitstring):
+        if all(c == "0" for c in bitstring):
             continue
         x = int(bitstring, 2)
         r = Fraction(x / 2**precision).limit_denominator(N - 1).denominator
@@ -148,7 +150,10 @@ def find_factor(
             print(f"Lucky guess of {a}, found factor {d}")
             return d
         r, _ = find_order(
-            a, N, simulator=simulator, pass_manager=pass_manager,
+            a,
+            N,
+            simulator=simulator,
+            pass_manager=pass_manager,
             num_shots=num_shots_per_trial,
         )
         if r == 0:

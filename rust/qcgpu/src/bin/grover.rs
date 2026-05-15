@@ -1,3 +1,5 @@
+//! Thin binary wrapper. Implementation lives in `qcgpu_bench::grover`.
+
 fn main() {
-    println!("qcgpu - grover: TODO");
+    qcgpu_bench::grover::run();
 }

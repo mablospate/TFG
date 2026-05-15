@@ -1,3 +1,3 @@
 fn main() {
-    println!("quantrs - grover: TODO");
+    quantrs_bench::grover::run();
 }

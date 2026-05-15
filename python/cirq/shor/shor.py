@@ -7,9 +7,7 @@ import cirq
 from python.cirq.shor.modular_exp import ModularExp
 
 
-def order_finding_circuit(
-    A: int, N: int, precision: int | None = None
-) -> cirq.Circuit:
+def order_finding_circuit(A: int, N: int, precision: int | None = None) -> cirq.Circuit:
     """
     Build circuit to find the order of A in Z_N using quantum phase estimation
     with modular exponentiation.
@@ -59,9 +57,7 @@ def order_finding_circuit(
     return circuit
 
 
-def _get_order_from_dist(
-    dist: dict[int, int], A: int, N: int, precision: int
-) -> int:
+def _get_order_from_dist(dist: dict[int, int], A: int, N: int, precision: int) -> int:
     """
     Classical post-processing: extract the order r from measurement outcomes
     using continued fractions.
@@ -182,7 +178,11 @@ def find_factor(
             return d
 
         r, _ = find_order(
-            a, N, simulator, pass_manager, num_shots=num_shots_per_trial,
+            a,
+            N,
+            simulator,
+            pass_manager,
+            num_shots=num_shots_per_trial,
         )
         if r == 0:
             i += 1

@@ -1,3 +1,3 @@
 fn main() {
-    println!("quantrs - shor: TODO");
+    quantrs_bench::shor::run();
 }

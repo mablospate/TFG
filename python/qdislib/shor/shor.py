@@ -8,7 +8,6 @@ not installed the module falls back to direct Qiskit-Aer simulation.
 
 import math
 import random
-from fractions import Fraction
 
 from python.qiskit.shor.shor import (
     order_finding_circuit as _qiskit_order_finding_circuit,
@@ -26,6 +25,7 @@ order_finding_circuit: callable = _qiskit_order_finding_circuit
 # Execution helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_backend_defaults():
     """Create a default AerSimulator backend, sampler and pass manager."""
     from qiskit_aer import AerSimulator
@@ -38,7 +38,9 @@ def _make_backend_defaults():
     return backend, sampler, pm
 
 
-def _run_circuit(qc, sampler, pass_manager, num_shots: int, register_name: str) -> dict[str, int]:
+def _run_circuit(
+    qc, sampler, pass_manager, num_shots: int, register_name: str
+) -> dict[str, int]:
     """Transpile, execute and return the counts distribution."""
     qc_isa = pass_manager.run(qc)
     result = sampler.run([qc_isa], shots=num_shots).result()[0]
@@ -49,6 +51,7 @@ def _run_circuit(qc, sampler, pass_manager, num_shots: int, register_name: str) 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def find_order(
     A: int,
@@ -83,7 +86,7 @@ def find_order(
 
     # --- Try QDisLib path ---------------------------------------------------
     try:
-        import qdislib  # noqa: F401
+        import Qdislib  # noqa: F401
 
         _, default_sampler, default_pm = _make_backend_defaults()
         _sampler = sampler if sampler is not None else default_sampler

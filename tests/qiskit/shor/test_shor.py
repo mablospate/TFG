@@ -49,6 +49,7 @@ def test_find_factor() -> None:
     )
 
     assert got_factor == want_factor, f"Got {got_factor}, want {want_factor}"
+    assert N % got_factor == 0 and 1 < got_factor < N
 
 
 def test_find_factor_even() -> None:
@@ -74,7 +75,10 @@ def test_find_factor_multiple_tries() -> None:
     got_factor = find_factor(
         15, aer_sampler, pm, num_tries=3, num_shots_per_trial=5, seed=42
     )
-    assert got_factor in (3, 5), f"Expected a non-trivial factor of 15, got {got_factor}"
+    assert got_factor in (3, 5), (
+        f"Expected a non-trivial factor of 15, got {got_factor}"
+    )
+    assert 15 % got_factor == 0 and 1 < got_factor < 15
 
 
 def test_order_finding_circuit_gcd_not_one() -> None:

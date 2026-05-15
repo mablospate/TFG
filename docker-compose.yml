@@ -1,0 +1,7 @@
+services:
+  benchmark:
+    image: ghcr.io/mablospate/tfg-bench
+    volumes:
+      - ./results:/app/results
+    stdin_open: true
+    tty: true

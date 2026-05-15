@@ -9,9 +9,7 @@ from projectq.backends import Simulator
 from projectq.libs.math import MultiplyByConstantModN
 
 
-def _run_order_finding_once(
-    A: int, N: int, precision: int
-) -> str:
+def _run_order_finding_once(A: int, N: int, precision: int) -> str:
     """
     Run a single shot of the order-finding circuit using semi-classical QFT.
 

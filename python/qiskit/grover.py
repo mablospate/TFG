@@ -130,21 +130,23 @@ def search(
                                     outcome as an integer. The second element is the
                                     distribution of measurement outcomes.
     """
-    iters = num_iterations if num_iterations is not None else math.floor(
-        math.pi / 4 * math.sqrt(2**n)
+    iters = (
+        num_iterations
+        if num_iterations is not None
+        else math.floor(math.pi / 4 * math.sqrt(2**n))
     )
 
     qc = grover_circuit(n, target, num_iterations=iters)
     qc_isa = pass_manager.run(qc)
 
     print(f"Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)")
-    dist = (
-        sampler.run([qc_isa], shots=num_shots).result()[0].data.result.get_counts()
-    )
+    dist = sampler.run([qc_isa], shots=num_shots).result()[0].data.result.get_counts()
 
     found = int(max(dist, key=dist.get), 2)
     if found == target:
-        print(f"Found target state |{target}> with probability {dist[max(dist, key=dist.get)] / num_shots:.2%}")
+        print(
+            f"Found target state |{target}> with probability {dist[max(dist, key=dist.get)] / num_shots:.2%}"
+        )
     else:
         print(f"Most frequent state was |{found}>, expected |{target}>")
 

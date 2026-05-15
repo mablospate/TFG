@@ -3,4 +3,23 @@ name = "quantrs-bench"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "quantrs2-grover"
+path = "src/bin/grover.rs"
+
+[[bin]]
+name = "quantrs2-shor"
+path = "src/bin/shor.rs"
+
 [dependencies]
+quantrs2 = "0.1"
+quantrs2-circuit = "0.1"
+quantrs2-sim = "0.1"
+quantrs2-core = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+num-integer = "0.1"
+num-rational = "0.4"
+num-traits = "0.2"
+rand = "0.8"

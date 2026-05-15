@@ -1,3 +1,3 @@
 fn main() {
-    println!("q1tsim - shor: TODO");
+    q1tsim_bench::shor::run();
 }

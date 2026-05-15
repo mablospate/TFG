@@ -8,7 +8,6 @@ not installed the module falls back to direct Qiskit-Aer simulation.
 
 import math
 
-from qiskit.circuit import QuantumCircuit
 
 from python.qiskit.grover import (
     build_oracle as _qiskit_build_oracle,
@@ -28,6 +27,7 @@ grover_circuit: callable = _qiskit_grover_circuit
 # ---------------------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------------------
+
 
 def search(
     n: int,
@@ -63,26 +63,30 @@ def search(
 
     # --- Try QDisLib path ---------------------------------------------------
     try:
-        import qdislib  # noqa: F401
+        import Qdislib  # noqa: F401
         from qiskit_aer import AerSimulator
         from qiskit_aer.primitives import SamplerV2 as AerSampler
         from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
         backend = AerSimulator()
-        _pm = pass_manager if pass_manager is not None else generate_preset_pass_manager(backend=backend)
+        _pm = (
+            pass_manager
+            if pass_manager is not None
+            else generate_preset_pass_manager(backend=backend)
+        )
         _sampler = sampler if sampler is not None else AerSampler()
 
         qc_isa = _pm.run(qc)
 
-        print(f"[QDisLib] Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)")
+        print(
+            f"[QDisLib] Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)"
+        )
         # Placeholder: use QDisLib cutting + execution API here.
         # For now delegate to the sampler directly; the circuit was built by
         # QDisLib-compatible Qiskit and would be processed by QDisLib's
         # cutting/execution pipeline in a production setting.
         dist = (
-            _sampler.run([qc_isa], shots=num_shots)
-            .result()[0]
-            .data.result.get_counts()
+            _sampler.run([qc_isa], shots=num_shots).result()[0].data.result.get_counts()
         )
     except ImportError:
         # --- Fallback: direct Qiskit-Aer execution --------------------------
@@ -91,16 +95,20 @@ def search(
         from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
         backend = AerSimulator()
-        _pm = pass_manager if pass_manager is not None else generate_preset_pass_manager(backend=backend)
+        _pm = (
+            pass_manager
+            if pass_manager is not None
+            else generate_preset_pass_manager(backend=backend)
+        )
         _sampler = sampler if sampler is not None else AerSampler()
 
         qc_isa = _pm.run(qc)
 
-        print(f"[QDisLib fallback] Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)")
+        print(
+            f"[QDisLib fallback] Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)"
+        )
         dist = (
-            _sampler.run([qc_isa], shots=num_shots)
-            .result()[0]
-            .data.result.get_counts()
+            _sampler.run([qc_isa], shots=num_shots).result()[0].data.result.get_counts()
         )
 
     found = int(max(dist, key=dist.get), 2)

@@ -3,7 +3,7 @@ name = "tfg"
 version = "0.1.0"
 description = "Quantum computing library benchmarks"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "numpy==2.2.4",
     "scipy==1.15.2",
@@ -14,14 +14,25 @@ dependencies = [
     "sympy==1.13.3",
     "pytest>=8.3.5",
     "cirq>=1.6.1",
-    "cudaq>=0.14.0",
+    "psutil>=5.9",
+    "qdislib>=1.0.0",
 ]
 
 [project.optional-dependencies]
+# x86_64-only: no manylinux_aarch64 wheels on PyPI (verified 2026-05-15)
+x86only = [
+    "projectq==0.8.0",
+    "cudaq>=0.14.0",
+]
+# NVIDIA GPU acceleration (x86_64 only, requires CUDA 13)
+gpu = [
+    "cuda-quantum-cu13==0.14.0",
+]
 dev = [
     "pytest==8.3.5",
     "ipykernel==6.29.5",
     "ipython==9.2.0",
+    "ruff>=0.9",
 ]
 
 [build-system]
@@ -34,3 +45,14 @@ include = ["python*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+exclude = ["memory/"]
+
+[tool.ruff.lint]
+per-file-ignores = {"tests/**/*.py" = ["E402"]}
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+]

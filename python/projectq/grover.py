@@ -63,25 +63,24 @@ def build_diffuser(n: int, eng, qureg) -> None:
     All(H) | qureg
 
 
-def grover_circuit(
-    n: int, target: int, num_iterations: int | None = None
-) -> tuple:
+def grover_circuit(n: int, target: int, num_iterations: int | None = None) -> None:
     """
-    Build and apply the full Grover search circuit for n qubits searching for
-    state |target>. Uses floor(pi/4 * sqrt(2^n)) iterations by default, as per
-    Grover (1996).
+    Build, apply, and teardown the full Grover search circuit for n qubits
+    searching for state |target>. Uses floor(pi/4 * sqrt(2^n)) iterations by
+    default, as per Grover (1996).
 
-    In ProjectQ, gates are applied imperatively. This function creates a fresh
-    engine and qubit register, applies all gates (superposition, oracle+diffuser
-    iterations), but does NOT measure. Measurement is left to the caller.
+    In ProjectQ, gates are applied imperatively and qubits must be measured
+    before the engine is released. This function creates a fresh engine, applies
+    all gates (superposition, oracle+diffuser iterations), measures all qubits,
+    and flushes — completing the full engine lifecycle.
+
+    Used by the benchmarking harness to measure circuit-build time only
+    (the measurement result is discarded).
 
     Args:
         n: Number of qubits.
         target: Integer representation of the target state (0 <= target < 2^n).
         num_iterations: Number of Grover iterations. If None, uses the optimal value.
-    Returns:
-        tuple: (eng, qureg) — the engine and qubit register after applying
-               all Grover operations (before measurement).
     """
     if num_iterations is None:
         num_iterations = math.floor(math.pi / 4 * math.sqrt(2**n))
@@ -97,7 +96,11 @@ def grover_circuit(
         build_oracle(n, target, eng, qureg)
         build_diffuser(n, eng, qureg)
 
-    return eng, qureg
+    # Measure and flush to complete the engine lifecycle before the engine
+    # goes out of scope. Without this, ProjectQ raises RuntimeError on GC
+    # for each unmeasured qubit.
+    All(Measure) | qureg
+    eng.flush()
 
 
 def search(
@@ -128,8 +131,10 @@ def search(
                                     outcome as an integer. The second element is the
                                     distribution of measurement outcomes.
     """
-    iters = num_iterations if num_iterations is not None else math.floor(
-        math.pi / 4 * math.sqrt(2**n)
+    iters = (
+        num_iterations
+        if num_iterations is not None
+        else math.floor(math.pi / 4 * math.sqrt(2**n))
     )
 
     print(f"Start Grover search for |{target}> in {n}-qubit space ({iters} iterations)")

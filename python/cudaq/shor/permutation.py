@@ -21,7 +21,9 @@ def _controlled_single_bit_transposition(
     """
     n = len(target_qubits)
     diff = a ^ b
-    assert diff != 0 and (diff & (diff - 1)) == 0, "a and b must differ in exactly one bit"
+    assert diff != 0 and (diff & (diff - 1)) == 0, (
+        "a and b must differ in exactly one bit"
+    )
     flip_bit = diff.bit_length() - 1
 
     other_positions = [i for i in range(n) if i != flip_bit]
@@ -105,9 +107,7 @@ def controlled_swap_permutation(
             continue
 
         for idx in range(1, len(cycle)):
-            controlled_transposition(
-                kernel, ctrl, target_qubits, cycle[0], cycle[idx]
-            )
+            controlled_transposition(kernel, ctrl, target_qubits, cycle[0], cycle[idx])
 
 
 def build_mod_exp_permutation(A: int, N: int, power: int) -> dict[int, int]:
