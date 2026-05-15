@@ -1,5 +1,5 @@
 # ── Stage 1: Rust builder ────────────────────────────────────────────────────
-FROM rust:1.78-slim-bookworm AS rust-builder
+FROM rust:1.85-slim-bookworm AS rust-builder
 WORKDIR /build
 # OpenCL headers for qcgpu compilation (runtime OpenCL provided by NVIDIA driver)
 RUN apt-get update && apt-get install -y ocl-icd-opencl-dev clang pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
