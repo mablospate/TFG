@@ -4,6 +4,8 @@ ARG TARGETARCH=amd64
 # ── Stage 1: Rust builder — always runs natively on build machine ─────────────
 FROM --platform=$BUILDPLATFORM rust:slim-bookworm AS rust-builder
 ARG TARGETARCH
+# Limit parallel codegen units to reduce peak memory during compilation
+ENV CARGO_BUILD_JOBS=4
 WORKDIR /build
 
 # arm64: install cross-compilation toolchain; amd64: only OpenCL headers (for qcgpu)
@@ -48,6 +50,7 @@ RUN mkdir -p /binaries && \
 # ── Stage 2a: amd64 base — CUDA runtime (enables cudaq-nvidia + qcgpu OpenCL) ─
 FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y software-properties-common curl && \
     add-apt-repository ppa:deadsnakes/ppa -y && \
@@ -69,12 +72,12 @@ ARG TARGETARCH
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-# amd64: all extras (projectq + cudaq-cpu + cuda-quantum-cu13 GPU)
-# arm64: base only (qiskit, cirq, qdislib)
+# amd64: install dependency extras only; project source is copied in runtime
+# arm64: base dependencies only
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        uv sync --no-dev --extra x86only --extra gpu --python python3.12; \
+        uv sync --no-dev --no-install-project --extra x86only --extra gpu --python python3.12; \
     else \
-        uv sync --no-dev; \
+        uv sync --no-dev --no-install-project; \
     fi
 
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────

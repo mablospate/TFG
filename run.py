@@ -57,11 +57,6 @@ def _check_cirq() -> bool:
     return True
 
 
-def _check_projectq() -> bool:
-    import projectq  # noqa: F401
-
-    return True
-
 
 def _check_cudaq() -> bool:
     import cudaq  # noqa: F401
@@ -75,7 +70,7 @@ def _check_qdislib() -> bool:
     return True
 
 
-FRAMEWORKS: list[str] = ["qiskit", "cirq", "projectq", "cudaq", "qdislib"]
+FRAMEWORKS: list[str] = ["qiskit", "cirq", "cudaq", "qdislib"]
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +105,6 @@ _PLATFORM_EXCLUSIONS: dict[tuple[str, str], set[str]] = {
     ("macos", "x86_64"): {"cudaq"},  # no wheels for Intel Mac
     ("windows", "x86_64"): {
         "cudaq",
-        "projectq",
         "qip",
     },  # no native support / no wheel / no CI
 }
@@ -132,26 +126,6 @@ class PlatformConfig:
     quantrs2_gpu: bool = False
     warnings: list[tuple[str, str, list[str]]] = dataclasses.field(default_factory=list)
 
-
-# Reusable warning bodies (verbatim copies of the text emitted by
-# print_platform_warnings, so --platform output is identical to runtime output).
-_PROJECTQ_WARNING_X86: tuple[str, str, list[str]] = (
-    "projectq",
-    "rendimiento severamente degradado en todas las plataformas",
-    [
-        "Causa: cada shot reconstruye un MainEngine + Simulator desde cero",
-        "       (asignación de qubits, aplicación de puertas, medición, flush × N shots).",
-        "Medición empírica (n=5, 1024 shots, macOS arm64):",
-        "  projectq ~10 994 ms  vs  qiskit ~14 ms  →  ~793× más lento.",
-        "Sin SIMD ARM (Neon/SVE): la extensión C++ solo vectoriza con AVX2 en x86_64.",
-        "Proyecto abandonado desde oct 2022; sin roadmap de optimización.",
-        "Para benchmarks: el wall_time no es comparable — usar JSD para comparar fidelidad.",
-    ],
-)
-
-# Same headline / body — the existing print_platform_warnings uses the same text
-# regardless of arch; alias kept for readability at the call site.
-_PROJECTQ_WARNING_ARM = _PROJECTQ_WARNING_X86
 
 
 def _cudaq_cpu_warning(os_name: str, arch: str) -> tuple[str, str, list[str]]:
@@ -250,7 +224,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "projectq",
             "cudaq",
             "qdislib",
             "q1tsim",
@@ -260,7 +233,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=True,
         warnings=[
-            _PROJECTQ_WARNING_ARM,
             _cudaq_cpu_warning("macos", "arm64"),
             _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
@@ -270,7 +242,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "projectq",
             "qdislib",
             "q1tsim",
             "quantr",
@@ -279,7 +250,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=True,
         warnings=[
-            _PROJECTQ_WARNING_X86,
             _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
@@ -288,7 +258,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "projectq",
             "cudaq",
             "qdislib",
             "q1tsim",
@@ -299,7 +268,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="nvidia",
         quantrs2_gpu=True,
         warnings=[
-            _PROJECTQ_WARNING_X86,
             _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
         ],
@@ -308,7 +276,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "projectq",
             "cudaq",
             "qdislib",
             "q1tsim",
@@ -318,7 +285,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=False,
         warnings=[
-            _PROJECTQ_WARNING_X86,
             _cudaq_cpu_warning("linux", "x86_64"),
             _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
@@ -538,19 +504,6 @@ def _benchmark_cirq(config: BenchmarkConfig):
     return startup_ms, search_call, build_call
 
 
-def _benchmark_projectq(config: BenchmarkConfig):
-    from python.projectq.grover import search, grover_circuit
-
-    startup_ms = 0.0
-
-    def search_call(n: int, target: int, num_shots: int):
-        return search(n, target, num_shots=num_shots)
-
-    def build_call(n: int, target: int):
-        return grover_circuit(n, target)
-
-    return startup_ms, search_call, build_call
-
 
 def _benchmark_cudaq(
     config: BenchmarkConfig, hw: HardwareInfo, cudaq_target: str = "qpp-cpu"
@@ -757,8 +710,6 @@ def _setup_framework(
         return _benchmark_qiskit(config)
     if name == "cirq":
         return _benchmark_cirq(config)
-    if name == "projectq":
-        return _benchmark_projectq(config)
     if name == "cudaq":
         return _benchmark_cudaq(config, hw, cudaq_target=cudaq_target)
     if name == "qdislib":

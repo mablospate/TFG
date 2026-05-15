@@ -1544,19 +1544,6 @@ wheels = [
 ]
 
 [[package]]
-name = "projectq"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "requests" },
-    { name = "scipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/30/88/48c8347cadf6afb7f329e7c06d30880159e2a50b6e8a643c7667c26ffaf0/projectq-0.8.0.tar.gz", hash = "sha256:0bcd242afabe947ac4737dffab1de62628b84125ee6ccb3ec23bd4f1d082ec60", size = 433667, upload-time = "2022-10-18T16:03:17.779Z" }
-
-[[package]]
 name = "prompt-toolkit"
 version = "3.0.51"
 source = { registry = "https://pypi.org/simple" }
@@ -2451,7 +2438,6 @@ gpu = [
 ]
 x86only = [
     { name = "cudaq" },
-    { name = "projectq" },
 ]
 
 [package.dev-dependencies]
@@ -2467,7 +2453,6 @@ requires-dist = [
     { name = "ipykernel", marker = "extra == 'dev'", specifier = "==6.29.5" },
     { name = "ipython", marker = "extra == 'dev'", specifier = "==9.2.0" },
     { name = "numpy", specifier = "==2.2.4" },
-    { name = "projectq", marker = "extra == 'x86only'", specifier = "==0.8.0" },
     { name = "psutil", specifier = ">=5.9" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==8.3.5" },
