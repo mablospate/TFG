@@ -8,18 +8,30 @@ ARG TARGETARCH
 ENV CARGO_BUILD_JOBS=4
 WORKDIR /build
 
-# arm64: install cross-compilation toolchain; amd64: only OpenCL headers (for qcgpu)
+# arm64: install cross-compilation toolchain + arm64 OpenSSL headers (for crates using openssl-sys)
 RUN apt-get update && \
     apt-get install -y ocl-icd-opencl-dev clang pkg-config libssl-dev \
         $([ "$TARGETARCH" = "arm64" ] && echo "gcc-aarch64-linux-gnu" || true) && \
     rm -rf /var/lib/apt/lists/*
 
-# arm64: register Rust target + configure cross-linker
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        dpkg --add-architecture arm64 && \
+        apt-get update && \
+        apt-get install -y libssl-dev:arm64 && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# arm64: register Rust target + configure cross-linker + pkg-config sysroot for openssl-sys
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         rustup target add aarch64-unknown-linux-gnu && \
         printf '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"\n' \
             >> /usr/local/cargo/config.toml; \
     fi
+
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
+ENV OPENSSL_DIR_aarch64_unknown_linux_gnu=/usr
+ENV OPENSSL_INCLUDE_DIR_aarch64_unknown_linux_gnu=/usr/include/aarch64-linux-gnu
 
 COPY Cargo.toml Cargo.lock ./
 COPY rust/ ./rust/
