@@ -60,7 +60,7 @@ RUN mkdir -p /binaries && \
     fi
 
 # ── Stage 2a: amd64 base — CUDA runtime (enables cudaq-nvidia + qcgpu OpenCL) ─
-FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
+FROM --platform=linux/amd64 nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
