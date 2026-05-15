@@ -1,3 +1,6 @@
+# Global ARG — injected by buildx per platform; also used for FROM substitution
+ARG TARGETARCH=amd64
+
 # ── Stage 1: Rust builder — always runs natively on build machine ─────────────
 FROM --platform=$BUILDPLATFORM rust:slim-bookworm AS rust-builder
 ARG TARGETARCH
@@ -20,8 +23,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY rust/ ./rust/
 
 # Build and collect binaries into /binaries/
-# arm64 excludes qcgpu (OpenCL headers not available for cross-compile; qcgpu excluded from
-# linux-aarch64-* PLATFORM_CONFIGS anyway)
+# arm64 excludes qcgpu (OpenCL headers not available for cross-compile)
 RUN mkdir -p /binaries && \
     if [ "$TARGETARCH" = "arm64" ]; then \
         cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu && \
@@ -43,26 +45,48 @@ RUN mkdir -p /binaries && \
         cp target/release/qcgpu-shor        /binaries/; \
     fi
 
-# ── Stage 2: CPU runtime ─────────────────────────────────────────────────────
-FROM python:3.12-slim-bookworm AS cpu
+# ── Stage 2a: amd64 base — CUDA runtime (enables cudaq-nvidia + qcgpu OpenCL) ─
+FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
+
+RUN apt-get update && \
+    apt-get install -y software-properties-common curl && \
+    add-apt-repository ppa:deadsnakes/ppa -y && \
+    apt-get update && \
+    apt-get install -y libgomp1 python3.12 python3.12-venv python3.12-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+
+# ── Stage 2b: arm64 base — Python slim (CPU only; no CUDA wheels for arm64) ───
+FROM python:3.12-slim-bookworm AS base-arm64
+
+RUN apt-get update && apt-get install -y libgomp1 curl && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir uv
+
+# ── Stage 3: Python dependencies — runs in parallel with rust-builder ─────────
+FROM base-${TARGETARCH} AS python-deps
 ARG TARGETARCH
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y libgomp1 curl && rm -rf /var/lib/apt/lists/*
-
-COPY --from=rust-builder /binaries/ ./bin/
-ENV PATH="/app/bin:$PATH"
-
-# Install uv
-RUN pip install --no-cache-dir uv
-
-# Python deps: x86only extra for amd64 (projectq + cudaq), base only for arm64
 COPY pyproject.toml uv.lock ./
+# amd64: all extras (projectq + cudaq-cpu + cuda-quantum-cu13 GPU)
+# arm64: base only (qiskit, cirq, qdislib)
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        uv sync --no-dev --extra x86only; \
+        uv sync --no-dev --extra x86only --extra gpu --python python3.12; \
     else \
         uv sync --no-dev; \
     fi
+
+# ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
+FROM base-${TARGETARCH} AS runtime
+ARG TARGETARCH
+WORKDIR /app
+
+COPY --from=python-deps /app/.venv /app/.venv
+COPY pyproject.toml uv.lock ./
+
+COPY --from=rust-builder /binaries/ ./bin/
+ENV PATH="/app/bin:$PATH"
 
 COPY python/ ./python/
 COPY run.py ./
@@ -72,35 +96,7 @@ RUN chmod +x /entrypoint.sh
 VOLUME ["/app/results"]
 LABEL org.opencontainers.image.source="https://github.com/mablospate/TFG"
 
-# DOCKER_IMAGE env var lets run.py record which image produced the results
 ARG DOCKER_IMAGE_TAG=dev
 ENV DOCKER_IMAGE=${DOCKER_IMAGE_TAG}
 
-ENTRYPOINT ["/entrypoint.sh"]
-
-# ── Stage 3: CUDA runtime ─────────────────────────────────────────────────────
-# Builds on CUDA base; adds cuda-quantum-cu13 on top of x86only deps.
-# Use: docker build --target cuda ...
-FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS cuda
-ARG TARGETARCH=amd64
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y libgomp1 curl python3.12 python3.12-dev python3-pip && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir uv
-
-COPY --from=rust-builder /binaries/ ./bin/
-ENV PATH="/app/bin:$PATH"
-
-COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --extra x86only --extra gpu
-
-COPY python/ ./python/
-COPY run.py ./
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ARG DOCKER_IMAGE_TAG=dev
-ENV DOCKER_IMAGE=${DOCKER_IMAGE_TAG}
-
-VOLUME ["/app/results"]
 ENTRYPOINT ["/entrypoint.sh"]

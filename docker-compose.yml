@@ -1,6 +1,6 @@
 services:
   benchmark:
-    image: ghcr.io/mablospate/tfg-bench
+    image: mablospate/tfg-bench
     volumes:
       - ./results:/app/results
     stdin_open: true
