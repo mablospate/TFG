@@ -73,7 +73,7 @@ RUN apt-get update && \
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
 # ── Stage 2b: arm64 base — Python slim (CPU only; no CUDA wheels for arm64) ───
-FROM python:3.12-slim-bookworm AS base-arm64
+FROM --platform=linux/arm64 python:3.12-slim-bookworm AS base-arm64
 
 RUN apt-get update && apt-get install -y libgomp1 curl && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
