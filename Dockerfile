@@ -1,5 +1,5 @@
 # Global ARG — injected by buildx per platform; also used for FROM substitution
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 
 # ── Stage 1: Rust builder — always runs natively on build machine ─────────────
 FROM --platform=$BUILDPLATFORM rust:slim-bookworm AS rust-builder
