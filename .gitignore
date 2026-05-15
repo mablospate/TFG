@@ -4,6 +4,10 @@
 # Editor / IDE
 .obsidian/
 .vscode/
+.idea/
+
+# Benchmark output
+results/
 
 # Python
 __pycache__/
