@@ -1,11 +1,47 @@
-# ── Stage 1: Rust builder ────────────────────────────────────────────────────
-FROM rust:slim-bookworm AS rust-builder
+# ── Stage 1: Rust builder — always runs natively on build machine ─────────────
+FROM --platform=$BUILDPLATFORM rust:slim-bookworm AS rust-builder
+ARG TARGETARCH
 WORKDIR /build
-# OpenCL headers for qcgpu compilation (runtime OpenCL provided by NVIDIA driver)
-RUN apt-get update && apt-get install -y ocl-icd-opencl-dev clang pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+# arm64: install cross-compilation toolchain; amd64: only OpenCL headers (for qcgpu)
+RUN apt-get update && \
+    apt-get install -y ocl-icd-opencl-dev clang pkg-config libssl-dev \
+        $([ "$TARGETARCH" = "arm64" ] && echo "gcc-aarch64-linux-gnu" || true) && \
+    rm -rf /var/lib/apt/lists/*
+
+# arm64: register Rust target + configure cross-linker
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        rustup target add aarch64-unknown-linux-gnu && \
+        printf '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"\n' \
+            >> /usr/local/cargo/config.toml; \
+    fi
+
 COPY Cargo.toml Cargo.lock ./
 COPY rust/ ./rust/
-RUN cargo build --release
+
+# Build and collect binaries into /binaries/
+# arm64 excludes qcgpu (OpenCL headers not available for cross-compile; qcgpu excluded from
+# linux-aarch64-* PLATFORM_CONFIGS anyway)
+RUN mkdir -p /binaries && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu && \
+        cp target/aarch64-unknown-linux-gnu/release/q1tsim-grover   /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/q1tsim-shor      /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/quantr-grover    /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/quantr-shor       /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/quantrs2-grover  /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/quantrs2-shor     /binaries/; \
+    else \
+        cargo build --release && \
+        cp target/release/q1tsim-grover   /binaries/ && \
+        cp target/release/q1tsim-shor      /binaries/ && \
+        cp target/release/quantr-grover    /binaries/ && \
+        cp target/release/quantr-shor       /binaries/ && \
+        cp target/release/quantrs2-grover  /binaries/ && \
+        cp target/release/quantrs2-shor     /binaries/ && \
+        cp target/release/qcgpu-grover     /binaries/ && \
+        cp target/release/qcgpu-shor        /binaries/; \
+    fi
 
 # ── Stage 2: CPU runtime ─────────────────────────────────────────────────────
 FROM python:3.12-slim-bookworm AS cpu
@@ -14,16 +50,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y libgomp1 curl && rm -rf /var/lib/apt/lists/*
 
-# Rust binaries
-COPY --from=rust-builder /build/target/release/q1tsim-grover    ./bin/
-COPY --from=rust-builder /build/target/release/q1tsim-shor      ./bin/
-COPY --from=rust-builder /build/target/release/quantr-grover    ./bin/
-COPY --from=rust-builder /build/target/release/quantr-shor      ./bin/
-COPY --from=rust-builder /build/target/release/quantrs2-grover  ./bin/
-COPY --from=rust-builder /build/target/release/quantrs2-shor    ./bin/
-COPY --from=rust-builder /build/target/release/qcgpu-grover     ./bin/
-COPY --from=rust-builder /build/target/release/qcgpu-shor       ./bin/
-
+COPY --from=rust-builder /binaries/ ./bin/
 ENV PATH="/app/bin:$PATH"
 
 # Install uv
@@ -61,14 +88,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y libgomp1 curl python3.12 python3.12-dev python3-pip && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 
-COPY --from=rust-builder /build/target/release/q1tsim-grover    ./bin/
-COPY --from=rust-builder /build/target/release/q1tsim-shor      ./bin/
-COPY --from=rust-builder /build/target/release/quantr-grover    ./bin/
-COPY --from=rust-builder /build/target/release/quantr-shor      ./bin/
-COPY --from=rust-builder /build/target/release/quantrs2-grover  ./bin/
-COPY --from=rust-builder /build/target/release/quantrs2-shor    ./bin/
-COPY --from=rust-builder /build/target/release/qcgpu-grover     ./bin/
-COPY --from=rust-builder /build/target/release/qcgpu-shor       ./bin/
+COPY --from=rust-builder /binaries/ ./bin/
 ENV PATH="/app/bin:$PATH"
 
 COPY pyproject.toml uv.lock ./
