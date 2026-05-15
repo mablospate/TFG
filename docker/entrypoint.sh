@@ -16,4 +16,4 @@ else
     echo "GPU: no detectada → plataforma: $PLATFORM"
 fi
 
-exec uv run --frozen python run.py --platform "$PLATFORM" "$@"
+exec uv run --frozen python -u run.py --platform "$PLATFORM" "$@"
