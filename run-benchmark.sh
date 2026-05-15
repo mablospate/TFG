@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-IMAGE="${BENCHMARK_IMAGE:-ghcr.io/mablospate/tfg-bench}"
+IMAGE="${BENCHMARK_IMAGE:-mablospate/tfg-bench}"
 VOL="-v $(pwd)/results:/app/results"
 
 _run()       { docker run --rm -it $1 $VOL "$IMAGE" "${@:2}"; }

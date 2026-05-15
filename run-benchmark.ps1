@@ -1,6 +1,6 @@
 param([Parameter(ValueFromRemainingArguments)]$PassArgs)
 
-$Image = $env:BENCHMARK_IMAGE ?? "ghcr.io/mablospate/tfg-bench"
+$Image = $env:BENCHMARK_IMAGE ?? "mablospate/tfg-bench"
 $Vol   = "-v ${PWD}\results:/app/results"
 
 function Probe-ContainerGpu {
