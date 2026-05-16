@@ -436,12 +436,7 @@ def ask_minutes() -> int:
 def config_for_minutes(minutes: int) -> BenchmarkConfig:
     if minutes < 5:
         print("Modo rápido: estadísticas menos fiables")
-        return BenchmarkConfig(n_repetitions=3, n_values=[3, 4, 5], num_shots=512)
-    if minutes < 15:
-        return BenchmarkConfig(n_repetitions=5, n_values=[3, 4, 5, 6], num_shots=1024)
-    if minutes < 30:
-        return BenchmarkConfig(n_repetitions=10, n_values=[3, 4, 5, 6], num_shots=1024)
-    return BenchmarkConfig(n_repetitions=10, n_values=[3, 4, 5, 6, 8], num_shots=1024)
+    return BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
 
 
 # ---------------------------------------------------------------------------
@@ -841,6 +836,160 @@ def benchmark_grover(
     return enriched
 
 
+def benchmark_grover_at_n(
+    framework_name: str,
+    n: int,
+    config: BenchmarkConfig,
+    hw: HardwareInfo,
+    contributor_name: str,
+    cudaq_target: str = "qpp-cpu",
+) -> dict:
+    """Run config.n_repetitions of Grover at qubit count n for one framework."""
+    target = n  # target state index = n (always valid since n < 2^n for n>=1)
+
+    startup_ms, search_call, build_call = _setup_framework(
+        framework_name, config, hw, cudaq_target=cudaq_target
+    )
+    build_ms = measure_build_time(lambda: build_call(n, target))
+
+    result = benchmark_run(
+        lambda: search_call(n, target, config.num_shots),
+        config,
+        framework=framework_name,
+        algorithm="grover",
+        n_qubits=n,
+    )
+
+    if result.raw_times_ms:
+        mean_ms = float(np.mean(result.raw_times_ms))
+        std_ms = float(np.std(result.raw_times_ms, ddof=1)) if len(result.raw_times_ms) > 1 else 0.0
+    else:
+        mean_ms = std_ms = 0.0
+
+    result.startup_time_ms = startup_ms
+    result.build_time_ms = build_ms
+    result.simulation_time_ms = max(0.0, result.wall_time_median_ms - startup_ms - build_ms)
+
+    try:
+        _found, dist = search_call(n, target, config.num_shots)
+        total = sum(dist.values())
+        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
+        theoretical = {format(target, f"0{n}b"): 1.0}
+        result.jsd = compute_jsd(empirical, theoretical)
+    except Exception as e:
+        print(f"  [WARN] JSD failed for {framework_name} n={n}: {e}")
+        result.jsd = 0.0
+
+    try:
+        framework_version = importlib.metadata.version(framework_name)
+    except Exception:
+        framework_version = "unknown"
+
+    return {
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": hw.python_version,
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+        "framework_version": framework_version,
+        **dataclasses.asdict(result),
+        "wall_time_mean_ms": mean_ms,
+        "wall_time_std_ms": std_ms,
+    }
+
+
+def benchmark_rust_grover_at_n(
+    framework_name: str,
+    binary: pathlib.Path,
+    n: int,
+    config: BenchmarkConfig,
+    hw: HardwareInfo,
+    contributor_name: str,
+) -> dict:
+    """Run config.n_repetitions of Grover at qubit count n using a Rust binary."""
+    target = n
+    times_ms: list[float] = []
+    last_payload: dict | None = None
+
+    for _ in range(max(0, config.warmup_runs)):
+        _run_rust_binary(binary, n, target, config.num_shots)
+    for _ in range(config.n_repetitions):
+        payload = _run_rust_binary(binary, n, target, config.num_shots)
+        times_ms.append(float(payload.get("time_ms", 0.0)))
+        last_payload = payload
+
+    arr = np.array(times_ms) if times_ms else np.array([0.0])
+    median_ms = float(np.median(arr))
+    q75, q25 = np.percentile(arr, [75, 25])
+    iqr_ms = float(q75 - q25)
+    mean_ms = float(np.mean(arr))
+    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+
+    jsd = 0.0
+    if last_payload and "distribution" in last_payload:
+        dist = last_payload["distribution"] or {}
+        total = sum(dist.values())
+        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
+        theoretical = {format(target, f"0{n}b"): 1.0}
+        try:
+            jsd = compute_jsd(empirical, theoretical)
+        except Exception as e:
+            print(f"  [WARN] JSD failed for {framework_name} n={n}: {e}")
+
+    result = BenchmarkResult(
+        wall_time_median_ms=median_ms,
+        wall_time_iqr_ms=iqr_ms,
+        peak_memory_rss_mb=float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
+        cv=cv,
+        startup_time_ms=0.0,
+        build_time_ms=0.0,
+        simulation_time_ms=median_ms,
+        cpu_percent_mean=0.0,
+        jsd=jsd,
+        scaling_alpha=0.0,
+        scaling_beta=0.0,
+        scaling_data={},
+        framework=framework_name,
+        algorithm="grover",
+        n_qubits=n,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        python_version=sys.version,
+        platform_info=platform.platform(),
+        raw_times_ms=times_ms,
+    )
+
+    return {
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": "rust (cargo --release)",
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+        "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
+        **dataclasses.asdict(result),
+        "wall_time_mean_ms": mean_ms,
+        "wall_time_std_ms": std_ms,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Saving and reporting
 # ---------------------------------------------------------------------------
@@ -1031,58 +1180,97 @@ def main() -> None:
     for n in RUST_FRAMEWORKS:
         statuses.setdefault(n, "SKIP")
 
-    total = len(enabled)
+    scaling_by_fw: dict[str, dict[int, float]] = {}
+    total = len(config.n_values) * (len(python_enabled) + len(rust_enabled))
     idx = 0
-    for fw_name in python_enabled:
-        idx += 1
-        print()
-        print(f"[{idx}/{total}] Benchmarking Grover — {fw_name} (python) ...")
-        try:
-            result = benchmark_grover(
-                fw_name, config, hw, contributor_name, cudaq_target=cudaq_target
-            )
-            results.append(result)
-            statuses[fw_name] = "OK"
-        except Exception as e:
-            statuses[fw_name] = "ERROR"
-            print(f"[ERROR] {fw_name} grover: {e}")
-            continue
 
-        partial_doc = _build_output_doc(contributor_name, hw, config, results, platform_id=args.platform)
-        _save_json(partial_path, partial_doc)
+    print(
+        f"Total: {total} operaciones "
+        f"({len(python_enabled) + len(rust_enabled)} frameworks × {len(config.n_values)} valores de n)"
+    )
 
-    for fw_name in rust_enabled:
-        idx += 1
-        binary = RUST_FRAMEWORKS[fw_name]
+    for n in config.n_values:
         print()
+        print(f"{'─'*58}")
         print(
-            f"[{idx}/{total}] Benchmarking Grover — {fw_name} (rust: {binary.name}) ..."
+            f"  Grover — {n} qubits  ({2**n} estados)  "
+            f"[{config.n_values.index(n)+1}/{len(config.n_values)}]"
         )
-        try:
-            result = benchmark_rust_grover(
-                fw_name, binary, config, hw, contributor_name
-            )
-            results.append(result)
-            statuses[fw_name] = "OK"
-        except FileNotFoundError as e:
-            statuses[fw_name] = "ERROR"
-            print(f"[ERROR] {fw_name} grover: binary not found ({e})")
-            continue
-        except subprocess.TimeoutExpired as e:
-            statuses[fw_name] = "ERROR"
-            print(f"[ERROR] {fw_name} grover: timed out after {e.timeout}s")
-            continue
-        except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-            statuses[fw_name] = "ERROR"
-            print(f"[ERROR] {fw_name} grover: {e}")
-            continue
-        except Exception as e:
-            statuses[fw_name] = "ERROR"
-            print(f"[ERROR] {fw_name} grover: {e}")
-            continue
+        print(f"{'─'*58}")
+        n_series_results: list[dict] = []
 
+        for fw_name in python_enabled:
+            idx += 1
+            print()
+            print(f"[{idx}/{total}] {fw_name} (python)  n={n} ...")
+            try:
+                result = benchmark_grover_at_n(
+                    fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target
+                )
+                results.append(result)
+                n_series_results.append(result)
+                statuses[fw_name] = "OK"
+                scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+            except Exception as e:
+                statuses[fw_name] = "ERROR"
+                print(f"[ERROR] {fw_name} grover n={n}: {e}")
+
+        for fw_name in rust_enabled:
+            idx += 1
+            binary = RUST_FRAMEWORKS[fw_name]
+            print()
+            print(f"[{idx}/{total}] {fw_name} (rust: {binary.name})  n={n} ...")
+            try:
+                result = benchmark_rust_grover_at_n(
+                    fw_name, binary, n, config, hw, contributor_name
+                )
+                results.append(result)
+                n_series_results.append(result)
+                statuses[fw_name] = "OK"
+                scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+            except FileNotFoundError as e:
+                statuses[fw_name] = "ERROR"
+                print(f"[ERROR] {fw_name} grover n={n}: binary not found ({e})")
+            except subprocess.TimeoutExpired as e:
+                statuses[fw_name] = "ERROR"
+                print(f"[ERROR] {fw_name} grover n={n}: timed out after {e.timeout}s")
+            except (json.JSONDecodeError, RuntimeError, ValueError) as e:
+                statuses[fw_name] = "ERROR"
+                print(f"[ERROR] {fw_name} grover n={n}: {e}")
+            except Exception as e:
+                statuses[fw_name] = "ERROR"
+                print(f"[ERROR] {fw_name} grover n={n}: {e}")
+
+        # Checkpoint after this qubit series
+        checkpoint_path = os.path.join("results", f"grover_{timestamp}_n{n}.json")
+        _save_json(checkpoint_path, {
+            "schema_version": "1.0",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "n_qubits": n,
+            "n_repetitions": config.n_repetitions,
+            "num_shots": config.num_shots,
+            "results": n_series_results,
+        })
+        print(f"\n→ Checkpoint n={n}: {checkpoint_path}")
+
+        # Update running partial with all results so far
         partial_doc = _build_output_doc(contributor_name, hw, config, results, platform_id=args.platform)
         _save_json(partial_path, partial_doc)
+
+    # Backfill scaling curves into each result
+    for result in results:
+        fw = result["framework"]
+        sd = scaling_by_fw.get(fw, {})
+        result["scaling_data"] = {int(k): v for k, v in sd.items()}
+        if len(sd) >= 2:
+            try:
+                alpha, beta = fit_scaling_curve(sd)
+            except Exception:
+                alpha, beta = 0.0, 0.0
+        else:
+            alpha, beta = 0.0, 0.0
+        result["scaling_alpha"] = alpha
+        result["scaling_beta"] = beta
 
     final_doc = _build_output_doc(contributor_name, hw, config, results, platform_id=args.platform)
     _save_json(final_path, final_doc)

@@ -37,7 +37,7 @@ class BenchmarkConfig:
     n_repetitions: int = 10  # Repeticiones para estadísticas
     warmup_runs: int = 1  # Ejecuciones de calentamiento (no se miden)
     n_values: list[int] = field(
-        default_factory=lambda: [3, 4, 5, 6, 8]
+        default_factory=lambda: [3, 5, 7, 9, 11]
     )  # Tamaños de n para escalabilidad
     num_shots: int = 1024  # Shots para distribución empírica
     cpu_sample_interval: float = 0.05  # Intervalo de muestreo de CPU (s)
