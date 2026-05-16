@@ -41,6 +41,7 @@ while read local_ref local_sha remote_ref remote_sha; do
         --platform linux/amd64,linux/arm64 \
         --target runtime \
         --push \
+        --progress=plain \
         -t "${IMAGE}:latest" \
         -t "${IMAGE}:sha-${SHORT_SHA}" \
         --build-arg "DOCKER_IMAGE_TAG=${SHORT_SHA}" \
