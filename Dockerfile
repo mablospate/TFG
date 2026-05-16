@@ -9,10 +9,11 @@ ARG TARGETARCH
 ENV CARGO_BUILD_JOBS=4
 WORKDIR /build
 
-# arm64: install cross-compilation toolchain + arm64 OpenSSL headers (for crates using openssl-sys)
+# Install cross-compilation toolchain for the target architecture when cross-compiling
 RUN apt-get update && \
     apt-get install -y ocl-icd-opencl-dev clang pkg-config libssl-dev \
-        $([ "$TARGETARCH" = "arm64" ] && echo "gcc-aarch64-linux-gnu" || true) && \
+        $([ "$TARGETARCH" = "arm64" ] && echo "gcc-aarch64-linux-gnu" || true) \
+        $([ "$TARGETARCH" = "amd64" ] && [ "$(uname -m)" != "x86_64" ] && echo "gcc-x86-64-linux-gnu" || true) && \
     rm -rf /var/lib/apt/lists/*
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
@@ -29,6 +30,13 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
             >> /usr/local/cargo/config.toml; \
     fi
 
+# amd64: register Rust target + configure cross-linker when building on arm64 host
+RUN if [ "$TARGETARCH" = "amd64" ] && [ "$(uname -m)" != "x86_64" ]; then \
+        rustup target add x86_64-unknown-linux-gnu && \
+        printf '[target.x86_64-unknown-linux-gnu]\nlinker = "x86_64-linux-gnu-gcc"\n' \
+            >> /usr/local/cargo/config.toml; \
+    fi
+
 ENV PKG_CONFIG_ALLOW_CROSS=1
 ENV PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
 ENV OPENSSL_DIR_aarch64_unknown_linux_gnu=/usr
@@ -39,6 +47,7 @@ COPY rust/ ./rust/
 
 # Build and collect binaries into /binaries/
 # arm64 excludes qcgpu (OpenCL headers not available for cross-compile)
+# amd64 cross-compiled from arm64 host also excludes qcgpu (no OpenCL headers for foreign arch)
 RUN mkdir -p /binaries && \
     if [ "$TARGETARCH" = "arm64" ]; then \
         cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu-bench && \
@@ -49,6 +58,15 @@ RUN mkdir -p /binaries && \
         cp target/aarch64-unknown-linux-gnu/release/quantr-shor       /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantrs2-grover  /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantrs2-shor     /binaries/; \
+    elif [ "$TARGETARCH" = "amd64" ] && [ "$(uname -m)" != "x86_64" ]; then \
+        cargo build --release --target x86_64-unknown-linux-gnu --workspace --exclude qcgpu-bench && \
+        cp target/x86_64-unknown-linux-gnu/release/q1tsim-grover   /binaries/ && \
+        cp target/x86_64-unknown-linux-gnu/release/q1tsim-shor      /binaries/ && \
+        find target/x86_64-unknown-linux-gnu/release -maxdepth 2 -name 'libq1tsim*.so' -exec cp {} /binaries/ \; && \
+        cp target/x86_64-unknown-linux-gnu/release/quantr-grover    /binaries/ && \
+        cp target/x86_64-unknown-linux-gnu/release/quantr-shor       /binaries/ && \
+        cp target/x86_64-unknown-linux-gnu/release/quantrs2-grover  /binaries/ && \
+        cp target/x86_64-unknown-linux-gnu/release/quantrs2-shor     /binaries/; \
     else \
         cargo build --release && \
         cp target/release/q1tsim-grover   /binaries/ && \

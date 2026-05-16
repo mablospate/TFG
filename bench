@@ -27,7 +27,22 @@ COLIMA_ORIG_CPU=0       # original CPU count before restart
 
 BENCH_CONTAINER_NAME=""   # set while container is running, cleared after
 
+TIME_BUDGET_MINS=0
+TIMER_PID=""
+
+ask_time_budget() {
+    local ans
+    read -r -p "Tiempo límite en minutos (Enter = sin límite): " ans
+    if [[ "$ans" =~ ^[0-9]+$ ]] && (( ans > 0 )); then
+        TIME_BUDGET_MINS=$ans
+    fi
+}
+
 _on_exit() {
+    if [[ -n "$TIMER_PID" ]]; then
+        kill "$TIMER_PID" 2>/dev/null
+        wait "$TIMER_PID" 2>/dev/null
+    fi
     [[ -n "${BENCH_CONTAINER_NAME:-}" ]] && docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
     cleanup_image
     restore_colima
@@ -199,23 +214,46 @@ pull_image() {
 }
 
 run_benchmark() {
+    local DOCKER_PLATFORM=""
+    local EMULATED_FLAG=""
+
+    # Parse run_benchmark-specific flags
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --docker-platform) DOCKER_PLATFORM="$2"; shift 2 ;;
+            --emulated) EMULATED_FLAG="--emulated"; shift ;;
+            *) break ;;
+        esac
+    done
+
     BENCH_CONTAINER_NAME="tfg-bench-$$"
 
     docker run --rm \
         --name "$BENCH_CONTAINER_NAME" \
+        ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} \
         --memory "${DOCKER_MEM_GB}g" \
         --cpus "$DOCKER_CPUS" \
         $GPU_FLAGS \
         -e BENCH_HOSTNAME="$(hostname)" \
         -e BENCH_CPU_MODEL="$CPU_MODEL" \
-        -e BENCH_CPU_CORES_PHYSICAL="$CPU_PHYSICAL" \
-        -e BENCH_CPU_CORES_LOGICAL="$CPU_LOGICAL" \
+        -e BENCH_CPU_CORES_PHYSICAL="$DOCKER_CPUS" \
+        -e BENCH_CPU_CORES_LOGICAL="$DOCKER_CPUS" \
         -e BENCH_CPU_FREQ_MHZ="$CPU_FREQ_MHZ" \
-        -e BENCH_RAM_GB="$RAM_GB_F" \
+        -e BENCH_RAM_GB="$DOCKER_MEM_GB" \
+        -e BENCH_OS="$(uname -s)" \
+        -e BENCH_OS_VERSION="$(sw_vers -productVersion 2>/dev/null || uname -r)" \
         -v "$(pwd)/results:/app/results" \
         "$IMAGE" \
+        $EMULATED_FLAG \
         "$@" &
     local _docker_pid=$!
+
+    # Start shell timer if time budget is set
+    TIMER_PID=""
+    if (( TIME_BUDGET_MINS > 0 )); then
+        ( sleep $(( TIME_BUDGET_MINS * 60 )) && docker stop "$BENCH_CONTAINER_NAME" 2>/dev/null ) &
+        TIMER_PID=$!
+    fi
 
     echo "(Pulsa 'q' para detener el benchmark)"
 
@@ -235,8 +273,17 @@ run_benchmark() {
     wait "$_docker_pid" 2>/dev/null && _rc=0 || _rc=$?
     kill "$_watcher_pid" 2>/dev/null || true
     wait "$_watcher_pid" 2>/dev/null || true
+    if [[ -n "$TIMER_PID" ]]; then
+        kill "$TIMER_PID" 2>/dev/null || true
+        wait "$TIMER_PID" 2>/dev/null || true
+        TIMER_PID=""
+    fi
     BENCH_CONTAINER_NAME=""
     return $_rc
+}
+
+_qemu_available() {
+    docker run --rm --platform linux/amd64 alpine uname -m 2>/dev/null | grep -q x86_64
 }
 
 cleanup_image() {
@@ -283,24 +330,7 @@ collect_run_args() {
         EXTRA_ARGS+=(--contributor "$name")
     fi
 
-    if [[ ! " $* " =~ " --time-budget " ]]; then
-        local budget=""
-        while true; do
-            printf "Límite de tiempo en minutos (Enter = sin límite): "
-            read -r budget
-            budget="${budget#"${budget%%[![:space:]]*}"}"
-            budget="${budget%"${budget##*[![:space:]]}"}"
-            if [[ -z "$budget" ]]; then
-                EXTRA_ARGS+=(--time-budget 0)
-                break
-            elif [[ "$budget" =~ ^[0-9]+$ ]] && (( budget > 0 )); then
-                EXTRA_ARGS+=(--time-budget "$budget")
-                break
-            else
-                echo "Entrada no válida: introduce un número entero positivo o pulsa Enter."
-            fi
-        done
-    fi
+    ask_time_budget
 }
 
 main() {
@@ -313,7 +343,22 @@ main() {
     pull_image
     echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
+
+    HOST_ARCH="$(uname -m)"
+
+    # First pass (native)
     run_benchmark "${EXTRA_ARGS[@]}" "$@"
+
+    # Second pass: amd64 via emulation (arm64 hosts only)
+    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
+        if _qemu_available; then
+            echo ""
+            echo "→ Segunda pasada: build amd64 vía emulación..."
+            run_benchmark --docker-platform linux/amd64 --emulated "${EXTRA_ARGS[@]}" "$@"
+        else
+            echo "  [INFO] Emulación amd64 no disponible, omitiendo segunda pasada."
+        fi
+    fi
 }
 
 main "$@"

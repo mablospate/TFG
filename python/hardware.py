@@ -144,8 +144,8 @@ def detect_hardware() -> HardwareInfo:
 
     return HardwareInfo(
         hostname=_env_or("BENCH_HOSTNAME", platform.node()),
-        os=_normalize_os(platform.system()),
-        os_version=platform.version(),
+        os=_normalize_os(_env_or("BENCH_OS", platform.system())),
+        os_version=_env_or("BENCH_OS_VERSION", platform.version()),
         cpu_model=_env_or("BENCH_CPU_MODEL", _detect_cpu_model()),
         cpu_cores_physical=int(_env_or("BENCH_CPU_CORES_PHYSICAL",
                                         str(psutil.cpu_count(logical=False) or 1))),

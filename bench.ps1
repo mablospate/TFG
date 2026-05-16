@@ -77,19 +77,11 @@ if ($args -notcontains "--contributor") {
     $extraArgs += @("--contributor", $contributor)
 }
 
+$TIME_BUDGET_MINS = 0  # 0 = unlimited
 if ($args -notcontains "--time-budget") {
-    while ($true) {
-        $budgetRaw = (Read-Host "Límite de tiempo en minutos (Enter = sin límite)").Trim()
-        if ($budgetRaw -eq "") {
-            $extraArgs += @("--time-budget", "0")
-            break
-        }
-        $budgetVal = 0
-        if ([int]::TryParse($budgetRaw, [ref]$budgetVal) -and $budgetVal -gt 0) {
-            $extraArgs += @("--time-budget", $budgetVal)
-            break
-        }
-        Write-Host "Entrada no válida: introduce un número entero positivo o pulsa Enter."
+    $ans = Read-Host "Tiempo límite en minutos (Enter = sin límite)"
+    if ($ans -match '^\d+$' -and [int]$ans -gt 0) {
+        $TIME_BUDGET_MINS = [int]$ans
     }
 }
 
@@ -101,16 +93,29 @@ $dockerArgs = @(
 ) + $GPU_FLAGS + @(
     "-e", "BENCH_HOSTNAME=$Env:COMPUTERNAME",
     "-e", "BENCH_CPU_MODEL=$CPU_MODEL",
-    "-e", "BENCH_CPU_CORES_PHYSICAL=$CPU_PHYSICAL",
-    "-e", "BENCH_CPU_CORES_LOGICAL=$CPU_LOGICAL",
+    "-e", "BENCH_CPU_CORES_PHYSICAL=$DOCKER_CPUS",
+    "-e", "BENCH_CPU_CORES_LOGICAL=$DOCKER_CPUS",
     "-e", "BENCH_CPU_FREQ_MHZ=$CPU_FREQ_MHZ",
-    "-e", "BENCH_RAM_GB=$RAM_GB_F",
+    "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
+    "-e", "BENCH_OS=Windows",
+    "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
     "-v", "${PWD}\results:/app/results",
     $IMAGE
 ) + $extraArgs + $args
 
 Write-Host "(Pulsa 'q' para detener el benchmark)"
 $dockerProc = Start-Process -FilePath "docker" -ArgumentList $dockerArgs -NoNewWindow -PassThru
+
+$timerJob = $null
+if ($TIME_BUDGET_MINS -gt 0) {
+    $containerName = $CONTAINER_NAME
+    $timerJob = Start-Job -ScriptBlock {
+        param($secs, $name)
+        Start-Sleep -Seconds $secs
+        docker stop $name 2>$null
+    } -ArgumentList ($TIME_BUDGET_MINS * 60), $containerName
+}
+
 while (-not $dockerProc.HasExited) {
     if ([Console]::KeyAvailable) {
         $key = [Console]::ReadKey($true)
@@ -124,6 +129,7 @@ while (-not $dockerProc.HasExited) {
     Start-Sleep -Milliseconds 200
 }
 $dockerProc.WaitForExit()
+if ($timerJob) { Stop-Job $timerJob; Remove-Job $timerJob }
 
 if ($Env:KEEP_IMAGE -ne "1") {
     Write-Host "-> Removing image $IMAGE..."

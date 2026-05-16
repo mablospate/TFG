@@ -35,9 +35,6 @@ from python.hardware import HardwareInfo, detect_hardware
 DOCKER_IMAGE: str = os.getenv("DOCKER_IMAGE", "dev")
 
 
-class _DeadlineExceeded(RuntimeError):
-    pass
-
 BANNER = r"""
 ==========================================================
   TFG  -  Quantum Benchmarking Suite
@@ -435,33 +432,6 @@ def ask_contributor_name() -> str:
         if name:
             return name
         print("  El nombre no puede estar vacío.")
-
-
-def ask_minutes() -> int | None:
-    raw = input(
-        "Límite de tiempo en minutos (Enter = sin límite) > "
-    ).strip()
-    if not raw:
-        return None
-    try:
-        m = int(raw)
-        if m < 1:
-            print("El valor debe ser un número entero positivo.")
-            return ask_minutes()
-        return m
-    except ValueError:
-        print(f"Entrada no válida: {raw!r}. Introduce un número entero positivo o pulsa Enter.")
-        return ask_minutes()
-
-
-def config_for_minutes(minutes: int | None) -> BenchmarkConfig:
-    if minutes is not None and minutes < 5:
-        print("Modo rápido: estadísticas menos fiables")
-    return BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
-
-
-def _over_budget(deadline: float | None) -> bool:
-    return deadline is not None and time.monotonic() > deadline
 
 
 # ---------------------------------------------------------------------------
@@ -868,7 +838,6 @@ def benchmark_grover_at_n(
     hw: HardwareInfo,
     contributor_name: str,
     cudaq_target: str = "qpp-cpu",
-    deadline: float | None = None,
 ) -> dict:
     """Run config.n_repetitions of Grover at qubit count n for one framework."""
     target = n  # target state index = n (always valid since n < 2^n for n>=1)
@@ -884,7 +853,6 @@ def benchmark_grover_at_n(
         framework=framework_name,
         algorithm="grover",
         n_qubits=n,
-        deadline=deadline,
     )
 
     if result.raw_times_ms:
@@ -941,7 +909,6 @@ def benchmark_rust_grover_at_n(
     config: BenchmarkConfig,
     hw: HardwareInfo,
     contributor_name: str,
-    deadline: float | None = None,
 ) -> dict:
     """Run config.n_repetitions of Grover at qubit count n using a Rust binary."""
     target = n
@@ -951,16 +918,9 @@ def benchmark_rust_grover_at_n(
     for _ in range(max(0, config.warmup_runs)):
         _run_rust_binary(binary, n, target, config.num_shots)
     for _ in range(config.n_repetitions):
-        if _over_budget(deadline):
-            break
         payload = _run_rust_binary(binary, n, target, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         last_payload = payload
-
-    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
-        raise _DeadlineExceeded(
-            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
-        )
 
     arr = np.array(times_ms) if times_ms else np.array([0.0])
     median_ms = float(np.median(arr))
@@ -1073,27 +1033,19 @@ def _setup_framework_shor(
 
 def benchmark_shor_at_n(
     framework_name: str, N: int, config, hw, contributor_name: str, cudaq_target: str = "qpp-cpu",
-    deadline: float | None = None,
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
     startup_ms, factor_call = _setup_framework_shor(framework_name, config, hw, cudaq_target)
 
     times_ms, factors = [], []
     for _ in range(config.n_repetitions):
-        if _over_budget(deadline):
-            break
         t0 = time.perf_counter()
         f = factor_call(N)
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
 
-    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
-        raise _DeadlineExceeded(
-            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
-        )
-
     if not times_ms:
-        raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
+        raise RuntimeError("No se completó ninguna repetición")
     arr = np.array(times_ms)
     median_ms = float(np.median(arr))
     q75, q25 = np.percentile(arr, [75, 25])
@@ -1163,7 +1115,6 @@ def benchmark_rust_shor_at_n(
     config: BenchmarkConfig,
     hw: HardwareInfo,
     contributor_name: str,
-    deadline: float | None = None,
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
     times_ms: list[float] = []
@@ -1171,20 +1122,13 @@ def benchmark_rust_shor_at_n(
     last_payload: dict | None = None
 
     for _ in range(config.n_repetitions):
-        if _over_budget(deadline):
-            break
         payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         last_payload = payload
 
-    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
-        raise _DeadlineExceeded(
-            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
-        )
-
     if not times_ms:
-        raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
+        raise RuntimeError("No se completó ninguna repetición")
     arr = np.array(times_ms) if times_ms else np.array([0.0])
     median_ms = float(np.median(arr))
     q75, q25 = np.percentile(arr, [75, 25])
@@ -1297,6 +1241,7 @@ def _build_output_doc(
     config: BenchmarkConfig,
     results: list[dict],
     platform_id: str = "",
+    emulated: bool = False,
 ) -> dict:
     return {
         "schema_version": "1.0",
@@ -1305,12 +1250,14 @@ def _build_output_doc(
         "platform": platform.platform(),
         "platform_id": platform_id,
         "gpu_enabled": platform_id.endswith("-nvidia"),
+        "emulated": emulated,
         "benchmark_image": os.getenv("DOCKER_IMAGE", "dev"),
         "contributor_name": contributor_name,
         "hardware": dataclasses.asdict(hw),
         "config": {
             "n_repetitions": config.n_repetitions,
             "n_values": list(config.n_values),
+            "n_values_shor": list(config.n_values_shor),
             "num_shots": config.num_shots,
         },
         "results": results,
@@ -1401,13 +1348,16 @@ def parse_args():
         required=True,
         help="Platform ID (e.g. linux-x86_64-cpu). Set automatically by Docker entrypoint.",
     )
-    p.add_argument("--time-budget", type=int, default=None,
-                   dest="time_budget",
-                   help="Time budget in minutes (0 = no limit). Skips interactive prompt.")
     p.add_argument(
         "--contributor",
         default=None,
         help="Contributor name. Skips interactive prompt.",
+    )
+    p.add_argument(
+        "--emulated",
+        action="store_true",
+        default=False,
+        help="Mark results as emulated (arm64 host running amd64 image)",
     )
     return p.parse_args()
 
@@ -1428,20 +1378,7 @@ def main() -> None:
     print("Se agradece dar el máximo tiempo posible para obtener datos más completos.")
     print()
 
-    if args.time_budget is not None:
-        time_budget = args.time_budget if args.time_budget > 0 else None
-    else:
-        time_budget = ask_minutes()
-    minutes = time_budget
-    config = config_for_minutes(minutes)
-
-    deadline: float | None = (
-        time.monotonic() + time_budget * 60 if time_budget else None
-    )
-    if deadline is not None:
-        from datetime import timedelta
-        eta = datetime.now() + timedelta(minutes=time_budget)
-        print(f"Límite de tiempo: {time_budget} min (hasta ~{eta.strftime('%H:%M:%S')})")
+    config = BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
 
     hw = detect_hardware()
     print_hardware_summary(hw)
@@ -1478,104 +1415,197 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     final_path = os.path.join("results", f"grover_{timestamp}.json")
     partial_path = os.path.join("results", f"grover_{timestamp}_partial.json")
+    shor_timestamp = timestamp
+    shor_final_path = os.path.join("results", f"shor_{shor_timestamp}.json")
+    shor_partial_path = os.path.join("results", f"shor_{shor_timestamp}_partial.json")
 
+    # ---- Grover state ----
     results: list[dict] = []
     statuses: dict[str, str] = {name: "SKIP" for name in FRAMEWORKS}
     for n in RUST_FRAMEWORKS:
         statuses.setdefault(n, "SKIP")
-
     scaling_by_fw: dict[str, dict[int, float]] = {}
-    total = len(config.n_values) * (len(python_enabled) + len(rust_enabled))
+
+    # ---- Shor state ----
+    shor_results: list[dict] = []
+    shor_statuses: dict[str, str] = {}
+    shor_python_enabled = [n for n in python_enabled if n in FRAMEWORKS]
+    shor_rust_enabled = [
+        n for n in rust_enabled
+        if n in RUST_FRAMEWORKS_SHOR
+        and RUST_FRAMEWORKS_SHOR[n].exists()
+        and os.access(RUST_FRAMEWORKS_SHOR[n], os.X_OK)
+    ]
+    shor_scaling_by_fw: dict[str, dict[int, float]] = {}
+
+    grover_total = len(config.n_values) * (len(python_enabled) + len(rust_enabled))
+    shor_total = len(config.n_values_shor) * (len(shor_python_enabled) + len(shor_rust_enabled))
     idx = 0
+    shor_idx = 0
 
     print(
-        f"Total: {total} operaciones "
+        f"Total Grover: {grover_total} operaciones "
         f"({len(python_enabled) + len(rust_enabled)} frameworks × {len(config.n_values)} valores de n)"
     )
+    print(
+        f"Total Shor:   {shor_total} operaciones "
+        f"({len(shor_python_enabled) + len(shor_rust_enabled)} frameworks × {len(config.n_values_shor)} valores de N)"
+    )
 
-    for n in config.n_values:
-        if _over_budget(deadline):
-            print(f"\n[Tiempo agotado — omitiendo n={n} y restantes]")
-            break
-        print()
-        print(f"{'─'*58}")
-        print(
-            f"  Grover — {n} qubits  ({2**n} estados)  "
-            f"[{config.n_values.index(n)+1}/{len(config.n_values)}]"
-        )
-        print(f"{'─'*58}")
-        n_series_results: list[dict] = []
+    # Intercalate Grover and Shor by qubit size: for each i, run Grover at n_i
+    # then Shor at N_i. If lists differ in length, the shorter one stops contributing.
+    n_grover_list = list(config.n_values)
+    n_shor_list = list(config.n_values_shor)
+    max_steps = max(len(n_grover_list), len(n_shor_list))
 
-        for fw_name in python_enabled:
-            if _over_budget(deadline):
-                print(f"\n[Tiempo agotado — omitiendo {fw_name} y siguientes]")
-                break
-            idx += 1
+    for i in range(max_steps):
+        n = n_grover_list[i] if i < len(n_grover_list) else None
+        N_shor = n_shor_list[i] if i < len(n_shor_list) else None
+
+        # --- Grover at n qubits ---
+        if n is not None:
             print()
-            print(f"[{idx}/{total}] {fw_name} (python)  n={n} ...")
-            try:
-                result = benchmark_grover_at_n(
-                    fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target,
-                    deadline=deadline,
+            print(f"{'─'*58}")
+            print(
+                f"  Grover — {n} qubits  ({2**n} estados)  "
+                f"[{i+1}/{len(n_grover_list)}]"
+            )
+            print(f"{'─'*58}")
+            n_series_results: list[dict] = []
+
+            for fw_name in python_enabled:
+                idx += 1
+                print()
+                print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...")
+                try:
+                    result = benchmark_grover_at_n(
+                        fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target,
+                    )
+                    results.append(result)
+                    n_series_results.append(result)
+                    statuses[fw_name] = "OK"
+                    scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+                except Exception as e:
+                    statuses[fw_name] = "ERROR"
+                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
+
+            for fw_name in rust_enabled:
+                idx += 1
+                binary = RUST_FRAMEWORKS[fw_name]
+                print()
+                print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...")
+                try:
+                    result = benchmark_rust_grover_at_n(
+                        fw_name, binary, n, config, hw, contributor_name,
+                    )
+                    results.append(result)
+                    n_series_results.append(result)
+                    statuses[fw_name] = "OK"
+                    scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+                except OSError as e:
+                    if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
+                        statuses[fw_name] = "SKIP"
+                        print(f"  [SKIP] {fw_name}: binario incompatible con esta arquitectura (errno {e.errno})")
+                    else:
+                        statuses[fw_name] = "ERROR"
+                        print(f"[ERROR] {fw_name} grover n={n}: {e}")
+                except FileNotFoundError as e:
+                    statuses[fw_name] = "SKIP"
+                    print(f"  [SKIP] {fw_name}: binario no encontrado ({e})")
+                except subprocess.TimeoutExpired as e:
+                    statuses[fw_name] = "ERROR"
+                    print(f"[ERROR] {fw_name} grover n={n}: timed out after {e.timeout}s")
+                except (json.JSONDecodeError, RuntimeError, ValueError) as e:
+                    statuses[fw_name] = "ERROR"
+                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
+                except Exception as e:
+                    statuses[fw_name] = "ERROR"
+                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
+
+            # Checkpoint after this qubit series
+            checkpoint_path = os.path.join("results", f"grover_{timestamp}_n{n}.json")
+            _save_json(checkpoint_path, {
+                "schema_version": "1.0",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "emulated": args.emulated,
+                "n_qubits": n,
+                "n_repetitions": config.n_repetitions,
+                "num_shots": config.num_shots,
+                "results": n_series_results,
+            })
+            print(f"\n→ Checkpoint grover n={n}: {checkpoint_path}")
+
+            partial_doc = _build_output_doc(
+                contributor_name, hw, config, results,
+                platform_id=args.platform, emulated=args.emulated,
+            )
+            _save_json(partial_path, partial_doc)
+
+        # --- Shor at N_shor ---
+        if N_shor is not None:
+            n_qubits_val = _n_qubits_shor(N_shor)
+            print(f"\n{'─' * 58}")
+            print(f"  Shor — N={N_shor} ({n_qubits_val} qubits)  "
+                  f"[{i + 1}/{len(n_shor_list)}]")
+            print(f"{'─' * 58}")
+            shor_n_series: list[dict] = []
+
+            for fw in shor_python_enabled:
+                shor_idx += 1
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...")
+                try:
+                    r = benchmark_shor_at_n(fw, N_shor, config, hw, contributor_name, cudaq_target)
+                    shor_results.append(r)
+                    shor_n_series.append(r)
+                    shor_statuses[fw] = "OK"
+                    shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+                except Exception as e:
+                    shor_statuses.setdefault(fw, "ERROR")
+                    print(f"[ERROR] {fw} shor N={N_shor}: {e}")
+
+            for fw in shor_rust_enabled:
+                shor_idx += 1
+                binary = RUST_FRAMEWORKS_SHOR[fw]
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...")
+                try:
+                    r = benchmark_rust_shor_at_n(fw, binary, N_shor, config, hw, contributor_name)
+                    shor_results.append(r)
+                    shor_n_series.append(r)
+                    shor_statuses[fw] = "OK"
+                    shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+                except OSError as e:
+                    if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
+                        shor_statuses[fw] = "SKIP"
+                        print(f"  [SKIP] {fw}: binario incompatible con esta arquitectura (errno {e.errno})")
+                    else:
+                        shor_statuses.setdefault(fw, "ERROR")
+                        print(f"[ERROR] {fw} shor N={N_shor}: {e}")
+                except FileNotFoundError as e:
+                    shor_statuses[fw] = "SKIP"
+                    print(f"  [SKIP] {fw}: binario no encontrado ({e})")
+                except Exception as e:
+                    shor_statuses.setdefault(fw, "ERROR")
+                    print(f"[ERROR] {fw} shor N={N_shor}: {e}")
+
+            checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_shor}.json")
+            _save_json(checkpoint_path, {
+                "schema_version": "1.0",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "emulated": args.emulated,
+                "n_to_factor": N_shor,
+                "n_qubits": n_qubits_val,
+                "n_repetitions": config.n_repetitions,
+                "results": shor_n_series,
+            })
+            print(f"\n→ Checkpoint shor N={N_shor}: {checkpoint_path}")
+            if shor_results:
+                shor_partial_doc = _build_output_doc(
+                    contributor_name, hw, config, shor_results,
+                    platform_id=args.platform, emulated=args.emulated,
                 )
-                results.append(result)
-                n_series_results.append(result)
-                statuses[fw_name] = "OK"
-                scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
-            except _DeadlineExceeded:
-                print(f"  [TIMEOUT] {fw_name} n={n}: serie incompleta, descartada")
-            except Exception as e:
-                statuses[fw_name] = "ERROR"
-                print(f"[ERROR] {fw_name} grover n={n}: {e}")
+                _save_json(shor_partial_path, shor_partial_doc)
 
-        for fw_name in rust_enabled:
-            if _over_budget(deadline):
-                print(f"\n[Tiempo agotado — omitiendo {fw_name} y siguientes]")
-                break
-            idx += 1
-            binary = RUST_FRAMEWORKS[fw_name]
-            print()
-            print(f"[{idx}/{total}] {fw_name} (rust: {binary.name})  n={n} ...")
-            try:
-                result = benchmark_rust_grover_at_n(
-                    fw_name, binary, n, config, hw, contributor_name, deadline=deadline,
-                )
-                results.append(result)
-                n_series_results.append(result)
-                statuses[fw_name] = "OK"
-                scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
-            except _DeadlineExceeded:
-                print(f"  [TIMEOUT] {fw_name} n={n}: serie incompleta, descartada")
-            except FileNotFoundError as e:
-                statuses[fw_name] = "ERROR"
-                print(f"[ERROR] {fw_name} grover n={n}: binary not found ({e})")
-            except subprocess.TimeoutExpired as e:
-                statuses[fw_name] = "ERROR"
-                print(f"[ERROR] {fw_name} grover n={n}: timed out after {e.timeout}s")
-            except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-                statuses[fw_name] = "ERROR"
-                print(f"[ERROR] {fw_name} grover n={n}: {e}")
-            except Exception as e:
-                statuses[fw_name] = "ERROR"
-                print(f"[ERROR] {fw_name} grover n={n}: {e}")
-
-        # Checkpoint after this qubit series
-        checkpoint_path = os.path.join("results", f"grover_{timestamp}_n{n}.json")
-        _save_json(checkpoint_path, {
-            "schema_version": "1.0",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "n_qubits": n,
-            "n_repetitions": config.n_repetitions,
-            "num_shots": config.num_shots,
-            "results": n_series_results,
-        })
-        print(f"\n→ Checkpoint n={n}: {checkpoint_path}")
-
-        # Update running partial with all results so far
-        partial_doc = _build_output_doc(contributor_name, hw, config, results, platform_id=args.platform)
-        _save_json(partial_path, partial_doc)
-
-    # Backfill scaling curves into each result
+    # ---- Backfill Grover scaling curves ----
     for result in results:
         fw = result["framework"]
         sd = scaling_by_fw.get(fw, {})
@@ -1590,7 +1620,10 @@ def main() -> None:
         result["scaling_alpha"] = alpha
         result["scaling_beta"] = beta
 
-    final_doc = _build_output_doc(contributor_name, hw, config, results, platform_id=args.platform)
+    final_doc = _build_output_doc(
+        contributor_name, hw, config, results,
+        platform_id=args.platform, emulated=args.emulated,
+    )
     _save_json(final_path, final_doc)
 
     db_endpoint = os.getenv("DB_ENDPOINT")
@@ -1618,96 +1651,12 @@ def main() -> None:
 
     print_summary_table(results, statuses)
     print()
-    print(f"Resultados guardados en: {final_path}")
+    print(f"Resultados Grover guardados en: {final_path}")
 
-    # ── Shor ──────────────────────────────────────────────────────────────
+    # ---- Backfill Shor scaling curves and finalize ----
     print("\n" + "=" * 58)
     print("  Shor — Factorización Cuántica")
     print("=" * 58)
-
-    if _over_budget(deadline):
-        print("[Tiempo agotado — omitiendo Shor]")
-        return
-
-    shor_results: list[dict] = []
-    shor_statuses: dict[str, str] = {}
-    shor_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    shor_final_path = os.path.join("results", f"shor_{shor_timestamp}.json")
-    shor_partial_path = os.path.join("results", f"shor_{shor_timestamp}_partial.json")
-
-    shor_python_enabled = [n for n in python_enabled if n in FRAMEWORKS]
-    shor_rust_enabled = [
-        n for n in rust_enabled
-        if n in RUST_FRAMEWORKS_SHOR
-        and RUST_FRAMEWORKS_SHOR[n].exists()
-        and os.access(RUST_FRAMEWORKS_SHOR[n], os.X_OK)
-    ]
-
-    shor_scaling_by_fw: dict[str, dict[int, float]] = {}
-    shor_total = len(config.n_values_shor) * (len(shor_python_enabled) + len(shor_rust_enabled))
-    shor_idx = 0
-
-    for N_val in config.n_values_shor:
-        if _over_budget(deadline):
-            print(f"\n[Tiempo agotado — omitiendo N={N_val} y restantes]")
-            break
-        n_qubits_val = _n_qubits_shor(N_val)
-        print(f"\n{'─' * 58}")
-        print(f"  Shor — N={N_val} ({n_qubits_val} qubits)  "
-              f"[{config.n_values_shor.index(N_val) + 1}/{len(config.n_values_shor)}]")
-        print(f"{'─' * 58}")
-        n_series: list[dict] = []
-
-        for fw in shor_python_enabled:
-            if _over_budget(deadline):
-                print(f"\n[Tiempo agotado — omitiendo {fw} y siguientes]")
-                break
-            shor_idx += 1
-            print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_val} ...")
-            try:
-                r = benchmark_shor_at_n(fw, N_val, config, hw, contributor_name, cudaq_target, deadline=deadline)
-                shor_results.append(r)
-                n_series.append(r)
-                shor_statuses[fw] = "OK"
-                shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
-            except _DeadlineExceeded:
-                print(f"  [TIMEOUT] {fw} N={N_val}: serie incompleta, descartada")
-            except Exception as e:
-                shor_statuses.setdefault(fw, "ERROR")
-                print(f"[ERROR] {fw} shor N={N_val}: {e}")
-
-        for fw in shor_rust_enabled:
-            if _over_budget(deadline):
-                print(f"\n[Tiempo agotado — omitiendo {fw} y siguientes]")
-                break
-            shor_idx += 1
-            binary = RUST_FRAMEWORKS_SHOR[fw]
-            print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_val} ...")
-            try:
-                r = benchmark_rust_shor_at_n(fw, binary, N_val, config, hw, contributor_name, deadline=deadline)
-                shor_results.append(r)
-                n_series.append(r)
-                shor_statuses[fw] = "OK"
-                shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
-            except _DeadlineExceeded:
-                print(f"  [TIMEOUT] {fw} N={N_val}: serie incompleta, descartada")
-            except Exception as e:
-                shor_statuses.setdefault(fw, "ERROR")
-                print(f"[ERROR] {fw} shor N={N_val}: {e}")
-
-        checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_val}.json")
-        _save_json(checkpoint_path, {
-            "schema_version": "1.0",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "n_to_factor": N_val,
-            "n_qubits": n_qubits_val,
-            "n_repetitions": config.n_repetitions,
-            "results": n_series,
-        })
-        print(f"\n→ Checkpoint N={N_val}: {checkpoint_path}")
-        if shor_results:
-            partial_doc = _build_output_doc(contributor_name, hw, config, shor_results, platform_id=args.platform)
-            _save_json(shor_partial_path, partial_doc)
 
     for r in shor_results:
         fw = r["framework"]
@@ -1725,11 +1674,13 @@ def main() -> None:
 
     if shor_results:
         _save_json(shor_final_path, _build_output_doc(
-            contributor_name, hw, config, shor_results, platform_id=args.platform
+            contributor_name, hw, config, shor_results,
+            platform_id=args.platform, emulated=args.emulated,
         ))
         print_shor_summary_table(shor_results, shor_statuses)
         if os.path.exists(shor_partial_path):
             os.remove(shor_partial_path)
+        print(f"\nResultados Shor guardados en: {shor_final_path}")
 
 
 if __name__ == "__main__":
