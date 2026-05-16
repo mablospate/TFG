@@ -4,6 +4,7 @@ param()
 
 $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
+$DOCKER_STARTED = $false   # we started Docker Desktop from scratch
 
 $proc         = Get-CimInstance Win32_Processor | Select-Object -First 1
 $CPU_MODEL    = $proc.Name.Trim()
@@ -39,7 +40,7 @@ function Ensure-Docker {
         for ($i = 0; $i -lt 90; $i++) {
             Start-Sleep 1
             $null = docker info 2>$null
-            if ($LASTEXITCODE -eq 0) { return }
+            if ($LASTEXITCODE -eq 0) { $script:DOCKER_STARTED = $true; return }
         }
         Write-Error "Docker Desktop did not respond in time."
         exit 1
@@ -47,6 +48,15 @@ function Ensure-Docker {
 
     Write-Error "Docker not found. Install Docker Desktop: https://docs.docker.com/desktop/install/windows-install/"
     exit 1
+}
+
+function Restore-Docker {
+    if ($script:DOCKER_STARTED) {
+        Write-Host "-> Stopping Docker Desktop (was not running before)..."
+        $dockerExe = Join-Path $Env:ProgramFiles "Docker\Docker\Docker.exe"
+        & $dockerExe --quit-on-logout 2>$null
+        Stop-Process -Name "Docker Desktop" -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Ensure-Docker
@@ -81,3 +91,5 @@ if ($Env:KEEP_IMAGE -ne "1") {
     Write-Host "-> Removing image $IMAGE..."
     docker rmi $IMAGE 2>$null
 }
+
+Restore-Docker

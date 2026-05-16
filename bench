@@ -15,6 +15,12 @@ GPU_MODEL=""
 DOCKER_MEM_GB=4
 DOCKER_CPUS=1
 
+# Colima state tracking — set during ensure_docker, used by restore_colima
+COLIMA_STARTED=0        # we started Colima from scratch
+COLIMA_RESTARTED=0      # we restarted an existing Colima
+COLIMA_ORIG_GB=0        # original memory before restart
+COLIMA_ORIG_CPU=0       # original CPU count before restart
+
 detect_hardware() {
     local os
     os="$(uname -s)"
@@ -73,9 +79,12 @@ _handle_macos_running() {
         elif (( needs_restart )); then
             echo "Colima is running with ${colima_gb}g RAM and ${colima_cpu} CPUs."
             echo "Optimal for this machine: ${DOCKER_MEM_GB}g RAM and ${DOCKER_CPUS} CPUs."
-            printf "Restart Colima now? This will stop all running containers. [y/N] "
+            printf "Restart Colima now? It will be restored afterwards. [y/N] "
             read -r reply
             if [[ "$reply" =~ ^[Yy]$ ]]; then
+                COLIMA_ORIG_GB=$colima_gb
+                COLIMA_ORIG_CPU=$colima_cpu
+                COLIMA_RESTARTED=1
                 echo "→ Restarting Colima (${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs)..."
                 colima stop
                 colima start --memory "$DOCKER_MEM_GB" --cpu "$DOCKER_CPUS"
@@ -95,6 +104,7 @@ _start_docker_macos() {
     if command -v colima &>/dev/null; then
         echo "→ Starting Colima with ${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs..."
         colima start --memory "$DOCKER_MEM_GB" --cpu "$DOCKER_CPUS"
+        COLIMA_STARTED=1
         return
     fi
 
@@ -198,6 +208,17 @@ cleanup_image() {
     fi
 }
 
+restore_colima() {
+    if (( COLIMA_STARTED )); then
+        echo "→ Stopping Colima (was not running before)..."
+        colima stop 2>/dev/null || true
+    elif (( COLIMA_RESTARTED )); then
+        echo "→ Restoring Colima to original state (${COLIMA_ORIG_GB}g RAM, ${COLIMA_ORIG_CPU} CPUs)..."
+        colima stop 2>/dev/null || true
+        colima start --memory "$COLIMA_ORIG_GB" --cpu "$COLIMA_ORIG_CPU"
+    fi
+}
+
 cap_to_docker_limits() {
     local docker_ncpu docker_mem_bytes docker_mem_gb
     docker_ncpu=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo "$DOCKER_CPUS")
@@ -222,6 +243,7 @@ main() {
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
     run_benchmark "$@"
     cleanup_image
+    restore_colima
 }
 
 main "$@"
