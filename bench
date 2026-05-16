@@ -217,12 +217,14 @@ pull_image() {
 run_benchmark() {
     local DOCKER_PLATFORM=""
     local EMULATED_FLAG=""
+    local NO_GPU_FLAG=""
 
     # Parse run_benchmark-specific flags
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --docker-platform) DOCKER_PLATFORM="$2"; shift 2 ;;
             --emulated) EMULATED_FLAG="--emulated"; shift ;;
+            --no-gpu) NO_GPU_FLAG="--no-gpu"; shift ;;
             *) break ;;
         esac
     done
@@ -246,6 +248,7 @@ run_benchmark() {
         -v "$(pwd)/results:/app/results" \
         "$IMAGE" \
         $EMULATED_FLAG \
+        $NO_GPU_FLAG \
         "$@" &
     local _docker_pid=$!
 
@@ -363,13 +366,20 @@ main() {
 
     HOST_ARCH="$(uname -m)"
 
-    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
-        echo "→ Primera pasada: build nativo arm64..."
-    fi
-    run_benchmark "${EXTRA_ARGS[@]}" "$@"
+    if [[ "$HAS_NVIDIA" -eq 1 ]]; then
+        # ── amd64 + NVIDIA: two passes ──
+        echo "→ Primera pasada: con GPU (CUDA)..."
+        run_benchmark "${EXTRA_ARGS[@]}" "$@"
 
-    # Second pass: amd64 via emulation (arm64 hosts only, skipped in dev mode)
-    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
+        echo ""
+        echo "→ Segunda pasada: sin GPU (CPU only)..."
+        GPU_FLAGS=""
+        run_benchmark --no-gpu "${EXTRA_ARGS[@]}" "$@"
+    elif [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
+        # ── arm64: native + emulated ──
+        echo "→ Primera pasada: build nativo arm64..."
+        run_benchmark "${EXTRA_ARGS[@]}" "$@"
+
         if _qemu_available; then
             echo ""
             echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."
@@ -377,6 +387,9 @@ main() {
         else
             echo "  [INFO] Emulación amd64 no disponible, omitiendo segunda pasada."
         fi
+    else
+        # ── amd64, no GPU: single pass ──
+        run_benchmark "${EXTRA_ARGS[@]}" "$@"
     fi
 }
 

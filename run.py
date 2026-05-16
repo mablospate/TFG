@@ -1266,6 +1266,7 @@ def _build_output_doc(
     results: list[dict],
     platform_id: str = "",
     emulated: bool = False,
+    no_gpu: bool = False,
 ) -> dict:
     return {
         "schema_version": "1.0",
@@ -1273,8 +1274,9 @@ def _build_output_doc(
         "python_version": sys.version,
         "platform": platform.platform(),
         "platform_id": platform_id,
-        "gpu_enabled": platform_id.endswith("-nvidia"),
+        "gpu_enabled": platform_id.endswith("-nvidia") and not no_gpu,
         "emulated": emulated,
+        "no_gpu": no_gpu,
         "benchmark_image": os.getenv("DOCKER_IMAGE", "dev"),
         "contributor_name": contributor_name,
         "hardware": dataclasses.asdict(hw),
@@ -1382,6 +1384,12 @@ def parse_args():
         action="store_true",
         default=False,
         help="Mark results as emulated (arm64 host running amd64 image)",
+    )
+    p.add_argument(
+        "--no-gpu",
+        action="store_true",
+        default=False,
+        help="CPU-only pass (GPU disabled at docker level)",
     )
     p.add_argument(
         "--dev",
@@ -1576,7 +1584,7 @@ def main() -> None:
 
             partial_doc = _build_output_doc(
                 contributor_name, hw, config, results,
-                platform_id=args.platform, emulated=args.emulated,
+                platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
             )
             _save_json(partial_path, partial_doc)
 
@@ -1640,7 +1648,7 @@ def main() -> None:
             if shor_results:
                 shor_partial_doc = _build_output_doc(
                     contributor_name, hw, config, shor_results,
-                    platform_id=args.platform, emulated=args.emulated,
+                    platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
                 )
                 _save_json(shor_partial_path, shor_partial_doc)
 
@@ -1661,7 +1669,7 @@ def main() -> None:
 
     final_doc = _build_output_doc(
         contributor_name, hw, config, results,
-        platform_id=args.platform, emulated=args.emulated,
+        platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
     )
     _save_json(final_path, final_doc)
 
@@ -1714,7 +1722,7 @@ def main() -> None:
     if shor_results:
         _save_json(shor_final_path, _build_output_doc(
             contributor_name, hw, config, shor_results,
-            platform_id=args.platform, emulated=args.emulated,
+            platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
         ))
         print_shor_summary_table(shor_results, shor_statuses)
         if os.path.exists(shor_partial_path):
