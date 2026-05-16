@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 from dataclasses import dataclass
@@ -132,19 +133,27 @@ def _detect_gpu() -> tuple[str | None, float | None]:
         return None, None
 
 
+def _env_or(key: str, default):
+    val = os.environ.get(key)
+    return val if val and val.strip() else default
+
+
 def detect_hardware() -> HardwareInfo:
     """Detect hardware characteristics of the current machine."""
     gpu_model, gpu_vram_gb = _detect_gpu()
 
     return HardwareInfo(
-        hostname=platform.node(),
+        hostname=_env_or("BENCH_HOSTNAME", platform.node()),
         os=_normalize_os(platform.system()),
         os_version=platform.version(),
-        cpu_model=_detect_cpu_model(),
-        cpu_cores_physical=psutil.cpu_count(logical=False) or 1,
-        cpu_cores_logical=psutil.cpu_count(logical=True) or 1,
-        cpu_freq_mhz=_detect_cpu_freq_mhz(),
-        ram_total_gb=psutil.virtual_memory().total / (1024**3),
+        cpu_model=_env_or("BENCH_CPU_MODEL", _detect_cpu_model()),
+        cpu_cores_physical=int(_env_or("BENCH_CPU_CORES_PHYSICAL",
+                                        str(psutil.cpu_count(logical=False) or 1))),
+        cpu_cores_logical=int(_env_or("BENCH_CPU_CORES_LOGICAL",
+                                       str(psutil.cpu_count(logical=True) or 1))),
+        cpu_freq_mhz=float(_env_or("BENCH_CPU_FREQ_MHZ", str(_detect_cpu_freq_mhz()))),
+        ram_total_gb=float(_env_or("BENCH_RAM_GB",
+                                    str(round(psutil.virtual_memory().total / (1024**3), 1)))),
         gpu_model=gpu_model,
         gpu_vram_gb=gpu_vram_gb,
         python_version=platform.python_version(),
