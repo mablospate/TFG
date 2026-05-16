@@ -1446,6 +1446,11 @@ def main() -> None:
         if skipped:
             print(f"[no-gpu] Omitiendo frameworks GPU: {', '.join(skipped)}")
 
+    if args.emulated:
+        # cudaq crashes under QEMU emulation even in CPU-only mode
+        all_enabled = [fw for fw in all_enabled if fw not in ("cudaq",)]
+        print("  [INFO] cudaq omitido en pasada emulada (incompatible con QEMU)")
+
     print(f"Plataforma seleccionada: {args.platform}")
     print(f"  Frameworks habilitados: {', '.join(all_enabled)}")
     print()
