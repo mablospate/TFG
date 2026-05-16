@@ -59,19 +59,24 @@ _handle_macos_running() {
     current_context=$(docker context show 2>/dev/null || echo "")
 
     if [[ "$current_context" == "colima" ]]; then
-        local colima_bytes colima_gb
-        colima_bytes=$(colima status --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('memory',0))" 2>/dev/null || echo 0)
-        colima_gb=$(( colima_bytes / 1073741824 ))
+        local colima_status colima_gb colima_cpu
+        colima_status=$(colima status --json 2>/dev/null || echo "{}")
+        colima_gb=$(echo "$colima_status" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('memory',0)//1073741824)" 2>/dev/null || echo 0)
+        colima_cpu=$(echo "$colima_status" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cpu',0))" 2>/dev/null || echo 0)
 
-        if [[ "${RESTART_COLIMA:-0}" == "1" ]]; then
-            echo "→ Restarting Colima with ${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs..."
+        local needs_restart=0
+        (( colima_gb  < DOCKER_MEM_GB * 8 / 10 )) && needs_restart=1
+        (( colima_cpu < DOCKER_CPUS )) && needs_restart=1
+
+        if [[ "${KEEP_COLIMA:-0}" == "1" ]]; then
+            echo "INFO: Keeping Colima as-is (${colima_gb}g RAM, ${colima_cpu} CPUs). Resources will be capped."
+        elif (( needs_restart )); then
+            echo "→ Restarting Colima with optimal resources (${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs)..."
+            echo "  (current: ${colima_gb}g RAM, ${colima_cpu} CPUs — use KEEP_COLIMA=1 to skip)"
             colima stop
             colima start --memory "$DOCKER_MEM_GB" --cpu "$DOCKER_CPUS"
-        elif (( colima_gb < DOCKER_MEM_GB * 8 / 10 )); then
-            echo "WARNING: Colima VM has ${colima_gb}g RAM but benchmark wants ${DOCKER_MEM_GB}g."
-            echo "         Run with RESTART_COLIMA=1 ./bench to restart Colima with optimal resources."
         else
-            echo "Colima OK (${colima_gb}g RAM, $(colima status --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cpu',0))" 2>/dev/null || echo "?") CPUs)"
+            echo "Colima OK (${colima_gb}g RAM, ${colima_cpu} CPUs)"
         fi
     else
         echo "INFO: Docker Desktop active. Per-container --memory/--cpus limits applied."
@@ -193,11 +198,9 @@ cap_to_docker_limits() {
     docker_mem_gb=$(( docker_mem_bytes / 1073741824 ))
 
     if (( docker_ncpu < DOCKER_CPUS )); then
-        echo "INFO: Docker has ${docker_ncpu} CPUs available, capping --cpus (host has ${DOCKER_CPUS})"
         DOCKER_CPUS=$docker_ncpu
     fi
     if (( docker_mem_gb > 0 && docker_mem_gb < DOCKER_MEM_GB )); then
-        echo "INFO: Docker has ${docker_mem_gb}g RAM available, capping --memory (host has ${RAM_GB_I}g)"
         DOCKER_MEM_GB=$docker_mem_gb
     fi
 }
