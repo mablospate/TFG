@@ -12,6 +12,7 @@ import json
 import os
 import pathlib
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -90,11 +91,17 @@ FRAMEWORKS: list[str] = ["qiskit", "cirq", "cudaq", "qdislib"]
 
 _RUST_BIN_DIR = pathlib.Path(__file__).parent / "target" / "release"
 
+
+def _rust_bin(name: str) -> pathlib.Path:
+    found = shutil.which(name)
+    return pathlib.Path(found) if found else _RUST_BIN_DIR / name
+
+
 RUST_FRAMEWORKS: dict[str, pathlib.Path] = {
-    "q1tsim": _RUST_BIN_DIR / "q1tsim-grover",
-    "quantr": _RUST_BIN_DIR / "quantr-grover",
-    "quantrs2": _RUST_BIN_DIR / "quantrs2-grover",
-    "qcgpu": _RUST_BIN_DIR / "qcgpu-grover",
+    "q1tsim":   _rust_bin("q1tsim-grover"),
+    "quantr":   _rust_bin("quantr-grover"),
+    "quantrs2": _rust_bin("quantrs2-grover"),
+    "qcgpu":    _rust_bin("qcgpu-grover"),
 }
 
 
