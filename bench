@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# When the script is piped (e.g. bash <(curl ...)), stdin is the pipe, not the
+# terminal. Reassign stdin to /dev/tty so read always talks to the user.
+exec </dev/tty
+
 IMAGE="${BENCHMARK_IMAGE:-mablospate/tfg-bench:latest}"
 
 CPU_MODEL="unknown"
@@ -234,13 +238,16 @@ cap_to_docker_limits() {
 }
 
 collect_run_args() {
-    # Prompt for --contributor if not already in args
     if [[ ! " $* " =~ " --contributor " ]]; then
-        printf "Contributor name: "
-        read -r _contributor </dev/tty
-        EXTRA_ARGS+=(--contributor "$_contributor")
+        local name=""
+        while [[ -z "$name" ]]; do
+            printf "Contributor name: "
+            read -r name
+            name="${name#"${name%%[![:space:]]*}"}"  # ltrim
+            name="${name%"${name##*[![:space:]]}"}"  # rtrim
+        done
+        EXTRA_ARGS+=(--contributor "$name")
     fi
-    # Default --time-budget to 120 min if not provided
     if [[ ! " $* " =~ " --time-budget " ]]; then
         EXTRA_ARGS+=(--time-budget 120)
     fi
