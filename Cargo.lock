@@ -1758,8 +1758,6 @@ dependencies = [
 [[package]]
 name = "q1tsim"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaa4e8af8f290adf13e403034c4c210888bd92b34c386d19e783d890fbd92fd5"
 dependencies = [
  "ndarray 0.12.1",
  "num-complex 0.2.4",

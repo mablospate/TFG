@@ -1,0 +1,34 @@
+[package]
+name = "q1tsim"
+version = "0.5.0"
+authors = ["Gé Vissers <ge@q1t.nl>"]
+description="A simple, efficient, quantum computer simulator."
+repository="https://github.com/Q1tBV/q1tsim"
+keywords=["quantum-computing", "quantum-simulator", "quantum", "qubits", "rust"]
+license="Apache-2.0"
+readme="README.md"
+edition="2018"
+
+[lib]
+name = "q1tsim"
+crate-type = ["dylib"]
+
+[dependencies]
+q1tsim-derive = { path = "q1tsim-derive", version = "0.1.0" }
+num-complex="0.2"
+num-traits="0.2"
+ndarray = "0.12"
+rand="0.7"
+rand_distr="0.2"
+regex="1.0"
+
+[dev-dependencies]
+criterion="0.2"
+matches="0.1"
+statrs="0.7"
+rand_core="0.5"
+rand_hc="0.2"
+
+[[bench]]
+name="bench_main"
+harness=false

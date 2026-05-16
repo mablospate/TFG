@@ -16,3 +16,4 @@ resolver = "2"
 [patch.crates-io]
 ocl-core = { path = "rust/qcgpu/vendor/ocl-core" }
 ocl = { path = "rust/qcgpu/vendor/ocl" }
+q1tsim = { path = "rust/q1tsim/vendor/q1tsim" }

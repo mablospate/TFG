@@ -1,0 +1,6 @@
+/target
+/q1tsim-derive/target
+**/*.rs.bk
+Cargo.lock
+/tmp
+python/__pycache__
