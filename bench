@@ -233,15 +233,30 @@ cap_to_docker_limits() {
     fi
 }
 
+collect_run_args() {
+    # Prompt for --contributor if not already in args
+    if [[ ! " $* " =~ " --contributor " ]]; then
+        printf "Contributor name: "
+        read -r _contributor </dev/tty
+        EXTRA_ARGS+=(--contributor "$_contributor")
+    fi
+    # Default --time-budget to 120 min if not provided
+    if [[ ! " $* " =~ " --time-budget " ]]; then
+        EXTRA_ARGS+=(--time-budget 120)
+    fi
+}
+
 main() {
+    EXTRA_ARGS=()
     detect_hardware
     compute_resources
     ensure_docker
     cap_to_docker_limits
+    collect_run_args "$@"
     pull_image
     echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
-    run_benchmark "$@"
+    run_benchmark "${EXTRA_ARGS[@]}" "$@"
     cleanup_image
     restore_colima
 }

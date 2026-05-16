@@ -70,6 +70,15 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
 Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
+$extraArgs = @()
+if ($args -notcontains "--contributor") {
+    $contributor = Read-Host "Contributor name"
+    $extraArgs += @("--contributor", $contributor)
+}
+if ($args -notcontains "--time-budget") {
+    $extraArgs += @("--time-budget", "120")
+}
+
 $dockerArgs = @(
     "run", "--rm",
     "--memory", "${DOCKER_MEM_GB}g",
@@ -83,7 +92,7 @@ $dockerArgs = @(
     "-e", "BENCH_RAM_GB=$RAM_GB_F",
     "-v", "${PWD}\results:/app/results",
     $IMAGE
-) + $args
+) + $extraArgs + $args
 
 & docker @dockerArgs
 
