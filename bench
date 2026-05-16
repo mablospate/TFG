@@ -186,10 +186,27 @@ cleanup_image() {
     fi
 }
 
+cap_to_docker_limits() {
+    local docker_ncpu docker_mem_bytes docker_mem_gb
+    docker_ncpu=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo "$DOCKER_CPUS")
+    docker_mem_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0)
+    docker_mem_gb=$(( docker_mem_bytes / 1073741824 ))
+
+    if (( docker_ncpu < DOCKER_CPUS )); then
+        echo "INFO: Docker has ${docker_ncpu} CPUs available, capping --cpus (host has ${DOCKER_CPUS})"
+        DOCKER_CPUS=$docker_ncpu
+    fi
+    if (( docker_mem_gb > 0 && docker_mem_gb < DOCKER_MEM_GB )); then
+        echo "INFO: Docker has ${docker_mem_gb}g RAM available, capping --memory (host has ${RAM_GB_I}g)"
+        DOCKER_MEM_GB=$docker_mem_gb
+    fi
+}
+
 main() {
     detect_hardware
     compute_resources
     ensure_docker
+    cap_to_docker_limits
     pull_image
     echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
