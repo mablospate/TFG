@@ -35,17 +35,33 @@ while read local_ref local_sha remote_ref remote_sha; do
         echo "$CHANGED" | sed 's/^/  /'
     fi
 
-    # ── Build & push ─────────────────────────────────────────────────────────
-    echo "pre-push: building $IMAGE:sha-$SHORT_SHA (linux/amd64 + linux/arm64)..."
+    # ── Build & push (sequential per platform to avoid OOM on scirs2-sparse) ──
+    echo "pre-push: building $IMAGE — linux/amd64..."
     docker buildx build \
-        --platform linux/amd64,linux/arm64 \
+        --platform linux/amd64 \
         --target runtime \
         --push \
         --progress=plain \
-        -t "${IMAGE}:latest" \
-        -t "${IMAGE}:sha-${SHORT_SHA}" \
+        -t "${IMAGE}:sha-${SHORT_SHA}-amd64" \
         --build-arg "DOCKER_IMAGE_TAG=${SHORT_SHA}" \
         .
+
+    echo "pre-push: building $IMAGE — linux/arm64..."
+    docker buildx build \
+        --platform linux/arm64 \
+        --target runtime \
+        --push \
+        --progress=plain \
+        -t "${IMAGE}:sha-${SHORT_SHA}-arm64" \
+        --build-arg "DOCKER_IMAGE_TAG=${SHORT_SHA}" \
+        .
+
+    echo "pre-push: merging into multi-arch manifest..."
+    docker buildx imagetools create \
+        -t "${IMAGE}:latest" \
+        -t "${IMAGE}:sha-${SHORT_SHA}" \
+        "${IMAGE}:sha-${SHORT_SHA}-amd64" \
+        "${IMAGE}:sha-${SHORT_SHA}-arm64"
 
     # ── Verify ───────────────────────────────────────────────────────────────
     echo "pre-push: verifying manifest..."
