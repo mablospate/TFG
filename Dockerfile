@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Global ARG — injected by buildx per platform; also used for FROM substitution
 ARG TARGETARCH
 
