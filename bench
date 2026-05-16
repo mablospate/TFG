@@ -386,7 +386,7 @@ main() {
             echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."
             echo "  Descargando variante amd64..."
             if docker pull --platform linux/amd64 "$IMAGE" >/dev/null 2>&1; then
-                run_benchmark --docker-platform linux/amd64 --emulated "${EXTRA_ARGS[@]}" "$@" \
+                run_benchmark --docker-platform linux/amd64 --emulated --no-gpu "${EXTRA_ARGS[@]}" "$@" \
                     || echo "  [WARN] Segunda pasada (amd64 emulado) terminó con error."
             else
                 echo "  [WARN] No se pudo descargar la imagen amd64, omitiendo segunda pasada."
