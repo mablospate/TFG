@@ -71,10 +71,17 @@ _handle_macos_running() {
         if [[ "${KEEP_COLIMA:-0}" == "1" ]]; then
             echo "INFO: Keeping Colima as-is (${colima_gb}g RAM, ${colima_cpu} CPUs). Resources will be capped."
         elif (( needs_restart )); then
-            echo "→ Restarting Colima with optimal resources (${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs)..."
-            echo "  (current: ${colima_gb}g RAM, ${colima_cpu} CPUs — use KEEP_COLIMA=1 to skip)"
-            colima stop
-            colima start --memory "$DOCKER_MEM_GB" --cpu "$DOCKER_CPUS"
+            echo "Colima is running with ${colima_gb}g RAM and ${colima_cpu} CPUs."
+            echo "Optimal for this machine: ${DOCKER_MEM_GB}g RAM and ${DOCKER_CPUS} CPUs."
+            printf "Restart Colima now? This will stop all running containers. [y/N] "
+            read -r reply
+            if [[ "$reply" =~ ^[Yy]$ ]]; then
+                echo "→ Restarting Colima (${DOCKER_MEM_GB}g RAM, ${DOCKER_CPUS} CPUs)..."
+                colima stop
+                colima start --memory "$DOCKER_MEM_GB" --cpu "$DOCKER_CPUS"
+            else
+                echo "Keeping Colima as-is. Resources will be capped to ${colima_gb}g / ${colima_cpu} CPUs."
+            fi
         else
             echo "Colima OK (${colima_gb}g RAM, ${colima_cpu} CPUs)"
         fi
