@@ -1145,13 +1145,22 @@ def main() -> None:
     all_enabled = list(platform_cfg.frameworks)
     cudaq_target = platform_cfg.cudaq_target
 
-    # When --no-gpu is set, cudaq and qcgpu require GPU/OpenCL and cannot run.
+    # When --no-gpu is set, qcgpu requires OpenCL GPU and cannot run.
     if args.no_gpu:
         _gpu_only = {"qcgpu"}
         skipped = [fw for fw in all_enabled if fw in _gpu_only]
         all_enabled = [fw for fw in all_enabled if fw not in _gpu_only]
         if skipped:
             print(f"[no-gpu] Omitiendo frameworks sin fallback CPU: {', '.join(skipped)}")
+
+    # When --emulated is set (amd64 image under QEMU on ARM), cudaq uses AVX/SSE
+    # instructions that QEMU does not emulate and will SIGILL.
+    if args.emulated:
+        _qemu_broken = {"cudaq"}
+        skipped_e = [fw for fw in all_enabled if fw in _qemu_broken]
+        all_enabled = [fw for fw in all_enabled if fw not in _qemu_broken]
+        if skipped_e:
+            print(f"[emulated] Omitiendo frameworks incompatibles con emulacion QEMU: {', '.join(skipped_e)}")
 
     print(f"Plataforma seleccionada: {args.platform}")
     print(f"  Frameworks habilitados: {', '.join(all_enabled)}")

@@ -9,8 +9,10 @@ $DEV_MODE = $Dev.IsPresent
 $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
-$CONTAINER_NAME = "tfg-bench-$PID"
+$script:PASS_NUM = 0
+$script:BENCH_CONTAINER_NAME = ""
 
+# --- Hardware detection ---
 $proc         = Get-CimInstance Win32_Processor | Select-Object -First 1
 $CPU_MODEL    = $proc.Name.Trim()
 $CPU_PHYSICAL = (Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
@@ -19,16 +21,20 @@ $CPU_FREQ_MHZ = $proc.MaxClockSpeed
 $RAM_BYTES    = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
 $RAM_GB_I     = [int]($RAM_BYTES / 1GB)
 $RAM_GB_F     = [math]::Round($RAM_BYTES / 1GB, 1)
+$HOST_ARCH    = $env:PROCESSOR_ARCHITECTURE   # "AMD64" or "ARM64" on Windows
 
+# --- Compute resources ---
 $DOCKER_MEM_GB = if ($RAM_GB_I -gt 6) { $RAM_GB_I - 2 } else { 4 }
 $DOCKER_CPUS   = $CPU_PHYSICAL
 
+# --- NVIDIA detection ---
 $HAS_NVIDIA = $false
 $GPU_FLAGS  = @()
+$GPU_MODEL  = ""
 if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
     $nv = & nvidia-smi --query-gpu=name --format=csv,noheader 2>$null
     if ($LASTEXITCODE -eq 0 -and $nv) {
-        $GPU_MODEL  = $nv | Select-Object -First 1
+        $GPU_MODEL  = ($nv | Select-Object -First 1).Trim()
         $HAS_NVIDIA = $true
         $GPU_FLAGS  = @("--gpus", "all")
     }
@@ -64,33 +70,147 @@ function Restore-Docker {
     }
 }
 
-Ensure-Docker
+function Cap-ToDockerLimits {
+    try {
+        $dockerNcpu = & docker info --format '{{.NCPU}}' 2>$null
+        if ($LASTEXITCODE -eq 0 -and $dockerNcpu -match '^\d+$') {
+            $dockerNcpuInt = [int]$dockerNcpu
+            if ($dockerNcpuInt -gt 0 -and $dockerNcpuInt -lt $script:DOCKER_CPUS) {
+                $script:DOCKER_CPUS = $dockerNcpuInt
+            }
+        }
+    } catch { }
 
-$imageExists = $false
-try {
-    $null = docker image inspect $IMAGE 2>$null
-    $imageExists = ($LASTEXITCODE -eq 0)
-} catch {
-    $imageExists = $false
+    try {
+        $dockerMem = & docker info --format '{{.MemTotal}}' 2>$null
+        if ($LASTEXITCODE -eq 0 -and $dockerMem -match '^\d+$') {
+            $dockerMemGb = [int]([int64]$dockerMem / 1GB)
+            if ($dockerMemGb -gt 0 -and $dockerMemGb -lt $script:DOCKER_MEM_GB) {
+                $script:DOCKER_MEM_GB = $dockerMemGb
+            }
+        }
+    } catch { }
 }
 
-if (-not $imageExists) {
-    if ($DEV_MODE -and (Test-Path (Join-Path $PWD "Dockerfile"))) {
-        Write-Host "-> Building image from local repo..."
-        docker build -t $IMAGE .
-        if ($LASTEXITCODE -ne 0) { Write-Error "docker build failed."; exit 1 }
-    } else {
+function Test-QemuAvailable {
+    $result = & docker run --rm --platform linux/amd64 alpine uname -m 2>$null
+    return ($LASTEXITCODE -eq 0 -and "$result" -match 'x86_64')
+}
+
+function Pull-Image {
+    $imageExists = $false
+    try {
+        $null = docker image inspect $IMAGE 2>$null
+        $imageExists = ($LASTEXITCODE -eq 0)
+    } catch {
+        $imageExists = $false
+    }
+
+    if (-not $imageExists) {
         Write-Host "-> Pulling $IMAGE from Docker Hub..."
         docker pull $IMAGE
         if ($LASTEXITCODE -ne 0) { Write-Error "docker pull failed."; exit 1 }
     }
 }
 
-Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
-Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
+function Run-Benchmark {
+    [CmdletBinding()]
+    param(
+        [switch]$NoGpu,
+        [switch]$Emulated,
+        [string]$DockerPlatform = "",
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$PassthroughArgs
+    )
 
+    $script:PASS_NUM += 1
+    $script:BENCH_CONTAINER_NAME = "tfg-bench-$PID-$($script:PASS_NUM)"
+
+    $dockerRunArgs = @(
+        "run", "--rm",
+        "--name", $script:BENCH_CONTAINER_NAME
+    )
+
+    if ($DockerPlatform) {
+        $dockerRunArgs += @("--platform", $DockerPlatform)
+    }
+
+    $dockerRunArgs += @(
+        "--memory", "${DOCKER_MEM_GB}g",
+        "--cpus", "$DOCKER_CPUS"
+    )
+
+    if (-not $NoGpu) {
+        $dockerRunArgs += $GPU_FLAGS
+    }
+
+    $dockerRunArgs += @(
+        "-e", "BENCH_HOSTNAME=$Env:COMPUTERNAME",
+        "-e", "BENCH_CPU_MODEL=$CPU_MODEL",
+        "-e", "BENCH_CPU_CORES_PHYSICAL=$DOCKER_CPUS",
+        "-e", "BENCH_CPU_CORES_LOGICAL=$DOCKER_CPUS",
+        "-e", "BENCH_CPU_FREQ_MHZ=$CPU_FREQ_MHZ",
+        "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
+        "-e", "BENCH_OS=Windows",
+        "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
+        "-v", "${PWD}\results:/app/results",
+        $IMAGE
+    )
+
+    if ($Emulated) {
+        $dockerRunArgs += "--emulated"
+    }
+
+    if ($NoGpu) {
+        $dockerRunArgs += "--no-gpu"
+    }
+
+    if ($PassthroughArgs) {
+        $dockerRunArgs += $PassthroughArgs
+    }
+
+    Write-Host "(Pulsa 'q' para detener el benchmark)"
+    $dockerProc = Start-Process -FilePath "docker" -ArgumentList $dockerRunArgs -NoNewWindow -PassThru
+
+    $timerJob = $null
+    if ($TIME_BUDGET_MINS -gt 0) {
+        $containerName = $script:BENCH_CONTAINER_NAME
+        $timerJob = Start-Job -ScriptBlock {
+            param($secs, $name)
+            Start-Sleep -Seconds $secs
+            docker stop $name 2>$null
+        } -ArgumentList ($TIME_BUDGET_MINS * 60), $containerName
+    }
+
+    while (-not $dockerProc.HasExited) {
+        if ([Console]::KeyAvailable) {
+            $key = [Console]::ReadKey($true)
+            if ($key.Key -eq [ConsoleKey]::Q) {
+                Write-Host ""
+                Write-Host "-> Benchmark detenido por el usuario."
+                & docker stop $script:BENCH_CONTAINER_NAME 2>$null
+                break
+            }
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    $dockerProc.WaitForExit()
+    if ($timerJob) {
+        Stop-Job $timerJob -ErrorAction SilentlyContinue
+        Remove-Job $timerJob -ErrorAction SilentlyContinue
+    }
+
+    $script:BENCH_CONTAINER_NAME = ""
+}
+
+# --- Main flow ---
+
+Ensure-Docker
+Cap-ToDockerLimits
+
+# Collect run args (contributor, time budget, dev)
 $extraArgs = @()
-if ($DEV_MODE) { $extraArgs += "--dev" }
+
 if ($args -notcontains "--contributor") {
     if ($DEV_MODE) {
         $contributor = "dev"
@@ -102,57 +222,47 @@ if ($args -notcontains "--contributor") {
 
 $TIME_BUDGET_MINS = 0  # 0 = unlimited
 if (-not $DEV_MODE -and $args -notcontains "--time-budget") {
-    $ans = Read-Host "Tiempo límite en minutos (Enter = sin límite)"
+    $ans = Read-Host "Tiempo limite en minutos (Enter = sin limite)"
     if ($ans -match '^\d+$' -and [int]$ans -gt 0) {
         $TIME_BUDGET_MINS = [int]$ans
     }
 }
 
-$dockerArgs = @(
-    "run", "--rm",
-    "--name", $CONTAINER_NAME,
-    "--memory", "${DOCKER_MEM_GB}g",
-    "--cpus", "$DOCKER_CPUS"
-) + $GPU_FLAGS + @(
-    "-e", "BENCH_HOSTNAME=$Env:COMPUTERNAME",
-    "-e", "BENCH_CPU_MODEL=$CPU_MODEL",
-    "-e", "BENCH_CPU_CORES_PHYSICAL=$DOCKER_CPUS",
-    "-e", "BENCH_CPU_CORES_LOGICAL=$DOCKER_CPUS",
-    "-e", "BENCH_CPU_FREQ_MHZ=$CPU_FREQ_MHZ",
-    "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
-    "-e", "BENCH_OS=Windows",
-    "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
-    "-v", "${PWD}\results:/app/results",
-    $IMAGE
-) + $extraArgs + $args
+if ($DEV_MODE) { $extraArgs += "--dev" }
 
-Write-Host "(Pulsa 'q' para detener el benchmark)"
-$dockerProc = Start-Process -FilePath "docker" -ArgumentList $dockerArgs -NoNewWindow -PassThru
+Pull-Image
 
-$timerJob = $null
-if ($TIME_BUDGET_MINS -gt 0) {
-    $containerName = $CONTAINER_NAME
-    $timerJob = Start-Job -ScriptBlock {
-        param($secs, $name)
-        Start-Sleep -Seconds $secs
-        docker stop $name 2>$null
-    } -ArgumentList ($TIME_BUDGET_MINS * 60), $containerName
-}
+Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
+Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
-while (-not $dockerProc.HasExited) {
-    if ([Console]::KeyAvailable) {
-        $key = [Console]::ReadKey($true)
-        if ($key.Key -eq [ConsoleKey]::Q) {
-            Write-Host ""
-            Write-Host "-> Benchmark detenido por el usuario."
-            & docker stop $CONTAINER_NAME 2>$null
-            break
+if ($HAS_NVIDIA) {
+    Write-Host "-> Primera pasada: con GPU (CUDA)..."
+    Run-Benchmark @extraArgs @args
+
+    Write-Host ""
+    Write-Host "-> Segunda pasada: sin GPU (CPU only)..."
+    $GPU_FLAGS = @()
+    Run-Benchmark -NoGpu @extraArgs @args
+} elseif ($HOST_ARCH -eq "ARM64") {
+    Write-Host "-> Primera pasada: build nativo arm64..."
+    Run-Benchmark @extraArgs @args
+
+    if (Test-QemuAvailable) {
+        Write-Host ""
+        Write-Host "-> Segunda pasada: build amd64 via emulacion..."
+        Write-Host "  Descargando variante amd64..."
+        & docker pull --platform linux/amd64 $IMAGE 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Run-Benchmark -DockerPlatform linux/amd64 -Emulated -NoGpu @extraArgs @args
+        } else {
+            Write-Host "  [WARN] No se pudo descargar la imagen amd64, omitiendo segunda pasada."
         }
+    } else {
+        Write-Host "  [INFO] Emulacion amd64 no disponible, omitiendo segunda pasada."
     }
-    Start-Sleep -Milliseconds 200
+} else {
+    Run-Benchmark @extraArgs @args
 }
-$dockerProc.WaitForExit()
-if ($timerJob) { Stop-Job $timerJob; Remove-Job $timerJob }
 
 if ($Env:KEEP_IMAGE -ne "1") {
     Write-Host "-> Removing image $IMAGE..."
