@@ -38,15 +38,42 @@ def _detect_cpu_model() -> str:
     try:
         if system == "linux":
             with open("/proc/cpuinfo", "r") as fh:
-                for line in fh:
-                    if line.startswith("model name"):
-                        return line.split(":", 1)[1].strip()
+                content = fh.read()
+            # x86: "model name" field
+            for line in content.splitlines():
+                if line.startswith("model name"):
+                    val = line.split(":", 1)[1].strip()
+                    if val:
+                        return val
+            # ARM: "Model name" via lscpu (most reliable across distros)
+            try:
+                out = subprocess.run(
+                    ["lscpu"], capture_output=True, text=True, timeout=5
+                )
+                if out.returncode == 0:
+                    for line in out.stdout.splitlines():
+                        if line.startswith("Model name"):
+                            val = line.split(":", 1)[1].strip()
+                            if val:
+                                return val
+                        if line.startswith("Vendor ID"):
+                            pass  # keep looking for Model name
+            except Exception:
+                pass
+            # ARM fallback: "Hardware" or "Model" fields in /proc/cpuinfo
+            for prefix in ("Model\t", "Model ", "Hardware"):
+                for line in content.splitlines():
+                    if line.startswith(prefix):
+                        val = line.split(":", 1)[1].strip()
+                        if val:
+                            return val
+            # Last resort: architecture string
+            arch = platform.machine()
+            return f"unknown ({arch})"
         elif system == "darwin":
             out = subprocess.run(
                 ["sysctl", "-n", "machdep.cpu.brand_string"],
-                capture_output=True,
-                text=True,
-                timeout=5,
+                capture_output=True, text=True, timeout=5,
             )
             if out.returncode == 0 and out.stdout.strip():
                 return out.stdout.strip()
@@ -55,6 +82,29 @@ def _detect_cpu_model() -> str:
     except Exception:
         pass
     return platform.processor() or "unknown"
+
+
+def _detect_cpu_freq_mhz() -> float:
+    freq = psutil.cpu_freq()
+    if freq and freq.max and freq.max > 0:
+        return float(freq.max)
+    # Docker/VM fallback: kernel cpufreq sysfs
+    try:
+        with open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq") as fh:
+            return float(fh.read().strip()) / 1000.0  # kHz → MHz
+    except Exception:
+        pass
+    # lscpu fallback
+    try:
+        out = subprocess.run(["lscpu"], capture_output=True, text=True, timeout=5)
+        if out.returncode == 0:
+            for line in out.stdout.splitlines():
+                if "CPU max MHz" in line or "CPU MHz" in line:
+                    val = line.split(":", 1)[1].strip().split()[0]
+                    return float(val)
+    except Exception:
+        pass
+    return 0.0
 
 
 def _detect_gpu() -> tuple[str | None, float | None]:
@@ -84,7 +134,6 @@ def _detect_gpu() -> tuple[str | None, float | None]:
 
 def detect_hardware() -> HardwareInfo:
     """Detect hardware characteristics of the current machine."""
-    freq = psutil.cpu_freq()
     gpu_model, gpu_vram_gb = _detect_gpu()
 
     return HardwareInfo(
@@ -94,7 +143,7 @@ def detect_hardware() -> HardwareInfo:
         cpu_model=_detect_cpu_model(),
         cpu_cores_physical=psutil.cpu_count(logical=False) or 1,
         cpu_cores_logical=psutil.cpu_count(logical=True) or 1,
-        cpu_freq_mhz=float(freq.max) if freq else 0.0,
+        cpu_freq_mhz=_detect_cpu_freq_mhz(),
         ram_total_gb=psutil.virtual_memory().total / (1024**3),
         gpu_model=gpu_model,
         gpu_vram_gb=gpu_vram_gb,
