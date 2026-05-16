@@ -44,6 +44,7 @@ RUN mkdir -p /binaries && \
         cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu-bench && \
         cp target/aarch64-unknown-linux-gnu/release/q1tsim-grover   /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/q1tsim-shor      /binaries/ && \
+        cp target/aarch64-unknown-linux-gnu/release/libq1tsim*.so    /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantr-grover    /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantr-shor       /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantrs2-grover  /binaries/ && \
@@ -52,6 +53,7 @@ RUN mkdir -p /binaries && \
         cargo build --release && \
         cp target/release/q1tsim-grover   /binaries/ && \
         cp target/release/q1tsim-shor      /binaries/ && \
+        cp target/release/libq1tsim*.so    /binaries/ && \
         cp target/release/quantr-grover    /binaries/ && \
         cp target/release/quantr-shor       /binaries/ && \
         cp target/release/quantrs2-grover  /binaries/ && \
@@ -103,6 +105,7 @@ COPY pyproject.toml uv.lock ./
 
 COPY --from=rust-builder /binaries/ ./bin/
 ENV PATH="/app/bin:$PATH"
+ENV LD_LIBRARY_PATH="/app/bin"
 
 COPY python/ ./python/
 COPY run.py ./
