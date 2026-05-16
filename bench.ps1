@@ -125,7 +125,7 @@ function ConvertTo-ProcessArg([string]$s) {
 }
 
 function Run-Benchmark {
-    [CmdletBinding()]
+    [CmdletBinding(PositionalBinding = $false)]
     param(
         [switch]$NoGpu,
         [switch]$Emulated,
