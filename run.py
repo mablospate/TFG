@@ -991,15 +991,39 @@ def benchmark_rust_grover_at_n(
 
 
 def _run_rust_shor_binary(
-    binary: pathlib.Path, N: int, shots: int = 10, tries: int = 3
+    binary: pathlib.Path, N: int, shots: int = 10, tries: int = 3, timeout_s: float = 300.0
 ) -> dict:
-    cmd = [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    """Invoke a Rust Shor binary and return its parsed JSON output.
+
+    Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
+    failure (caller is expected to catch and convert to a SKIP/ERROR row).
+    """
+    proc = subprocess.Popen(
+        [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)],
+        stdout=subprocess.PIPE,
+        stderr=sys.stderr,
+        text=True,
+    )
+    lines: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        line = line.rstrip("\n")
+        if line.strip():
+            lines.append(line)
+            # Print progress lines; the last line is JSON and will look like garbage — skip it
+            try:
+                json.loads(line)
+            except json.JSONDecodeError:
+                print(line)
+    try:
+        proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        raise
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or f"exit {proc.returncode}")
-    lines = [ln for ln in proc.stdout.splitlines() if ln.startswith("{")]
+        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
-        raise RuntimeError("no JSON output from binary")
+        raise ValueError(f"{binary.name} produced no stdout")
     return json.loads(lines[-1])
 
 
