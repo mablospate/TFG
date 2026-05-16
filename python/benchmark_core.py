@@ -120,6 +120,7 @@ def benchmark_run(
     framework: str = "",
     algorithm: str = "",
     n_qubits: int = 0,
+    deadline: float | None = None,
 ) -> BenchmarkResult:
     """
     Ejecuta `fn` repetidamente y recopila todas las métricas instrumentales.
@@ -143,6 +144,8 @@ def benchmark_run(
 
     # --- Repeticiones de medición ---
     for i in range(config.n_repetitions):
+        if deadline is not None and time.monotonic() > deadline:
+            break
         # Memoria: tracemalloc captura asignaciones de Python;
         # psutil captura la RSS del proceso completo (incluye extensiones C).
         proc = psutil.Process()

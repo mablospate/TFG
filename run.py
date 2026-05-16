@@ -864,6 +864,7 @@ def benchmark_grover_at_n(
     hw: HardwareInfo,
     contributor_name: str,
     cudaq_target: str = "qpp-cpu",
+    deadline: float | None = None,
 ) -> dict:
     """Run config.n_repetitions of Grover at qubit count n for one framework."""
     target = n  # target state index = n (always valid since n < 2^n for n>=1)
@@ -879,6 +880,7 @@ def benchmark_grover_at_n(
         framework=framework_name,
         algorithm="grover",
         n_qubits=n,
+        deadline=deadline,
     )
 
     if result.raw_times_ms:
@@ -935,6 +937,7 @@ def benchmark_rust_grover_at_n(
     config: BenchmarkConfig,
     hw: HardwareInfo,
     contributor_name: str,
+    deadline: float | None = None,
 ) -> dict:
     """Run config.n_repetitions of Grover at qubit count n using a Rust binary."""
     target = n
@@ -944,6 +947,8 @@ def benchmark_rust_grover_at_n(
     for _ in range(max(0, config.warmup_runs)):
         _run_rust_binary(binary, n, target, config.num_shots)
     for _ in range(config.n_repetitions):
+        if _over_budget(deadline):
+            break
         payload = _run_rust_binary(binary, n, target, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         last_payload = payload
@@ -1058,18 +1063,23 @@ def _setup_framework_shor(
 
 
 def benchmark_shor_at_n(
-    framework_name: str, N: int, config, hw, contributor_name: str, cudaq_target: str = "qpp-cpu"
+    framework_name: str, N: int, config, hw, contributor_name: str, cudaq_target: str = "qpp-cpu",
+    deadline: float | None = None,
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
     startup_ms, factor_call = _setup_framework_shor(framework_name, config, hw, cudaq_target)
 
     times_ms, factors = [], []
     for _ in range(config.n_repetitions):
+        if _over_budget(deadline):
+            break
         t0 = time.perf_counter()
         f = factor_call(N)
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
 
+    if not times_ms:
+        raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
     arr = np.array(times_ms)
     median_ms = float(np.median(arr))
     q75, q25 = np.percentile(arr, [75, 25])
@@ -1139,6 +1149,7 @@ def benchmark_rust_shor_at_n(
     config: BenchmarkConfig,
     hw: HardwareInfo,
     contributor_name: str,
+    deadline: float | None = None,
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
     times_ms: list[float] = []
@@ -1146,11 +1157,15 @@ def benchmark_rust_shor_at_n(
     last_payload: dict | None = None
 
     for _ in range(config.n_repetitions):
+        if _over_budget(deadline):
+            break
         payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         last_payload = payload
 
+    if not times_ms:
+        raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
     arr = np.array(times_ms) if times_ms else np.array([0.0])
     median_ms = float(np.median(arr))
     q75, q25 = np.percentile(arr, [75, 25])
@@ -1481,7 +1496,8 @@ def main() -> None:
             print(f"[{idx}/{total}] {fw_name} (python)  n={n} ...")
             try:
                 result = benchmark_grover_at_n(
-                    fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target
+                    fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target,
+                    deadline=deadline,
                 )
                 results.append(result)
                 n_series_results.append(result)
@@ -1501,7 +1517,7 @@ def main() -> None:
             print(f"[{idx}/{total}] {fw_name} (rust: {binary.name})  n={n} ...")
             try:
                 result = benchmark_rust_grover_at_n(
-                    fw_name, binary, n, config, hw, contributor_name
+                    fw_name, binary, n, config, hw, contributor_name, deadline=deadline,
                 )
                 results.append(result)
                 n_series_results.append(result)
@@ -1626,7 +1642,7 @@ def main() -> None:
             shor_idx += 1
             print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_val} ...")
             try:
-                r = benchmark_shor_at_n(fw, N_val, config, hw, contributor_name, cudaq_target)
+                r = benchmark_shor_at_n(fw, N_val, config, hw, contributor_name, cudaq_target, deadline=deadline)
                 shor_results.append(r)
                 n_series.append(r)
                 shor_statuses[fw] = "OK"
@@ -1643,7 +1659,7 @@ def main() -> None:
             binary = RUST_FRAMEWORKS_SHOR[fw]
             print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_val} ...")
             try:
-                r = benchmark_rust_shor_at_n(fw, binary, N_val, config, hw, contributor_name)
+                r = benchmark_rust_shor_at_n(fw, binary, N_val, config, hw, contributor_name, deadline=deadline)
                 shor_results.append(r)
                 n_series.append(r)
                 shor_statuses[fw] = "OK"
