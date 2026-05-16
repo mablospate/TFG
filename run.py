@@ -433,21 +433,25 @@ def ask_contributor_name() -> str:
         print("  El nombre no puede estar vacío.")
 
 
-def ask_minutes() -> int:
+def ask_minutes() -> int | None:
     raw = input(
-        "¿Cuántos minutos puedes dedicar al benchmarking? (mínimo recomendado: 10) > "
+        "Límite de tiempo en minutos (Enter = sin límite) > "
     ).strip()
+    if not raw:
+        return None
     try:
         m = int(raw)
         if m < 1:
-            return 10
+            print("El valor debe ser un número entero positivo.")
+            return ask_minutes()
         return m
     except ValueError:
-        return 10
+        print(f"Entrada no válida: {raw!r}. Introduce un número entero positivo o pulsa Enter.")
+        return ask_minutes()
 
 
-def config_for_minutes(minutes: int) -> BenchmarkConfig:
-    if minutes < 5:
+def config_for_minutes(minutes: int | None) -> BenchmarkConfig:
+    if minutes is not None and minutes < 5:
         print("Modo rápido: estadísticas menos fiables")
     return BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
 
@@ -1361,7 +1365,7 @@ def parse_args():
     )
     p.add_argument("--time-budget", type=int, default=None,
                    dest="time_budget",
-                   help="Time budget in minutes (skips interactive prompt).")
+                   help="Time budget in minutes (0 = no limit). Skips interactive prompt.")
     p.add_argument(
         "--contributor",
         default=None,
@@ -1387,7 +1391,7 @@ def main() -> None:
     print()
 
     if args.time_budget is not None:
-        time_budget = args.time_budget
+        time_budget = args.time_budget if args.time_budget > 0 else None
     else:
         time_budget = ask_minutes()
     minutes = time_budget

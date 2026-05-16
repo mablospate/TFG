@@ -248,9 +248,6 @@ collect_run_args() {
         done
         EXTRA_ARGS+=(--contributor "$name")
     fi
-    if [[ ! " $* " =~ " --time-budget " ]]; then
-        EXTRA_ARGS+=(--time-budget 120)
-    fi
 }
 
 main() {

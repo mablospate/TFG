@@ -75,9 +75,6 @@ if ($args -notcontains "--contributor") {
     $contributor = Read-Host "Contributor name"
     $extraArgs += @("--contributor", $contributor)
 }
-if ($args -notcontains "--time-budget") {
-    $extraArgs += @("--time-budget", "120")
-}
 
 $dockerArgs = @(
     "run", "--rm",
