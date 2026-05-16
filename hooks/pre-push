@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# hooks/pre-push
+# Install: chmod +x hooks/pre-push && ln -sf ../../hooks/pre-push .git/hooks/pre-push
+set -e
+
+IMAGE="mablospate/tfg-bench"
+DOCKER_PATHS="Dockerfile docker/ rust/ Cargo.toml Cargo.lock python/ pyproject.toml uv.lock run.py"
+
+# ── Prereqs ──────────────────────────────────────────────────────────────────
+if ! docker buildx version &>/dev/null; then
+    echo "pre-push: docker buildx not found — install Docker Desktop or buildx plugin" >&2
+    exit 1
+fi
+if ! docker info &>/dev/null; then
+    echo "pre-push: Docker daemon not running" >&2
+    exit 1
+fi
+
+while read local_ref local_sha remote_ref remote_sha; do
+    [[ "$remote_ref" != "refs/heads/main" ]] && continue
+
+    SHORT_SHA=$(git rev-parse --short HEAD)
+    EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+    BASE="${remote_sha:-$EMPTY_TREE}"
+
+    # ── Smart skip ───────────────────────────────────────────────────────────
+    if [[ "${FORCE_DOCKER:-0}" != "1" ]]; then
+        CHANGED=$(git diff --name-only "$BASE" "$local_sha" -- $DOCKER_PATHS 2>/dev/null || true)
+        if [[ -z "$CHANGED" ]]; then
+            echo "pre-push: no Docker-relevant changes, skipping image build"
+            echo "  (use FORCE_DOCKER=1 git push to override)"
+            continue
+        fi
+        echo "pre-push: Docker-relevant changes detected:"
+        echo "$CHANGED" | sed 's/^/  /'
+    fi
+
+    # ── Build & push ─────────────────────────────────────────────────────────
+    echo "pre-push: building $IMAGE:sha-$SHORT_SHA (linux/amd64 + linux/arm64)..."
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --target runtime \
+        --push \
+        -t "${IMAGE}:latest" \
+        -t "${IMAGE}:sha-${SHORT_SHA}" \
+        --build-arg "DOCKER_IMAGE_TAG=${SHORT_SHA}" \
+        .
+
+    # ── Verify ───────────────────────────────────────────────────────────────
+    echo "pre-push: verifying manifest..."
+    docker manifest inspect "${IMAGE}:latest" | grep '"architecture"'
+    echo "pre-push: done — ${IMAGE}:latest published"
+done
