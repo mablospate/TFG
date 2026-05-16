@@ -169,8 +169,16 @@ function Run-Benchmark {
         $dockerRunArgs += $PassthroughArgs
     }
 
+    # Start-Process -ArgumentList does not quote elements that contain spaces,
+    # so args like "BENCH_CPU_MODEL=Intel Core i7 ..." get split into multiple
+    # tokens. Mirror bash's natural quoting by wrapping any element with spaces
+    # in double-quotes before joining into the final argument string.
+    $argLine = ($dockerRunArgs | ForEach-Object {
+        if ($_ -match ' ') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
+    }) -join ' '
+
     Write-Host "(Pulsa 'q' para detener el benchmark)"
-    $dockerProc = Start-Process -FilePath "docker" -ArgumentList $dockerRunArgs -NoNewWindow -PassThru
+    $dockerProc = Start-Process -FilePath "docker" -ArgumentList $argLine -NoNewWindow -PassThru
 
     $timerJob = $null
     if ($TIME_BUDGET_MINS -gt 0) {

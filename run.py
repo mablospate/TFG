@@ -287,7 +287,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "qdislib",
             "q1tsim",
             "quantr",
             "quantrs2",
@@ -295,7 +294,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="nvidia",
         quantrs2_gpu=True,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),
@@ -303,7 +301,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         frameworks=[
             "qiskit",
             "cirq",
-            "qdislib",
             "q1tsim",
             "quantr",
             "quantrs2",
@@ -311,7 +308,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=False,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),
