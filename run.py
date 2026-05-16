@@ -463,6 +463,111 @@ def print_hardware_summary(hw: HardwareInfo) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _error_result(
+    framework: str,
+    algo: str,
+    n: int,
+    hw: HardwareInfo,
+    contributor_name: str,
+    error_msg: str,
+) -> dict:
+    """Return a minimal error result dict compatible with the result schema."""
+    return {
+        "status": "error",
+        "framework": framework,
+        "algorithm": algo,
+        "n_qubits": n,
+        "error": error_msg,
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "wall_time_median_ms": 0.0,
+        "peak_memory_rss_mb": 0.0,
+        "cv": 0.0,
+        "jsd": 0.0,
+        "startup_time_ms": 0.0,
+        "build_time_ms": 0.0,
+        "simulation_time_ms": 0.0,
+        "raw_times_ms": [],
+        "num_shots": 0,
+        "n_repetitions": 0,
+        "framework_version": "",
+        "runtime_version": "",
+        "scaling_data": {},
+        "scaling_alpha": 0.0,
+        "scaling_beta": 0.0,
+    }
+
+
+def _run_python_worker(
+    framework: str,
+    algo: str,
+    n: int,
+    config: BenchmarkConfig,
+    contributor_name: str,
+    hw: HardwareInfo,
+    cudaq_target: str = "qpp-cpu",
+    timeout_s: float = 600.0,
+) -> dict:
+    """Launch a framework worker subprocess, return its result dict.
+
+    The worker module reads its JSON config from stdin and writes a single JSON
+    result line to stdout. Stderr is inherited so the worker's progress prints
+    flow through to the terminal. Any failure (timeout, non-zero exit, parse
+    error, error status from the worker) is converted into an `_error_result`
+    so the orchestrator loop can continue with the next framework.
+    """
+    worker_module = f"python.workers.{framework}_worker"
+    payload = json.dumps({
+        "algo": algo,
+        "n": n,
+        "n_repetitions": config.n_repetitions,
+        "num_shots": config.num_shots,
+        "contributor": contributor_name,
+        "cudaq_target": cudaq_target,
+    })
+    proc = subprocess.Popen(
+        [sys.executable, "-m", worker_module],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=sys.stderr,
+        text=True,
+    )
+    try:
+        stdout, _ = proc.communicate(input=payload, timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        return _error_result(framework, algo, n, hw, contributor_name, "timeout")
+    if proc.returncode != 0 or not stdout.strip():
+        return _error_result(
+            framework, algo, n, hw, contributor_name, f"exit {proc.returncode}"
+        )
+    # Worker emits one JSON object on its last non-empty stdout line.
+    last_line = ""
+    for line in stdout.splitlines():
+        line = line.strip()
+        if line:
+            last_line = line
+    try:
+        result = json.loads(last_line)
+    except json.JSONDecodeError as e:
+        return _error_result(framework, algo, n, hw, contributor_name, str(e))
+    if result.get("status") == "error":
+        return _error_result(
+            framework, algo, n, hw, contributor_name, result.get("error", "unknown")
+        )
+    return result
+
+
 def _benchmark_qiskit(config: BenchmarkConfig):
     from qiskit_aer import AerSimulator
     from qiskit_aer.primitives import SamplerV2
@@ -1539,13 +1644,18 @@ def main() -> None:
                 print()
                 print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...")
                 try:
-                    result = benchmark_grover_at_n(
-                        fw_name, n, config, hw, contributor_name, cudaq_target=cudaq_target,
+                    result = _run_python_worker(
+                        fw_name, "grover", n, config, contributor_name, hw,
+                        cudaq_target=cudaq_target,
                     )
                     results.append(result)
                     n_series_results.append(result)
-                    statuses[fw_name] = "OK"
-                    scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+                    if result.get("status") == "error":
+                        statuses[fw_name] = "ERROR"
+                        print(f"[ERROR] {fw_name} grover n={n}: {result.get('error', 'unknown')}")
+                    else:
+                        statuses[fw_name] = "OK"
+                        scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
                 except Exception as e:
                     statuses[fw_name] = "ERROR"
                     print(f"[ERROR] {fw_name} grover n={n}: {e}")
@@ -1615,11 +1725,18 @@ def main() -> None:
                 shor_idx += 1
                 print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...")
                 try:
-                    r = benchmark_shor_at_n(fw, N_shor, config, hw, contributor_name, cudaq_target)
+                    r = _run_python_worker(
+                        fw, "shor", N_shor, config, contributor_name, hw,
+                        cudaq_target=cudaq_target,
+                    )
                     shor_results.append(r)
                     shor_n_series.append(r)
-                    shor_statuses[fw] = "OK"
-                    shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+                    if r.get("status") == "error":
+                        shor_statuses[fw] = "ERROR"
+                        print(f"[ERROR] {fw} shor N={N_shor}: {r.get('error', 'unknown')}")
+                    else:
+                        shor_statuses[fw] = "OK"
+                        shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
                 except Exception as e:
                     shor_statuses.setdefault(fw, "ERROR")
                     print(f"[ERROR] {fw} shor N={N_shor}: {e}")
