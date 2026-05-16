@@ -113,6 +113,17 @@ function Pull-Image {
     }
 }
 
+function ConvertTo-ProcessArg([string]$s) {
+    # Implements CommandLineToArgvW quoting rules (MSVCRT / Go runtime).
+    if ($s -eq '') { return '""' }
+    if ($s -notmatch '[ \t\n\v"]') { return $s }
+    # Escape backslashes that immediately precede a quote, then the quote itself.
+    $e = [regex]::Replace($s, '(\\*)"', { '\\' * ($args[0].Groups[1].Length * 2 + 1) + '"' })
+    # Double trailing backslashes before the closing quote.
+    $e = [regex]::Replace($e, '(\\+)$', { '\\' * ($args[0].Groups[1].Length * 2) })
+    return '"' + $e + '"'
+}
+
 function Run-Benchmark {
     [CmdletBinding()]
     param(
@@ -169,13 +180,10 @@ function Run-Benchmark {
         $dockerRunArgs += $PassthroughArgs
     }
 
-    # Start-Process -ArgumentList does not quote elements that contain spaces,
-    # so args like "BENCH_CPU_MODEL=Intel Core i7 ..." get split into multiple
-    # tokens. Mirror bash's natural quoting by wrapping any element with spaces
-    # in double-quotes before joining into the final argument string.
-    $argLine = ($dockerRunArgs | ForEach-Object {
-        if ($_ -match ' ') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
-    }) -join ' '
+    # Build a properly-quoted command line (CommandLineToArgvW rules) so that
+    # values with spaces, embedded quotes, or trailing backslashes survive
+    # Start-Process's verbatim pass-through to CreateProcess unchanged.
+    $argLine = ($dockerRunArgs | ForEach-Object { ConvertTo-ProcessArg $_ }) -join ' '
 
     Write-Host "(Pulsa 'q' para detener el benchmark)"
     $dockerProc = Start-Process -FilePath "docker" -ArgumentList $argLine -NoNewWindow -PassThru
