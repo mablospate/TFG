@@ -40,7 +40,7 @@ COPY rust/ ./rust/
 # arm64 excludes qcgpu (OpenCL headers not available for cross-compile)
 RUN mkdir -p /binaries && \
     if [ "$TARGETARCH" = "arm64" ]; then \
-        cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu && \
+        cargo build --release --target aarch64-unknown-linux-gnu --workspace --exclude qcgpu-bench && \
         cp target/aarch64-unknown-linux-gnu/release/q1tsim-grover   /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/q1tsim-shor      /binaries/ && \
         cp target/aarch64-unknown-linux-gnu/release/quantr-grover    /binaries/ && \
