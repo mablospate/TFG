@@ -77,6 +77,22 @@ if ($args -notcontains "--contributor") {
     $extraArgs += @("--contributor", $contributor)
 }
 
+if ($args -notcontains "--time-budget") {
+    while ($true) {
+        $budgetRaw = (Read-Host "Límite de tiempo en minutos (Enter = sin límite)").Trim()
+        if ($budgetRaw -eq "") {
+            $extraArgs += @("--time-budget", "0")
+            break
+        }
+        $budgetVal = 0
+        if ([int]::TryParse($budgetRaw, [ref]$budgetVal) -and $budgetVal -gt 0) {
+            $extraArgs += @("--time-budget", $budgetVal)
+            break
+        }
+        Write-Host "Entrada no válida: introduce un número entero positivo o pulsa Enter."
+    }
+}
+
 $dockerArgs = @(
     "run", "--rm",
     "--name", $CONTAINER_NAME,

@@ -282,6 +282,25 @@ collect_run_args() {
         done
         EXTRA_ARGS+=(--contributor "$name")
     fi
+
+    if [[ ! " $* " =~ " --time-budget " ]]; then
+        local budget=""
+        while true; do
+            printf "Límite de tiempo en minutos (Enter = sin límite): "
+            read -r budget
+            budget="${budget#"${budget%%[![:space:]]*}"}"
+            budget="${budget%"${budget##*[![:space:]]}"}"
+            if [[ -z "$budget" ]]; then
+                EXTRA_ARGS+=(--time-budget 0)
+                break
+            elif [[ "$budget" =~ ^[0-9]+$ ]] && (( budget > 0 )); then
+                EXTRA_ARGS+=(--time-budget "$budget")
+                break
+            else
+                echo "Entrada no válida: introduce un número entero positivo o pulsa Enter."
+            fi
+        done
+    fi
 }
 
 main() {
