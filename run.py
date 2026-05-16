@@ -9,6 +9,7 @@ import argparse
 import dataclasses
 import importlib.metadata
 import json
+import math
 import os
 import pathlib
 import platform
@@ -103,6 +104,18 @@ RUST_FRAMEWORKS: dict[str, pathlib.Path] = {
     "quantrs2": _rust_bin("quantrs2-grover"),
     "qcgpu":    _rust_bin("qcgpu-grover"),
 }
+
+
+RUST_FRAMEWORKS_SHOR: dict[str, pathlib.Path] = {
+    "q1tsim":   _rust_bin("q1tsim-shor"),
+    "quantr":   _rust_bin("quantr-shor"),
+    "quantrs2": _rust_bin("quantrs2-shor"),
+    "qcgpu":    _rust_bin("qcgpu-shor"),
+}
+
+
+def _n_qubits_shor(N: int) -> int:
+    return math.ceil(math.log2(N)) * 2
 
 
 
@@ -991,6 +1004,247 @@ def benchmark_rust_grover_at_n(
 
 
 # ---------------------------------------------------------------------------
+# Shor benchmarking
+# ---------------------------------------------------------------------------
+
+
+def _run_rust_shor_binary(
+    binary: pathlib.Path, N: int, shots: int = 10, tries: int = 3
+) -> dict:
+    cmd = [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or f"exit {proc.returncode}")
+    lines = [ln for ln in proc.stdout.splitlines() if ln.startswith("{")]
+    if not lines:
+        raise RuntimeError("no JSON output from binary")
+    return json.loads(lines[-1])
+
+
+def _setup_framework_shor(
+    name: str, config, hw, cudaq_target: str = "qpp-cpu"
+):
+    t0 = time.perf_counter()
+    if name == "qiskit":
+        from python.qiskit.shor.shor import find_factor as _ff
+        from qiskit_aer.primitives import SamplerV2
+        from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+        sampler = SamplerV2()
+        pm = generate_preset_pass_manager(optimization_level=1, backend=sampler._backend)
+        factor_call = lambda N: _ff(N, sampler, pm, num_tries=3, num_shots_per_trial=config.num_shots)
+    elif name == "cirq":
+        from python.cirq.shor.shor import find_factor as _ff
+        import cirq
+        sim = cirq.Simulator()
+        factor_call = lambda N: _ff(N, sim, num_tries=3, num_shots_per_trial=config.num_shots)
+    elif name == "cudaq":
+        from python.cudaq.shor.shor import find_factor as _ff
+        factor_call = lambda N: _ff(N, simulator=cudaq_target, num_tries=3, num_shots_per_trial=config.num_shots)
+    elif name == "qdislib":
+        from python.qdislib.shor.shor import find_factor as _ff
+        factor_call = lambda N: _ff(N, num_tries=3, num_shots_per_trial=config.num_shots)
+    else:
+        raise ValueError(f"Unknown framework for Shor: {name}")
+    startup_ms = (time.perf_counter() - t0) * 1000
+    return startup_ms, factor_call
+
+
+def benchmark_shor_at_n(
+    framework_name: str, N: int, config, hw, contributor_name: str, cudaq_target: str = "qpp-cpu"
+) -> dict:
+    n_qubits = _n_qubits_shor(N)
+    startup_ms, factor_call = _setup_framework_shor(framework_name, config, hw, cudaq_target)
+
+    times_ms, factors = [], []
+    for _ in range(config.n_repetitions):
+        t0 = time.perf_counter()
+        f = factor_call(N)
+        times_ms.append((time.perf_counter() - t0) * 1000)
+        factors.append(f)
+
+    arr = np.array(times_ms)
+    median_ms = float(np.median(arr))
+    q75, q25 = np.percentile(arr, [75, 25])
+    iqr_ms = float(q75 - q25)
+    mean_ms = float(np.mean(arr))
+    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+    success_rate = sum(1 for f in factors if f not in (1, N)) / len(factors)
+    factor_found = max(set(factors), key=factors.count)
+
+    try:
+        framework_version = importlib.metadata.version(framework_name)
+    except Exception:
+        framework_version = "unknown"
+
+    result = BenchmarkResult(
+        wall_time_median_ms=median_ms,
+        wall_time_iqr_ms=iqr_ms,
+        peak_memory_rss_mb=0.0,
+        cv=cv,
+        startup_time_ms=startup_ms,
+        build_time_ms=0.0,
+        simulation_time_ms=max(0.0, median_ms - startup_ms),
+        cpu_percent_mean=0.0,
+        jsd=0.0,
+        scaling_alpha=0.0,
+        scaling_beta=0.0,
+        scaling_data={},
+        framework=framework_name,
+        algorithm="shor",
+        n_qubits=n_qubits,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        python_version=sys.version,
+        platform_info=platform.platform(),
+        raw_times_ms=times_ms,
+    )
+
+    return {
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": hw.python_version,
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+        "framework_version": framework_version,
+        "n_to_factor": N,
+        "factor_found": factor_found,
+        "success_rate": success_rate,
+        **dataclasses.asdict(result),
+        "wall_time_mean_ms": mean_ms,
+        "wall_time_std_ms": std_ms,
+    }
+
+
+def benchmark_rust_shor_at_n(
+    framework_name: str,
+    binary: pathlib.Path,
+    N: int,
+    config: BenchmarkConfig,
+    hw: HardwareInfo,
+    contributor_name: str,
+) -> dict:
+    n_qubits = _n_qubits_shor(N)
+    times_ms: list[float] = []
+    factors: list[int] = []
+    last_payload: dict | None = None
+
+    for _ in range(config.n_repetitions):
+        payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
+        times_ms.append(float(payload.get("time_ms", 0.0)))
+        factors.append(int(payload.get("factor", 1)))
+        last_payload = payload
+
+    arr = np.array(times_ms) if times_ms else np.array([0.0])
+    median_ms = float(np.median(arr))
+    q75, q25 = np.percentile(arr, [75, 25])
+    iqr_ms = float(q75 - q25)
+    mean_ms = float(np.mean(arr))
+    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+
+    factor_found = max(set(factors), key=factors.count) if factors else 1
+    success_rate = 1.0 if factor_found not in (1, N) else 0.0
+
+    result = BenchmarkResult(
+        wall_time_median_ms=median_ms,
+        wall_time_iqr_ms=iqr_ms,
+        peak_memory_rss_mb=0.0,
+        cv=cv,
+        startup_time_ms=0.0,
+        build_time_ms=0.0,
+        simulation_time_ms=median_ms,
+        cpu_percent_mean=0.0,
+        jsd=0.0,
+        scaling_alpha=0.0,
+        scaling_beta=0.0,
+        scaling_data={},
+        framework=framework_name,
+        algorithm="shor",
+        n_qubits=n_qubits,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        python_version=sys.version,
+        platform_info=platform.platform(),
+        raw_times_ms=times_ms,
+    )
+
+    return {
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": "rust (cargo --release)",
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+        "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
+        "n_to_factor": N,
+        "factor_found": factor_found,
+        "success_rate": success_rate,
+        **dataclasses.asdict(result),
+        "wall_time_mean_ms": mean_ms,
+        "wall_time_std_ms": std_ms,
+    }
+
+
+def print_shor_summary_table(results: list[dict], statuses: dict[str, str]) -> None:
+    print()
+    print(
+        "╔══════════════╦═══════════╦══════╦══════════╦═══════════╦══════════════════╦══════════╗"
+    )
+    print(
+        "║ Framework    ║ Status    ║ N    ║ Factor   ║ Success%  ║ Median time (ms) ║ CV       ║"
+    )
+    print(
+        "╠══════════════╬═══════════╬══════╬══════════╬═══════════╬══════════════════╬══════════╣"
+    )
+    ordered_names: list[str] = list(FRAMEWORKS) + [
+        n for n in RUST_FRAMEWORKS_SHOR if n not in FRAMEWORKS
+    ]
+    by_pair: dict[tuple[str, int], dict] = {
+        (r["framework"], r.get("n_to_factor", 0)): r for r in results
+    }
+    n_values_seen = sorted({r.get("n_to_factor", 0) for r in results})
+    for fw_name in ordered_names:
+        status = statuses.get(fw_name, "SKIP")
+        printed_any = False
+        for N_val in n_values_seen:
+            key = (fw_name, N_val)
+            if key in by_pair:
+                r = by_pair[key]
+                N = f"{r.get('n_to_factor', '—')}"
+                fac = f"{r.get('factor_found', '—')}"
+                succ = f"{r.get('success_rate', 0.0) * 100:.0f}%"
+                median = f"{r['wall_time_median_ms']:.1f}"
+                cv = f"{r['cv']:.3f}"
+                print(
+                    f"║ {fw_name:<12} ║ {status:<9} ║ {N:<4} ║ {fac:<8} ║ {succ:<9} ║ {median:<16} ║ {cv:<8} ║"
+                )
+                printed_any = True
+        if not printed_any:
+            print(
+                f"║ {fw_name:<12} ║ {status:<9} ║ {'—':<4} ║ {'—':<8} ║ {'—':<9} ║ {'—':<16} ║ {'—':<8} ║"
+            )
+    print(
+        "╚══════════════╩═══════════╩══════╩══════════╩═══════════╩══════════════════╩══════════╝"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Saving and reporting
 # ---------------------------------------------------------------------------
 
@@ -1301,6 +1555,100 @@ def main() -> None:
     print_summary_table(results, statuses)
     print()
     print(f"Resultados guardados en: {final_path}")
+
+    # ── Shor ──────────────────────────────────────────────────────────────
+    print("\n" + "=" * 58)
+    print("  Shor — Factorización Cuántica")
+    print("=" * 58)
+
+    shor_results: list[dict] = []
+    shor_statuses: dict[str, str] = {}
+    shor_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    shor_final_path = os.path.join("results", f"shor_{shor_timestamp}.json")
+    shor_partial_path = os.path.join("results", f"shor_{shor_timestamp}_partial.json")
+
+    shor_python_enabled = [n for n in python_enabled if n in FRAMEWORKS]
+    shor_rust_enabled = [
+        n for n in rust_enabled
+        if n in RUST_FRAMEWORKS_SHOR
+        and RUST_FRAMEWORKS_SHOR[n].exists()
+        and os.access(RUST_FRAMEWORKS_SHOR[n], os.X_OK)
+    ]
+
+    shor_scaling_by_fw: dict[str, dict[int, float]] = {}
+    shor_total = len(config.n_values_shor) * (len(shor_python_enabled) + len(shor_rust_enabled))
+    shor_idx = 0
+
+    for N_val in config.n_values_shor:
+        n_qubits_val = _n_qubits_shor(N_val)
+        print(f"\n{'─' * 58}")
+        print(f"  Shor — N={N_val} ({n_qubits_val} qubits)  "
+              f"[{config.n_values_shor.index(N_val) + 1}/{len(config.n_values_shor)}]")
+        print(f"{'─' * 58}")
+        n_series: list[dict] = []
+
+        for fw in shor_python_enabled:
+            shor_idx += 1
+            print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_val} ...")
+            try:
+                r = benchmark_shor_at_n(fw, N_val, config, hw, contributor_name, cudaq_target)
+                shor_results.append(r)
+                n_series.append(r)
+                shor_statuses[fw] = "OK"
+                shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+            except Exception as e:
+                shor_statuses.setdefault(fw, "ERROR")
+                print(f"[ERROR] {fw} shor N={N_val}: {e}")
+
+        for fw in shor_rust_enabled:
+            shor_idx += 1
+            binary = RUST_FRAMEWORKS_SHOR[fw]
+            print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_val} ...")
+            try:
+                r = benchmark_rust_shor_at_n(fw, binary, N_val, config, hw, contributor_name)
+                shor_results.append(r)
+                n_series.append(r)
+                shor_statuses[fw] = "OK"
+                shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+            except Exception as e:
+                shor_statuses.setdefault(fw, "ERROR")
+                print(f"[ERROR] {fw} shor N={N_val}: {e}")
+
+        checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_val}.json")
+        _save_json(checkpoint_path, {
+            "schema_version": "1.0",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "n_to_factor": N_val,
+            "n_qubits": n_qubits_val,
+            "n_repetitions": config.n_repetitions,
+            "results": n_series,
+        })
+        print(f"\n→ Checkpoint N={N_val}: {checkpoint_path}")
+        if shor_results:
+            partial_doc = _build_output_doc(contributor_name, hw, config, shor_results, platform_id=args.platform)
+            _save_json(shor_partial_path, partial_doc)
+
+    for r in shor_results:
+        fw = r["framework"]
+        sd = shor_scaling_by_fw.get(fw, {})
+        r["scaling_data"] = {int(k): v for k, v in sd.items()}
+        if len(sd) >= 2:
+            try:
+                alpha, beta = fit_scaling_curve(sd)
+            except Exception:
+                alpha, beta = 0.0, 0.0
+        else:
+            alpha, beta = 0.0, 0.0
+        r["scaling_alpha"] = alpha
+        r["scaling_beta"] = beta
+
+    if shor_results:
+        _save_json(shor_final_path, _build_output_doc(
+            contributor_name, hw, config, shor_results, platform_id=args.platform
+        ))
+        print_shor_summary_table(shor_results, shor_statuses)
+        if os.path.exists(shor_partial_path):
+            os.remove(shor_partial_path)
 
 
 if __name__ == "__main__":

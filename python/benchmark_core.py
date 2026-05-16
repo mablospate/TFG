@@ -39,6 +39,9 @@ class BenchmarkConfig:
     n_values: list[int] = field(
         default_factory=lambda: [3, 5, 7, 9, 11]
     )  # Tamaños de n para escalabilidad
+    n_values_shor: list[int] = field(
+        default_factory=lambda: [15, 21, 35, 77, 143]
+    )
     num_shots: int = 1024  # Shots para distribución empírica
     cpu_sample_interval: float = 0.05  # Intervalo de muestreo de CPU (s)
 
