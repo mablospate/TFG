@@ -6,9 +6,41 @@ param(
 
 $DEV_MODE = $Dev.IsPresent
 
+# --- Self-elevation via UAC ---
+$_isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $_isAdmin) {
+    Write-Host "-> Se requieren permisos de administrador. Solicitando elevacion (UAC)..."
+    # Save the running script to a temp file so the elevated process can re-run it.
+    if ($PSCommandPath) {
+        $src     = $PSCommandPath
+        $cleanup = $false
+    } else {
+        $src     = [IO.Path]::GetTempFileName() + ".ps1"
+        $MyInvocation.MyCommand.Definition | Set-Content $src -Encoding UTF8
+        $cleanup = $true
+    }
+    $elevArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$src`""
+    if ($Dev) { $elevArgs += " -Dev" }
+    foreach ($_a in $args) { $elevArgs += " `"$_a`"" }
+    Start-Process powershell -Verb RunAs -ArgumentList $elevArgs -Wait
+    if ($cleanup) { Remove-Item $src -ErrorAction SilentlyContinue }
+    exit
+}
+
 $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
+
+# Results directory: next to the script when running from a file, otherwise
+# fall back to the user profile to avoid writing into protected system dirs.
+$RESULTS_DIR = if ($PSCommandPath) {
+    Join-Path (Split-Path $PSCommandPath) "results"
+} else {
+    Join-Path $env:USERPROFILE "tfg-bench\results"
+}
+if (-not (Test-Path $RESULTS_DIR)) {
+    New-Item -ItemType Directory -Path $RESULTS_DIR -Force | Out-Null
+}
 $script:PASS_NUM = 0
 $script:BENCH_CONTAINER_NAME = ""
 
@@ -164,7 +196,7 @@ function Run-Benchmark {
         "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
         "-e", "BENCH_OS=Windows",
         "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
-        "-v", "${PWD}\results:/app/results",
+        "-v", "${RESULTS_DIR}:/app/results",
         $IMAGE
     )
 
