@@ -456,6 +456,10 @@ def config_for_minutes(minutes: int | None) -> BenchmarkConfig:
     return BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
 
 
+def _over_budget(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() > deadline
+
+
 # ---------------------------------------------------------------------------
 # Hardware summary
 # ---------------------------------------------------------------------------
@@ -1397,6 +1401,14 @@ def main() -> None:
     minutes = time_budget
     config = config_for_minutes(minutes)
 
+    deadline: float | None = (
+        time.monotonic() + time_budget * 60 if time_budget else None
+    )
+    if deadline is not None:
+        from datetime import timedelta
+        eta = datetime.now() + timedelta(minutes=time_budget)
+        print(f"Límite de tiempo: {time_budget} min (hasta ~{eta.strftime('%H:%M:%S')})")
+
     hw = detect_hardware()
     print_hardware_summary(hw)
 
@@ -1448,6 +1460,9 @@ def main() -> None:
     )
 
     for n in config.n_values:
+        if _over_budget(deadline):
+            print(f"\n[Tiempo agotado — omitiendo n={n} y restantes]")
+            break
         print()
         print(f"{'─'*58}")
         print(
@@ -1458,6 +1473,9 @@ def main() -> None:
         n_series_results: list[dict] = []
 
         for fw_name in python_enabled:
+            if _over_budget(deadline):
+                print(f"\n[Tiempo agotado — omitiendo {fw_name} y siguientes]")
+                break
             idx += 1
             print()
             print(f"[{idx}/{total}] {fw_name} (python)  n={n} ...")
@@ -1474,6 +1492,9 @@ def main() -> None:
                 print(f"[ERROR] {fw_name} grover n={n}: {e}")
 
         for fw_name in rust_enabled:
+            if _over_budget(deadline):
+                print(f"\n[Tiempo agotado — omitiendo {fw_name} y siguientes]")
+                break
             idx += 1
             binary = RUST_FRAMEWORKS[fw_name]
             print()
@@ -1565,6 +1586,10 @@ def main() -> None:
     print("  Shor — Factorización Cuántica")
     print("=" * 58)
 
+    if _over_budget(deadline):
+        print("[Tiempo agotado — omitiendo Shor]")
+        return
+
     shor_results: list[dict] = []
     shor_statuses: dict[str, str] = {}
     shor_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1584,6 +1609,9 @@ def main() -> None:
     shor_idx = 0
 
     for N_val in config.n_values_shor:
+        if _over_budget(deadline):
+            print(f"\n[Tiempo agotado — omitiendo N={N_val} y restantes]")
+            break
         n_qubits_val = _n_qubits_shor(N_val)
         print(f"\n{'─' * 58}")
         print(f"  Shor — N={N_val} ({n_qubits_val} qubits)  "
@@ -1592,6 +1620,9 @@ def main() -> None:
         n_series: list[dict] = []
 
         for fw in shor_python_enabled:
+            if _over_budget(deadline):
+                print(f"\n[Tiempo agotado — omitiendo {fw} y siguientes]")
+                break
             shor_idx += 1
             print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_val} ...")
             try:
@@ -1605,6 +1636,9 @@ def main() -> None:
                 print(f"[ERROR] {fw} shor N={N_val}: {e}")
 
         for fw in shor_rust_enabled:
+            if _over_budget(deadline):
+                print(f"\n[Tiempo agotado — omitiendo {fw} y siguientes]")
+                break
             shor_idx += 1
             binary = RUST_FRAMEWORKS_SHOR[fw]
             print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_val} ...")
