@@ -369,7 +369,7 @@ main() {
     run_benchmark "${EXTRA_ARGS[@]}" "$@"
 
     # Second pass: amd64 via emulation (arm64 hosts only, skipped in dev mode)
-    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]] && [[ "$DEV_MODE" -ne 1 ]]; then
+    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
         if _qemu_available; then
             echo ""
             echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."
