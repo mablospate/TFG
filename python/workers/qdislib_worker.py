@@ -72,7 +72,7 @@ def main() -> None:
 
     try:
         import Qdislib  # noqa: F401
-    except ImportError as e:
+    except Exception as e:
         write_error(f"qdislib not available: {e}")
         return
 

@@ -23,11 +23,8 @@ import numpy as np
 
 from python.benchmark_core import (
     BenchmarkConfig,
-    BenchmarkResult,
-    benchmark_run,
     compute_jsd,
     fit_scaling_curve,
-    measure_build_time,
 )
 from python.hardware import HardwareInfo, detect_hardware
 
@@ -46,31 +43,6 @@ BANNER = r"""
 # Framework availability detection
 # ---------------------------------------------------------------------------
 
-
-def _check_qiskit() -> bool:
-    import qiskit  # noqa: F401
-    import qiskit_aer  # noqa: F401
-
-    return True
-
-
-def _check_cirq() -> bool:
-    import cirq  # noqa: F401
-
-    return True
-
-
-
-def _check_cudaq() -> bool:
-    import cudaq  # noqa: F401
-
-    return True
-
-
-def _check_qdislib() -> bool:
-    import Qdislib  # noqa: F401
-
-    return True
 
 
 FRAMEWORKS: list[str] = ["qiskit", "cirq", "cudaq", "qdislib"]
@@ -504,6 +476,7 @@ def _error_result(
         "scaling_data": {},
         "scaling_alpha": 0.0,
         "scaling_beta": 0.0,
+        "subprocess_wall_time_ms": 0.0,
     }
 
 
@@ -534,6 +507,7 @@ def _run_python_worker(
         "contributor": contributor_name,
         "cudaq_target": cudaq_target,
     })
+    t_start = time.perf_counter()
     proc = subprocess.Popen(
         [sys.executable, "-m", worker_module],
         stdin=subprocess.PIPE,
@@ -541,111 +515,47 @@ def _run_python_worker(
         stderr=sys.stderr,
         text=True,
     )
+    proc.stdin.write(payload)
+    proc.stdin.close()
+
+    lines: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        line = line.rstrip("\n")
+        if line.strip():
+            lines.append(line)
+            try:
+                json.loads(line)
+            except json.JSONDecodeError:
+                print(line)
+
     try:
-        stdout, _ = proc.communicate(input=payload, timeout=timeout_s)
+        proc.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.wait()
         return _error_result(framework, algo, n, hw, contributor_name, "timeout")
-    if proc.returncode != 0 or not stdout.strip():
-        return _error_result(
-            framework, algo, n, hw, contributor_name, f"exit {proc.returncode}"
-        )
-    # Worker emits one JSON object on its last non-empty stdout line.
-    last_line = ""
-    for line in stdout.splitlines():
-        line = line.strip()
-        if line:
-            last_line = line
+
+    subprocess_wall_ms = (time.perf_counter() - t_start) * 1000.0
+
+    if not lines:
+        return _error_result(framework, algo, n, hw, contributor_name,
+                             f"no output (exit {proc.returncode})")
     try:
-        result = json.loads(last_line)
-    except json.JSONDecodeError as e:
-        return _error_result(framework, algo, n, hw, contributor_name, str(e))
+        result = json.loads(lines[-1])
+    except json.JSONDecodeError:
+        return _error_result(framework, algo, n, hw, contributor_name,
+                             f"no JSON result (exit {proc.returncode})")
     if result.get("status") == "error":
-        return _error_result(
-            framework, algo, n, hw, contributor_name, result.get("error", "unknown")
-        )
+        err = result.get("error", "unknown")
+        print(f"  [worker error] {framework}: {err}", file=sys.stderr)
+        return _error_result(framework, algo, n, hw, contributor_name, err)
+    if proc.returncode != 0:
+        return _error_result(framework, algo, n, hw, contributor_name,
+                             f"exit {proc.returncode}")
+    result["subprocess_wall_time_ms"] = round(subprocess_wall_ms, 3)
     return result
 
-
-def _benchmark_qiskit(config: BenchmarkConfig):
-    from qiskit_aer import AerSimulator
-    from qiskit_aer.primitives import SamplerV2
-    from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-    from python.qiskit.grover import search, grover_circuit
-
-    t0 = time.perf_counter()
-    backend = AerSimulator()
-    pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
-    sampler = SamplerV2()
-    startup_ms = (time.perf_counter() - t0) * 1000.0
-
-    def search_call(n: int, target: int, num_shots: int):
-        return search(n, target, sampler, pm, num_shots=num_shots)
-
-    def build_call(n: int, target: int):
-        return grover_circuit(n, target)
-
-    return startup_ms, search_call, build_call
-
-
-def _benchmark_cirq(config: BenchmarkConfig):
-    import cirq
-    from python.cirq.grover import search, grover_circuit
-
-    t0 = time.perf_counter()
-    simulator = cirq.Simulator()
-    startup_ms = (time.perf_counter() - t0) * 1000.0
-
-    def search_call(n: int, target: int, num_shots: int):
-        return search(n, target, simulator, num_shots=num_shots)
-
-    def build_call(n: int, target: int):
-        return grover_circuit(n, target)
-
-    return startup_ms, search_call, build_call
-
-
-
-def _benchmark_cudaq(
-    config: BenchmarkConfig, hw: HardwareInfo, cudaq_target: str = "qpp-cpu"
-):
-    import cudaq
-    from python.cudaq.grover import search, grover_circuit
-
-    t0 = time.perf_counter()
-    cudaq.set_target(cudaq_target)
-    startup_ms = (time.perf_counter() - t0) * 1000.0
-
-    def search_call(n: int, target: int, num_shots: int):
-        return search(n, target, simulator=None, num_shots=num_shots)
-
-    def build_call(n: int, target: int):
-        return grover_circuit(n, target)
-
-    return startup_ms, search_call, build_call
-
-
-def _benchmark_qdislib(config: BenchmarkConfig):
-    from qiskit_aer import AerSimulator
-    from qiskit_aer.primitives import SamplerV2
-    from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-    from python.qdislib.grover import search
-    from python.qiskit.grover import grover_circuit as qiskit_grover_circuit
-
-    t0 = time.perf_counter()
-    backend = AerSimulator()
-    pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
-    sampler = SamplerV2()
-    startup_ms = (time.perf_counter() - t0) * 1000.0
-
-    def search_call(n: int, target: int, num_shots: int):
-        return search(n, target, sampler=sampler, pass_manager=pm, num_shots=num_shots)
-
-    def build_call(n: int, target: int):
-        return qiskit_grover_circuit(n, target)
-
-    return startup_ms, search_call, build_call
 
 
 def _run_rust_binary(
@@ -757,31 +667,6 @@ def benchmark_rust_grover(
     else:
         alpha, beta = 0.0, 0.0
 
-    result = BenchmarkResult(
-        wall_time_median_ms=median_ms,
-        wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
-        cv=cv,
-        startup_time_ms=0.0,
-        build_time_ms=0.0,
-        simulation_time_ms=median_ms,
-        cpu_percent_mean=0.0,
-        jsd=jsd,
-        scaling_alpha=alpha,
-        scaling_beta=beta,
-        scaling_data=scaling_data,
-        framework=framework_name,
-        algorithm="grover",
-        n_qubits=n_main,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        python_version=sys.version,
-        platform_info=platform.platform(),
-        raw_times_ms=times_ms,
-    )
-
-    wall_time_mean_ms = mean_ms
-    wall_time_std_ms = std_ms
-
     enriched = {
         "contributor_name": contributor_name,
         "hostname": hw.hostname,
@@ -798,213 +683,32 @@ def benchmark_rust_grover(
         "num_shots": config.num_shots,
         "n_repetitions": config.n_repetitions,
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
-        **dataclasses.asdict(result),
-        "wall_time_mean_ms": wall_time_mean_ms,
-        "wall_time_std_ms": wall_time_std_ms,
-    }
-    return enriched
-
-
-def _setup_framework(
-    name: str,
-    config: BenchmarkConfig,
-    hw: HardwareInfo,
-    cudaq_target: str = "qpp-cpu",
-):
-    if name == "qiskit":
-        return _benchmark_qiskit(config)
-    if name == "cirq":
-        return _benchmark_cirq(config)
-    if name == "cudaq":
-        return _benchmark_cudaq(config, hw, cudaq_target=cudaq_target)
-    if name == "qdislib":
-        return _benchmark_qdislib(config)
-    raise ValueError(f"Unknown framework: {name}")
-
-
-def benchmark_grover(
-    framework_name: str,
-    config: BenchmarkConfig,
-    hw: HardwareInfo,
-    contributor_name: str,
-    cudaq_target: str = "qpp-cpu",
-) -> dict:
-    """Run the full Grover benchmark for one framework. Returns enriched dict."""
-    n_main = 5
-    target_main = 5
-
-    startup_ms, search_call, build_call = _setup_framework(
-        framework_name, config, hw, cudaq_target=cudaq_target
-    )
-
-    build_ms = measure_build_time(lambda: build_call(n_main, target_main))
-
-    result = benchmark_run(
-        lambda: search_call(n_main, target_main, config.num_shots),
-        config,
-        framework=framework_name,
-        algorithm="grover",
-        n_qubits=n_main,
-    )
-
-    if result.raw_times_ms:
-        wall_time_mean_ms = float(np.mean(result.raw_times_ms))
-        if len(result.raw_times_ms) > 1:
-            wall_time_std_ms = float(np.std(result.raw_times_ms, ddof=1))
-        else:
-            wall_time_std_ms = 0.0
-    else:
-        wall_time_mean_ms = 0.0
-        wall_time_std_ms = 0.0
-
-    result.startup_time_ms = startup_ms
-    result.build_time_ms = build_ms
-    result.simulation_time_ms = max(
-        0.0, result.wall_time_median_ms - startup_ms - build_ms
-    )
-
-    # JSD: extract distribution
-    try:
-        _found, dist = search_call(n_main, target_main, config.num_shots)
-        total = sum(dist.values())
-        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
-        theoretical = {format(target_main, f"0{n_main}b"): 1.0}
-        result.jsd = compute_jsd(empirical, theoretical)
-    except Exception as e:
-        print(f"  [WARN] Could not compute JSD for {framework_name}: {e}")
-        result.jsd = 0.0
-
-    # Scalability
-    scaling_data: dict[int, float] = {}
-    scaling_config = BenchmarkConfig(
-        n_repetitions=3,
-        warmup_runs=config.warmup_runs,
-        num_shots=config.num_shots,
-    )
-    for n in config.n_values:
-        try:
-            target_n = n
-            sub_result = benchmark_run(
-                lambda nn=n, tt=target_n: search_call(nn, tt, config.num_shots),
-                scaling_config,
-                framework=framework_name,
-                algorithm="grover",
-                n_qubits=n,
-            )
-            scaling_data[n] = sub_result.wall_time_median_ms
-        except Exception as e:
-            print(f"  [WARN] scaling n={n} failed for {framework_name}: {e}")
-
-    if len(scaling_data) >= 2:
-        try:
-            alpha, beta = fit_scaling_curve(scaling_data)
-        except Exception as e:
-            print(f"  [WARN] curve fit failed for {framework_name}: {e}")
-            alpha, beta = 0.0, 0.0
-    else:
-        alpha, beta = 0.0, 0.0
-
-    result.scaling_data = scaling_data
-    result.scaling_alpha = alpha
-    result.scaling_beta = beta
-
-    try:
-        framework_version = importlib.metadata.version(framework_name)
-    except Exception:
-        framework_version = "unknown"
-
-    enriched = {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": hw.python_version,
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": framework_version,
-        **dataclasses.asdict(result),
-        "wall_time_mean_ms": wall_time_mean_ms,
-        "wall_time_std_ms": wall_time_std_ms,
-    }
-    return enriched
-
-
-def benchmark_grover_at_n(
-    framework_name: str,
-    n: int,
-    config: BenchmarkConfig,
-    hw: HardwareInfo,
-    contributor_name: str,
-    cudaq_target: str = "qpp-cpu",
-) -> dict:
-    """Run config.n_repetitions of Grover at qubit count n for one framework."""
-    target = n  # target state index = n (always valid since n < 2^n for n>=1)
-
-    startup_ms, search_call, build_call = _setup_framework(
-        framework_name, config, hw, cudaq_target=cudaq_target
-    )
-    build_ms = measure_build_time(lambda: build_call(n, target))
-
-    result = benchmark_run(
-        lambda: search_call(n, target, config.num_shots),
-        config,
-        framework=framework_name,
-        algorithm="grover",
-        n_qubits=n,
-    )
-
-    if result.raw_times_ms:
-        mean_ms = float(np.mean(result.raw_times_ms))
-        std_ms = float(np.std(result.raw_times_ms, ddof=1)) if len(result.raw_times_ms) > 1 else 0.0
-    else:
-        mean_ms = std_ms = 0.0
-
-    result.startup_time_ms = startup_ms
-    result.build_time_ms = build_ms
-    result.simulation_time_ms = max(0.0, result.wall_time_median_ms - startup_ms - build_ms)
-
-    try:
-        _found, dist = search_call(n, target, config.num_shots)
-        total = sum(dist.values())
-        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
-        theoretical = {format(target, f"0{n}b"): 1.0}
-        result.jsd = compute_jsd(empirical, theoretical)
-    except Exception as e:
-        print(f"  [WARN] JSD failed for {framework_name} n={n}: {e}")
-        result.jsd = 0.0
-
-    try:
-        framework_version = importlib.metadata.version(framework_name)
-    except Exception:
-        framework_version = "unknown"
-
-    return {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": hw.python_version,
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": framework_version,
-        **dataclasses.asdict(result),
+        "wall_time_median_ms": median_ms,
+        "wall_time_iqr_ms": iqr_ms,
+        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
+        "cv": cv,
+        "startup_time_ms": 0.0,
+        "build_time_ms": 0.0,
+        "simulation_time_ms": median_ms,
+        "cpu_percent_mean": 0.0,
+        "jsd": jsd,
+        "scaling_alpha": alpha,
+        "scaling_beta": beta,
+        "scaling_data": scaling_data,
+        "framework": framework_name,
+        "algorithm": "grover",
+        "n_qubits": n_main,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "python_version": sys.version,
+        "platform_info": platform.platform(),
+        "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
     }
+    return enriched
+
+
+
 
 
 def benchmark_rust_grover_at_n(
@@ -1046,28 +750,6 @@ def benchmark_rust_grover_at_n(
         except Exception as e:
             print(f"  [WARN] JSD failed for {framework_name} n={n}: {e}")
 
-    result = BenchmarkResult(
-        wall_time_median_ms=median_ms,
-        wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
-        cv=cv,
-        startup_time_ms=0.0,
-        build_time_ms=0.0,
-        simulation_time_ms=median_ms,
-        cpu_percent_mean=0.0,
-        jsd=jsd,
-        scaling_alpha=0.0,
-        scaling_beta=0.0,
-        scaling_data={},
-        framework=framework_name,
-        algorithm="grover",
-        n_qubits=n,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        python_version=sys.version,
-        platform_info=platform.platform(),
-        raw_times_ms=times_ms,
-    )
-
     return {
         "contributor_name": contributor_name,
         "hostname": hw.hostname,
@@ -1084,7 +766,25 @@ def benchmark_rust_grover_at_n(
         "num_shots": config.num_shots,
         "n_repetitions": config.n_repetitions,
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
-        **dataclasses.asdict(result),
+        "wall_time_median_ms": median_ms,
+        "wall_time_iqr_ms": iqr_ms,
+        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
+        "cv": cv,
+        "startup_time_ms": 0.0,
+        "build_time_ms": 0.0,
+        "simulation_time_ms": median_ms,
+        "cpu_percent_mean": 0.0,
+        "jsd": jsd,
+        "scaling_alpha": 0.0,
+        "scaling_beta": 0.0,
+        "scaling_data": {},
+        "framework": framework_name,
+        "algorithm": "grover",
+        "n_qubits": n,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "python_version": sys.version,
+        "platform_info": platform.platform(),
+        "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
     }
@@ -1132,109 +832,8 @@ def _run_rust_shor_binary(
     return json.loads(lines[-1])
 
 
-def _setup_framework_shor(
-    name: str, config, hw, cudaq_target: str = "qpp-cpu"
-):
-    t0 = time.perf_counter()
-    if name == "qiskit":
-        from python.qiskit.shor.shor import find_factor as _ff
-        from qiskit_aer.primitives import SamplerV2
-        from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-        sampler = SamplerV2()
-        pm = generate_preset_pass_manager(optimization_level=1, backend=sampler._backend)
-        factor_call = lambda N: _ff(N, sampler, pm, num_tries=3, num_shots_per_trial=config.num_shots)
-    elif name == "cirq":
-        from python.cirq.shor.shor import find_factor as _ff
-        import cirq
-        sim = cirq.Simulator()
-        factor_call = lambda N: _ff(N, sim, num_tries=3, num_shots_per_trial=config.num_shots)
-    elif name == "cudaq":
-        from python.cudaq.shor.shor import find_factor as _ff
-        factor_call = lambda N: _ff(N, simulator=cudaq_target, num_tries=3, num_shots_per_trial=config.num_shots)
-    elif name == "qdislib":
-        from python.qdislib.shor.shor import find_factor as _ff
-        factor_call = lambda N: _ff(N, num_tries=3, num_shots_per_trial=config.num_shots)
-    else:
-        raise ValueError(f"Unknown framework for Shor: {name}")
-    startup_ms = (time.perf_counter() - t0) * 1000
-    return startup_ms, factor_call
 
 
-def benchmark_shor_at_n(
-    framework_name: str, N: int, config, hw, contributor_name: str, cudaq_target: str = "qpp-cpu",
-) -> dict:
-    n_qubits = _n_qubits_shor(N)
-    startup_ms, factor_call = _setup_framework_shor(framework_name, config, hw, cudaq_target)
-
-    times_ms, factors = [], []
-    for _ in range(config.n_repetitions):
-        t0 = time.perf_counter()
-        f = factor_call(N)
-        times_ms.append((time.perf_counter() - t0) * 1000)
-        factors.append(f)
-
-    if not times_ms:
-        raise RuntimeError("No se completó ninguna repetición")
-    arr = np.array(times_ms)
-    median_ms = float(np.median(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr_ms = float(q75 - q25)
-    mean_ms = float(np.mean(arr))
-    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
-    success_rate = sum(1 for f in factors if f not in (1, N)) / len(factors)
-    factor_found = max(set(factors), key=factors.count)
-
-    try:
-        framework_version = importlib.metadata.version(framework_name)
-    except Exception:
-        framework_version = "unknown"
-
-    result = BenchmarkResult(
-        wall_time_median_ms=median_ms,
-        wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=0.0,
-        cv=cv,
-        startup_time_ms=startup_ms,
-        build_time_ms=0.0,
-        simulation_time_ms=max(0.0, median_ms - startup_ms),
-        cpu_percent_mean=0.0,
-        jsd=0.0,
-        scaling_alpha=0.0,
-        scaling_beta=0.0,
-        scaling_data={},
-        framework=framework_name,
-        algorithm="shor",
-        n_qubits=n_qubits,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        python_version=sys.version,
-        platform_info=platform.platform(),
-        raw_times_ms=times_ms,
-    )
-
-    return {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": hw.python_version,
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": framework_version,
-        "n_to_factor": N,
-        "factor_found": factor_found,
-        "success_rate": success_rate,
-        **dataclasses.asdict(result),
-        "wall_time_mean_ms": mean_ms,
-        "wall_time_std_ms": std_ms,
-    }
 
 
 def benchmark_rust_shor_at_n(
@@ -1269,28 +868,6 @@ def benchmark_rust_shor_at_n(
     factor_found = max(set(factors), key=factors.count) if factors else 1
     success_rate = 1.0 if factor_found not in (1, N) else 0.0
 
-    result = BenchmarkResult(
-        wall_time_median_ms=median_ms,
-        wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=0.0,
-        cv=cv,
-        startup_time_ms=0.0,
-        build_time_ms=0.0,
-        simulation_time_ms=median_ms,
-        cpu_percent_mean=0.0,
-        jsd=0.0,
-        scaling_alpha=0.0,
-        scaling_beta=0.0,
-        scaling_data={},
-        framework=framework_name,
-        algorithm="shor",
-        n_qubits=n_qubits,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        python_version=sys.version,
-        platform_info=platform.platform(),
-        raw_times_ms=times_ms,
-    )
-
     return {
         "contributor_name": contributor_name,
         "hostname": hw.hostname,
@@ -1310,7 +887,25 @@ def benchmark_rust_shor_at_n(
         "n_to_factor": N,
         "factor_found": factor_found,
         "success_rate": success_rate,
-        **dataclasses.asdict(result),
+        "wall_time_median_ms": median_ms,
+        "wall_time_iqr_ms": iqr_ms,
+        "peak_memory_rss_mb": 0.0,
+        "cv": cv,
+        "startup_time_ms": 0.0,
+        "build_time_ms": 0.0,
+        "simulation_time_ms": median_ms,
+        "cpu_percent_mean": 0.0,
+        "jsd": 0.0,
+        "scaling_alpha": 0.0,
+        "scaling_beta": 0.0,
+        "scaling_data": {},
+        "framework": framework_name,
+        "algorithm": "shor",
+        "n_qubits": n_qubits,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "python_version": sys.version,
+        "platform_info": platform.platform(),
+        "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
     }
@@ -1545,16 +1140,11 @@ def main() -> None:
 
     # When --no-gpu is set, cudaq and qcgpu require GPU/OpenCL and cannot run.
     if args.no_gpu:
-        _gpu_only = {"cudaq", "qcgpu"}
+        _gpu_only = {"qcgpu"}
         skipped = [fw for fw in all_enabled if fw in _gpu_only]
         all_enabled = [fw for fw in all_enabled if fw not in _gpu_only]
         if skipped:
-            print(f"[no-gpu] Omitiendo frameworks GPU: {', '.join(skipped)}")
-
-    if args.emulated:
-        # cudaq crashes under QEMU emulation even in CPU-only mode
-        all_enabled = [fw for fw in all_enabled if fw not in ("cudaq",)]
-        print("  [INFO] cudaq omitido en pasada emulada (incompatible con QEMU)")
+            print(f"[no-gpu] Omitiendo frameworks sin fallback CPU: {', '.join(skipped)}")
 
     print(f"Plataforma seleccionada: {args.platform}")
     print(f"  Frameworks habilitados: {', '.join(all_enabled)}")
