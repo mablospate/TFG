@@ -7,23 +7,30 @@ param(
 $DEV_MODE = $Dev.IsPresent
 
 # --- Self-elevation via UAC ---
-$_isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $_isAdmin) {
-    Write-Host "-> Se requieren permisos de administrador. Solicitando elevacion (UAC)..."
-    # Save the running script to a temp file so the elevated process can re-run it.
+# Windows cannot elevate the current process in place; a new elevated window is
+# always required. The original window waits silently; close the new window when
+# the benchmark finishes and the original prompt will return.
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "-> Permisos de administrador requeridos."
+    Write-Host "   Se abrira una nueva ventana elevada — cierra esa ventana al terminar."
+
+    $_tmpFile = $null
     if ($PSCommandPath) {
-        $src     = $PSCommandPath
-        $cleanup = $false
+        $_src = $PSCommandPath
     } else {
-        $src     = [IO.Path]::GetTempFileName() + ".ps1"
-        $MyInvocation.MyCommand.Definition | Set-Content $src -Encoding UTF8
-        $cleanup = $true
+        # Running via irm: save current scriptblock text to a temp file.
+        $_tmpFile = [IO.Path]::GetTempFileName() + ".ps1"
+        [IO.File]::WriteAllText($_tmpFile, $MyInvocation.MyCommand.Definition, [Text.Encoding]::UTF8)
+        $_src = $_tmpFile
     }
-    $elevArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$src`""
-    if ($Dev) { $elevArgs += " -Dev" }
-    foreach ($_a in $args) { $elevArgs += " `"$_a`"" }
-    Start-Process powershell -Verb RunAs -ArgumentList $elevArgs -Wait
-    if ($cleanup) { Remove-Item $src -ErrorAction SilentlyContinue }
+
+    # -NoExit keeps the elevated window open after the script finishes so the
+    # user can read the output before closing it manually.
+    $_elevArgs = "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$_src`""
+    if ($Dev) { $_elevArgs += " -Dev" }
+
+    Start-Process powershell -Verb RunAs -ArgumentList $_elevArgs -Wait
+    if ($_tmpFile) { Remove-Item $_tmpFile -ErrorAction SilentlyContinue }
     exit
 }
 
