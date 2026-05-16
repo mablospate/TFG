@@ -121,3 +121,47 @@ def search(
         print(f"Most frequent state was |{found}>, expected |{target}>")
 
     return found, dist
+
+
+def search_with_cutting(
+    n: int,
+    target: int,
+    pass_manager=None,
+    num_shots: int = 1024,
+    max_cuts: int = 2,
+) -> tuple[float, list, float]:
+    """Execute Grover via QDisLib circuit cutting.
+
+    Returns (expectation_value, cuts, find_cut_time_ms).
+    find_cut_time_ms is the time spent finding the cuts (not executing).
+    """
+    import time
+    from Qdislib.api import find_cut, wire_cutting
+    from qiskit_aer import AerSimulator
+    from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+
+    iters = math.floor(math.pi / 4 * math.sqrt(2**n))
+    qc = grover_circuit(n, target, num_iterations=iters)
+
+    _pm = (
+        pass_manager
+        if pass_manager is not None
+        else generate_preset_pass_manager(backend=AerSimulator())
+    )
+    qc_isa = _pm.run(qc)
+
+    max_sub_qubits = max(2, math.ceil(n / 2))
+    t0 = time.perf_counter()
+    cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
+                   wire_cut=True, gate_cut=True)
+    find_time_ms = (time.perf_counter() - t0) * 1000.0
+
+    print(f"[QDisLib cutting] Grover n={n} target={target} cuts={cuts}")
+
+    if not cuts:
+        print(f"[QDisLib cutting] No cuts found for n={n}, using direct execution")
+        exp_val = 0.0
+    else:
+        exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+
+    return float(exp_val), cuts, find_time_ms

@@ -20,7 +20,7 @@ def _setup_grover(config: BenchmarkConfig):
     from qiskit_aer import AerSimulator
     from qiskit_aer.primitives import SamplerV2
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
-    from python.qdislib.grover import search
+    from python.qdislib.grover import search, search_with_cutting
     from python.qiskit.grover import grover_circuit as qiskit_grover_circuit
 
     t0 = time.perf_counter()
@@ -35,11 +35,15 @@ def _setup_grover(config: BenchmarkConfig):
     def build_call(n, target):
         return qiskit_grover_circuit(n, target)
 
-    return startup_ms, search_call, build_call
+    def cutting_call(n, target, num_shots):
+        return search_with_cutting(n, target, pass_manager=pm, num_shots=num_shots)
+
+    return startup_ms, search_call, build_call, cutting_call
 
 
 def _setup_shor(config: BenchmarkConfig):
     from python.qdislib.shor.shor import find_factor as _ff
+    from python.qdislib.shor.shor import find_factor_with_cutting as _ffc
 
     t0 = time.perf_counter()
     startup_ms = (time.perf_counter() - t0) * 1000.0
@@ -47,7 +51,10 @@ def _setup_shor(config: BenchmarkConfig):
     def factor_call(N):
         return _ff(N, num_tries=3, num_shots_per_trial=config.num_shots)
 
-    return startup_ms, factor_call
+    def cutting_factor_call(N):
+        return _ffc(N, num_shots_per_trial=config.num_shots)
+
+    return startup_ms, factor_call, cutting_factor_call
 
 
 def main() -> None:
@@ -78,17 +85,43 @@ def main() -> None:
 
     try:
         if algo == "grover":
-            startup_ms, search_call, build_call = _setup_grover(config)
+            startup_ms, search_call, build_call, cutting_call = _setup_grover(config)
             result = run_grover_worker(
                 "qdislib", n, config, hw, contributor,
                 startup_ms, search_call, build_call,
             )
+            cutting_times: list[float] = []
+            last_exp = 0.0
+            last_find_ms = 0.0
+            for _ in range(config.n_repetitions):
+                t0 = time.perf_counter()
+                exp_val, _cuts, find_ms = cutting_call(n, n, config.num_shots)
+                cutting_times.append((time.perf_counter() - t0) * 1000.0)
+                last_exp = exp_val
+                last_find_ms = find_ms
+            import numpy as _np
+            result["cutting_wall_time_ms"] = round(float(_np.median(cutting_times)), 3)
+            result["cutting_find_time_ms"] = round(last_find_ms, 3)
+            result["cutting_expectation_value"] = round(last_exp, 6)
         elif algo == "shor":
-            startup_ms, factor_call = _setup_shor(config)
+            startup_ms, factor_call, cutting_factor_call = _setup_shor(config)
             result = run_shor_worker(
                 "qdislib", n, config, hw, contributor,
                 startup_ms, factor_call,
             )
+            cutting_times = []
+            last_exp = 0.0
+            last_find_ms = 0.0
+            for _ in range(config.n_repetitions):
+                t0 = time.perf_counter()
+                exp_val, _cuts, find_ms = cutting_factor_call(n)
+                cutting_times.append((time.perf_counter() - t0) * 1000.0)
+                last_exp = exp_val
+                last_find_ms = find_ms
+            import numpy as _np
+            result["cutting_wall_time_ms"] = round(float(_np.median(cutting_times)), 3)
+            result["cutting_find_time_ms"] = round(last_find_ms, 3)
+            result["cutting_expectation_value"] = round(last_exp, 6)
         else:
             write_error(f"unknown algo: {algo}")
             return

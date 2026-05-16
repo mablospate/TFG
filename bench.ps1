@@ -66,10 +66,30 @@ function Restore-Docker {
 
 Ensure-Docker
 
-$inspect = docker image inspect $IMAGE 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "-> Pulling $IMAGE..."
-    docker pull $IMAGE
+$imageExists = $false
+try {
+    $null = docker image inspect $IMAGE 2>$null
+    $imageExists = ($LASTEXITCODE -eq 0)
+} catch {
+    $imageExists = $false
+}
+
+if (-not $imageExists) {
+    if ($DEV_MODE) {
+        Write-Host "-> Image $IMAGE not found locally. Building from Dockerfile..."
+        docker build -t $IMAGE .
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "docker build failed."
+            exit 1
+        }
+    } else {
+        Write-Host "-> Pulling $IMAGE..."
+        docker pull $IMAGE
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "docker pull failed."
+            exit 1
+        }
+    }
 }
 
 Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"

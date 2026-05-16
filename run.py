@@ -340,7 +340,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
             "q1tsim",
             "quantr",
             "quantrs2",
-            "qcgpu",
         ],
         cudaq_target="qpp-cpu",
         quantrs2_gpu=False,
@@ -551,8 +550,16 @@ def _run_python_worker(
         print(f"  [worker error] {framework}: {err}", file=sys.stderr)
         return _error_result(framework, algo, n, hw, contributor_name, err)
     if proc.returncode != 0:
-        return _error_result(framework, algo, n, hw, contributor_name,
-                             f"exit {proc.returncode}")
+        if proc.returncode < 0:
+            try:
+                import signal as _signal
+                sig_name = _signal.Signals(-proc.returncode).name
+                exit_msg = f"killed by {sig_name} (exit {proc.returncode})"
+            except (ValueError, AttributeError):
+                exit_msg = f"exit {proc.returncode}"
+        else:
+            exit_msg = f"exit {proc.returncode}"
+        return _error_result(framework, algo, n, hw, contributor_name, exit_msg)
     result["subprocess_wall_time_ms"] = round(subprocess_wall_ms, 3)
     return result
 
