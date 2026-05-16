@@ -346,14 +346,16 @@ main() {
 
     HOST_ARCH="$(uname -m)"
 
-    # First pass (native)
+    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
+        echo "→ Primera pasada: build nativo arm64..."
+    fi
     run_benchmark "${EXTRA_ARGS[@]}" "$@"
 
     # Second pass: amd64 via emulation (arm64 hosts only)
     if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
         if _qemu_available; then
             echo ""
-            echo "→ Segunda pasada: build amd64 vía emulación..."
+            echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."
             run_benchmark --docker-platform linux/amd64 --emulated "${EXTRA_ARGS[@]}" "$@"
         else
             echo "  [INFO] Emulación amd64 no disponible, omitiendo segunda pasada."
