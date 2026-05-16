@@ -168,6 +168,11 @@ def benchmark_run(
         times_ms.append(elapsed_ms)
         peak_rss_mb = max(peak_rss_mb, rss_mb)
 
+    if deadline is not None and len(times_ms) < config.n_repetitions:
+        raise RuntimeError(
+            f"deadline: {len(times_ms)}/{config.n_repetitions} reps"
+        )
+
     # --- Estadísticas ---
     arr = np.array(times_ms)
     median_ms = float(np.median(arr))

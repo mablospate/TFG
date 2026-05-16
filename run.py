@@ -34,6 +34,10 @@ from python.hardware import HardwareInfo, detect_hardware
 
 DOCKER_IMAGE: str = os.getenv("DOCKER_IMAGE", "dev")
 
+
+class _DeadlineExceeded(RuntimeError):
+    pass
+
 BANNER = r"""
 ==========================================================
   TFG  -  Quantum Benchmarking Suite
@@ -953,6 +957,11 @@ def benchmark_rust_grover_at_n(
         times_ms.append(float(payload.get("time_ms", 0.0)))
         last_payload = payload
 
+    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
+        raise _DeadlineExceeded(
+            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
+        )
+
     arr = np.array(times_ms) if times_ms else np.array([0.0])
     median_ms = float(np.median(arr))
     q75, q25 = np.percentile(arr, [75, 25])
@@ -1078,6 +1087,11 @@ def benchmark_shor_at_n(
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
 
+    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
+        raise _DeadlineExceeded(
+            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
+        )
+
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
     arr = np.array(times_ms)
@@ -1163,6 +1177,11 @@ def benchmark_rust_shor_at_n(
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         last_payload = payload
+
+    if _over_budget(deadline) and len(times_ms) < config.n_repetitions:
+        raise _DeadlineExceeded(
+            f"{len(times_ms)}/{config.n_repetitions} reps completadas"
+        )
 
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición antes del límite de tiempo")
@@ -1503,6 +1522,8 @@ def main() -> None:
                 n_series_results.append(result)
                 statuses[fw_name] = "OK"
                 scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+            except _DeadlineExceeded:
+                print(f"  [TIMEOUT] {fw_name} n={n}: serie incompleta, descartada")
             except Exception as e:
                 statuses[fw_name] = "ERROR"
                 print(f"[ERROR] {fw_name} grover n={n}: {e}")
@@ -1523,6 +1544,8 @@ def main() -> None:
                 n_series_results.append(result)
                 statuses[fw_name] = "OK"
                 scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
+            except _DeadlineExceeded:
+                print(f"  [TIMEOUT] {fw_name} n={n}: serie incompleta, descartada")
             except FileNotFoundError as e:
                 statuses[fw_name] = "ERROR"
                 print(f"[ERROR] {fw_name} grover n={n}: binary not found ({e})")
@@ -1647,6 +1670,8 @@ def main() -> None:
                 n_series.append(r)
                 shor_statuses[fw] = "OK"
                 shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+            except _DeadlineExceeded:
+                print(f"  [TIMEOUT] {fw} N={N_val}: serie incompleta, descartada")
             except Exception as e:
                 shor_statuses.setdefault(fw, "ERROR")
                 print(f"[ERROR] {fw} shor N={N_val}: {e}")
@@ -1664,6 +1689,8 @@ def main() -> None:
                 n_series.append(r)
                 shor_statuses[fw] = "OK"
                 shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
+            except _DeadlineExceeded:
+                print(f"  [TIMEOUT] {fw} N={N_val}: serie incompleta, descartada")
             except Exception as e:
                 shor_statuses.setdefault(fw, "ERROR")
                 print(f"[ERROR] {fw} shor N={N_val}: {e}")
