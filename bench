@@ -25,6 +25,15 @@ COLIMA_RESTARTED=0      # we restarted an existing Colima
 COLIMA_ORIG_GB=0        # original memory before restart
 COLIMA_ORIG_CPU=0       # original CPU count before restart
 
+BENCH_CONTAINER_NAME=""   # set while container is running, cleared after
+
+_on_exit() {
+    [[ -n "${BENCH_CONTAINER_NAME:-}" ]] && docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
+    cleanup_image
+    restore_colima
+}
+trap '_on_exit' EXIT
+
 detect_hardware() {
     local os
     os="$(uname -s)"
@@ -190,7 +199,10 @@ pull_image() {
 }
 
 run_benchmark() {
+    BENCH_CONTAINER_NAME="tfg-bench-$$"
+
     docker run --rm \
+        --name "$BENCH_CONTAINER_NAME" \
         --memory "${DOCKER_MEM_GB}g" \
         --cpus "$DOCKER_CPUS" \
         $GPU_FLAGS \
@@ -202,7 +214,29 @@ run_benchmark() {
         -e BENCH_RAM_GB="$RAM_GB_F" \
         -v "$(pwd)/results:/app/results" \
         "$IMAGE" \
-        "$@"
+        "$@" &
+    local _docker_pid=$!
+
+    echo "(Pulsa 'q' para detener el benchmark)"
+
+    (
+        while true; do
+            if IFS= read -r -n1 -s -t 0.3 key </dev/tty 2>/dev/null; then
+                if [[ "$key" == "q" || "$key" == "Q" ]]; then
+                    printf "\n→ Benchmark detenido por el usuario.\n" >/dev/tty
+                    docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
+                    break
+                fi
+            fi
+        done
+    ) &
+    local _watcher_pid=$!
+
+    wait "$_docker_pid" 2>/dev/null && _rc=0 || _rc=$?
+    kill "$_watcher_pid" 2>/dev/null || true
+    wait "$_watcher_pid" 2>/dev/null || true
+    BENCH_CONTAINER_NAME=""
+    return $_rc
 }
 
 cleanup_image() {
@@ -261,8 +295,6 @@ main() {
     echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
     run_benchmark "${EXTRA_ARGS[@]}" "$@"
-    cleanup_image
-    restore_colima
 }
 
 main "$@"

@@ -5,6 +5,7 @@ param()
 $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
+$CONTAINER_NAME = "tfg-bench-$PID"
 
 $proc         = Get-CimInstance Win32_Processor | Select-Object -First 1
 $CPU_MODEL    = $proc.Name.Trim()
@@ -78,6 +79,7 @@ if ($args -notcontains "--contributor") {
 
 $dockerArgs = @(
     "run", "--rm",
+    "--name", $CONTAINER_NAME,
     "--memory", "${DOCKER_MEM_GB}g",
     "--cpus", "$DOCKER_CPUS"
 ) + $GPU_FLAGS + @(
@@ -91,7 +93,21 @@ $dockerArgs = @(
     $IMAGE
 ) + $extraArgs + $args
 
-& docker @dockerArgs
+Write-Host "(Pulsa 'q' para detener el benchmark)"
+$dockerProc = Start-Process -FilePath "docker" -ArgumentList $dockerArgs -NoNewWindow -PassThru
+while (-not $dockerProc.HasExited) {
+    if ([Console]::KeyAvailable) {
+        $key = [Console]::ReadKey($true)
+        if ($key.Key -eq [ConsoleKey]::Q) {
+            Write-Host ""
+            Write-Host "-> Benchmark detenido por el usuario."
+            & docker stop $CONTAINER_NAME 2>$null
+            break
+        }
+    }
+    Start-Sleep -Milliseconds 200
+}
+$dockerProc.WaitForExit()
 
 if ($Env:KEEP_IMAGE -ne "1") {
     Write-Host "-> Removing image $IMAGE..."
