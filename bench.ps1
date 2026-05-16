@@ -76,8 +76,26 @@ try {
 
 if (-not $imageExists) {
     if ($DEV_MODE) {
-        Write-Host "-> Image $IMAGE not found locally. Building from Dockerfile..."
-        docker build -t $IMAGE .
+        # Find the repo root: prefer current directory if it has a Dockerfile,
+        # otherwise clone into a temp directory.
+        if (Test-Path (Join-Path $PWD "Dockerfile")) {
+            $BUILD_CONTEXT = $PWD
+        } else {
+            $BUILD_CONTEXT = Join-Path $Env:TEMP "tfg-bench-build"
+            if (Test-Path $BUILD_CONTEXT) {
+                Write-Host "-> Updating local repo clone at $BUILD_CONTEXT..."
+                git -C $BUILD_CONTEXT pull --ff-only 2>$null
+            } else {
+                Write-Host "-> Cloning repo for build (run from repo root next time)..."
+                git clone --depth=1 https://github.com/mablospate/TFG.git $BUILD_CONTEXT
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "git clone failed."
+                    exit 1
+                }
+            }
+        }
+        Write-Host "-> Building image from $BUILD_CONTEXT ..."
+        docker build -t $IMAGE $BUILD_CONTEXT
         if ($LASTEXITCODE -ne 0) {
             Write-Error "docker build failed."
             exit 1
