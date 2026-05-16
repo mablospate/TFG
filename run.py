@@ -565,27 +565,31 @@ def _run_rust_binary(
     Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
     failure (caller is expected to catch and convert to a SKIP/ERROR row).
     """
-    proc = subprocess.run(
-        [
-            str(binary),
-            "--n",
-            str(n),
-            "--target",
-            str(target),
-            "--shots",
-            str(num_shots),
-        ],
-        capture_output=True,
+    proc = subprocess.Popen(
+        [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=timeout_s,
     )
+    lines: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        line = line.rstrip("\n")
+        if line.strip():
+            lines.append(line)
+            # Print progress lines; the last line is JSON and will look like garbage — skip it
+            try:
+                json.loads(line)
+            except json.JSONDecodeError:
+                print(line)
+    try:
+        proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        raise
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"{binary.name} exited with code {proc.returncode}: {proc.stderr.strip()[:300]}"
-        )
-    # Some binaries (qcgpu) may emit informational lines before the JSON; take
-    # the last non-empty stdout line as the result.
-    lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+        stderr = (proc.stderr.read() if proc.stderr else "").strip()[:300]
+        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: {stderr}")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     return json.loads(lines[-1])
