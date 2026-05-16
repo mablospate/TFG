@@ -1383,6 +1383,12 @@ def parse_args():
         default=False,
         help="Mark results as emulated (arm64 host running amd64 image)",
     )
+    p.add_argument(
+        "--dev",
+        action="store_true",
+        default=False,
+        help="Dev mode: 1 rep, smallest n only, fast exit",
+    )
     return p.parse_args()
 
 
@@ -1403,6 +1409,15 @@ def main() -> None:
     print()
 
     config = BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
+
+    if args.dev:
+        config = BenchmarkConfig(
+            n_repetitions=1,
+            n_values=[config.n_values[0]],
+            n_values_shor=[config.n_values_shor[0]],
+            num_shots=10,
+        )
+        print("[DEV] Modo desarrollo: 1 repetición, n mínimo, 10 shots")
 
     hw = detect_hardware()
     print_hardware_summary(hw)

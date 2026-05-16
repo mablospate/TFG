@@ -6,6 +6,7 @@ set -euo pipefail
 exec </dev/tty
 
 IMAGE="${BENCHMARK_IMAGE:-mablospate/tfg-bench:latest}"
+DEV_MODE=0
 
 CPU_MODEL="unknown"
 CPU_PHYSICAL=1
@@ -320,20 +321,36 @@ cap_to_docker_limits() {
 
 collect_run_args() {
     if [[ ! " $* " =~ " --contributor " ]]; then
-        local name=""
-        while [[ -z "$name" ]]; do
-            printf "Contributor name: "
-            read -r name
-            name="${name#"${name%%[![:space:]]*}"}"  # ltrim
-            name="${name%"${name##*[![:space:]]}"}"  # rtrim
-        done
-        EXTRA_ARGS+=(--contributor "$name")
+        if [[ "$DEV_MODE" -eq 1 ]]; then
+            EXTRA_ARGS+=(--contributor "dev")
+        else
+            local name=""
+            while [[ -z "$name" ]]; do
+                printf "Contributor name: "
+                read -r name
+                name="${name#"${name%%[![:space:]]*}"}"  # ltrim
+                name="${name%"${name##*[![:space:]]}"}"  # rtrim
+            done
+            EXTRA_ARGS+=(--contributor "$name")
+        fi
     fi
 
-    ask_time_budget
+    if [[ "$DEV_MODE" -ne 1 ]]; then
+        ask_time_budget
+    fi
+    [[ "$DEV_MODE" -eq 1 ]] && EXTRA_ARGS+=("--dev")
+}
+
+_parse_flags() {
+    for arg in "$@"; do
+        if [[ "$arg" == "--dev" ]]; then
+            DEV_MODE=1
+        fi
+    done
 }
 
 main() {
+    _parse_flags "$@"
     EXTRA_ARGS=()
     detect_hardware
     compute_resources
@@ -351,8 +368,8 @@ main() {
     fi
     run_benchmark "${EXTRA_ARGS[@]}" "$@"
 
-    # Second pass: amd64 via emulation (arm64 hosts only)
-    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]]; then
+    # Second pass: amd64 via emulation (arm64 hosts only, skipped in dev mode)
+    if [[ "$HOST_ARCH" =~ ^(arm64|aarch64)$ ]] && [[ "$DEV_MODE" -ne 1 ]]; then
         if _qemu_available; then
             echo ""
             echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."

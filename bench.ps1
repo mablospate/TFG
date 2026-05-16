@@ -1,6 +1,10 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param()
+param(
+    [switch]$Dev
+)
+
+$DEV_MODE = $Dev.IsPresent
 
 $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
@@ -72,13 +76,18 @@ Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CP
 Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
 $extraArgs = @()
+if ($DEV_MODE) { $extraArgs += "--dev" }
 if ($args -notcontains "--contributor") {
-    $contributor = Read-Host "Contributor name"
+    if ($DEV_MODE) {
+        $contributor = "dev"
+    } else {
+        $contributor = Read-Host "Contributor name"
+    }
     $extraArgs += @("--contributor", $contributor)
 }
 
 $TIME_BUDGET_MINS = 0  # 0 = unlimited
-if ($args -notcontains "--time-budget") {
+if (-not $DEV_MODE -and $args -notcontains "--time-budget") {
     $ans = Read-Host "Tiempo límite en minutos (Enter = sin límite)"
     if ($ans -match '^\d+$' -and [int]$ans -gt 0) {
         $TIME_BUDGET_MINS = [int]$ans
