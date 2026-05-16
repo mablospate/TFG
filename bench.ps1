@@ -80,9 +80,9 @@ if (-not $imageExists) {
         docker build -t $IMAGE .
         if ($LASTEXITCODE -ne 0) { Write-Error "docker build failed."; exit 1 }
     } else {
-        Write-Host "-> Building image from GitHub..."
-        docker build -t $IMAGE https://github.com/mablospate/TFG.git
-        if ($LASTEXITCODE -ne 0) { Write-Error "docker build failed."; exit 1 }
+        Write-Host "-> Pulling $IMAGE from Docker Hub..."
+        docker pull $IMAGE
+        if ($LASTEXITCODE -ne 0) { Write-Error "docker pull failed."; exit 1 }
     }
 }
 
