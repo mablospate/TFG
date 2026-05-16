@@ -15,13 +15,13 @@ dependencies = [
     "pytest>=8.3.5",
     "cirq>=1.6.1",
     "psutil>=5.9",
-    "qdislib>=1.0.0",
 ]
 
 [project.optional-dependencies]
-# x86_64-only: no manylinux_aarch64 wheels on PyPI (verified 2026-05-15)
+# x86_64-only: cudaq has no arm64 wheels; qdislib->pymetis requires gcc to build from source (no arm64 manylinux wheel, verified 2026-05-16)
 x86only = [
     "cudaq>=0.14.0",
+    "qdislib>=1.0.0",
 ]
 # NVIDIA GPU acceleration (x86_64 only, requires CUDA 13)
 gpu = [
