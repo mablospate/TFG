@@ -42,6 +42,7 @@ pub struct Args {
 #[derive(Serialize)]
 pub struct Output {
     pub framework: &'static str,
+    pub framework_version: &'static str,
     pub algorithm: &'static str,
     pub n: usize,
     pub target: u64,
@@ -49,6 +50,7 @@ pub struct Output {
     pub iterations: usize,
     pub found: u64,
     pub time_ms: f64,
+    pub mem_mb: f64,
     pub distribution: HashMap<String, usize>,
 }
 
@@ -154,6 +156,20 @@ pub fn grover_circuit(n: usize, target: u64, iterations: usize) -> QResult<Circu
     Ok(circuit)
 }
 
+fn peak_rss_mb() -> f64 {
+    #[cfg(target_os = "linux")]
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                if let Some(kb) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
+                    return kb as f64 / 1024.0;
+                }
+            }
+        }
+    }
+    0.0
+}
+
 pub fn run_with_args(args: &Args) -> Result<Output, Box<dyn Error>> {
     let max_target = 1u64 << args.n;
     if args.target >= max_target {
@@ -172,6 +188,10 @@ pub fn run_with_args(args: &Args) -> Result<Output, Box<dyn Error>> {
         })
         .max(1);
 
+    eprintln!(
+        "Start Grover search for |{}> in {}-qubit space ({} iterations)",
+        args.target, args.n, iterations
+    );
     let start = Instant::now();
     let mut circuit = grover_circuit(args.n, args.target, iterations)
         .map_err(|e| -> Box<dyn Error> { e.to_string().into() })?;
@@ -188,9 +208,16 @@ pub fn run_with_args(args: &Args) -> Result<Output, Box<dyn Error>> {
         .max_by_key(|(_, c)| *c)
         .ok_or("empty histogram")?;
     let found = u64::from_str_radix(best_bs, 2)?;
+    let mem_mb = peak_rss_mb();
+
+    let total_shots: usize = dist.values().sum();
+    let target_bs = format!("{:0width$b}", args.target, width = args.n);
+    let prob = dist.get(&target_bs).copied().unwrap_or(0) as f64 / total_shots.max(1) as f64;
+    eprintln!("Found target state |{}> with probability {:.2}%", found, prob * 100.0);
 
     Ok(Output {
         framework: "q1tsim",
+        framework_version: env!("CARGO_PKG_VERSION"),
         algorithm: "grover",
         n: args.n,
         target: args.target,
@@ -198,6 +225,7 @@ pub fn run_with_args(args: &Args) -> Result<Output, Box<dyn Error>> {
         iterations,
         found,
         time_ms: elapsed.as_secs_f64() * 1000.0,
+        mem_mb,
         distribution: dist,
     })
 }

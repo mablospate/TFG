@@ -33,29 +33,64 @@ pub struct Args {
 #[derive(Serialize)]
 pub struct Output {
     pub framework: &'static str,
+    pub framework_version: &'static str,
     pub algorithm: &'static str,
     pub n: usize,
     pub target: u64,
     pub shots: u32,
+    pub iterations: usize,
     pub found: u64,
     pub time_ms: f64,
+    pub mem_mb: f64,
     pub distribution: HashMap<String, usize>,
+}
+
+fn peak_rss_mb() -> f64 {
+    #[cfg(target_os = "linux")]
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                if let Some(kb) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
+                    return kb as f64 / 1024.0;
+                }
+            }
+        }
+    }
+    0.0
 }
 
 /// Binary entry point. Parses CLI args, runs Grover, prints JSON, then exits.
 pub fn run() -> ! {
     let args = Args::parse();
+    let num_iter = args.iterations.unwrap_or_else(|| {
+        let space = (1u64 << args.n) as f64;
+        ((std::f64::consts::PI / 4.0) * space.sqrt()).floor() as usize
+    });
+    eprintln!(
+        "Start Grover search for |{}> in {}-qubit space ({} iterations)",
+        args.target, args.n, num_iter
+    );
     let start = Instant::now();
-    let (found, dist) = run_grover(args.n, args.target, args.shots, args.iterations);
+    let (found, dist) = run_grover(args.n, args.target, args.shots, Some(num_iter));
     let time_ms = start.elapsed().as_secs_f64() * 1000.0;
+    let mem_mb = peak_rss_mb();
+
+    let total_shots: usize = dist.values().sum();
+    let target_bs = format!("{:0width$b}", args.target, width = args.n);
+    let prob = dist.get(&target_bs).copied().unwrap_or(0) as f64 / total_shots.max(1) as f64;
+    eprintln!("Found target state |{}> with probability {:.2}%", found, prob * 100.0);
+
     let out = Output {
         framework: "quantrs2",
+        framework_version: env!("CARGO_PKG_VERSION"),
         algorithm: "grover",
         n: args.n,
         target: args.target,
         shots: args.shots,
+        iterations: num_iter,
         found,
         time_ms,
+        mem_mb,
         distribution: dist,
     };
     println!("{}", serde_json::to_string(&out).unwrap());

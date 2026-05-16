@@ -172,8 +172,8 @@ _Q1TSIM_WARNING: tuple[str, str, list[str]] = (
         "Última publicación en crates.io: 2019; sin commits relevantes desde entonces.",
         "Depende de ndarray 0.12 / rand 0.4 — varias generaciones por debajo del ecosistema actual.",
         "Sin SIMD ni paralelismo: simulación statevector single-threaded.",
-        "Empaquetado como dylib → el ejecutable necesita rpath al sysroot de Rust",
-        "(resuelto automáticamente por rust/q1tsim/build.rs).",
+        "Upstream declara crate-type=[dylib]; vendoreado en rust/q1tsim/vendor/ con rlib para",
+        "evitar dependencia en libstd.so y libq1tsim.so en el contenedor de runtime.",
     ],
 )
 
@@ -568,7 +568,7 @@ def _run_rust_binary(
     proc = subprocess.Popen(
         [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=sys.stderr,
         text=True,
     )
     lines: list[str] = []
@@ -588,8 +588,7 @@ def _run_rust_binary(
         proc.kill()
         raise
     if proc.returncode != 0:
-        stderr = (proc.stderr.read() if proc.stderr else "").strip()[:300]
-        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: {stderr}")
+        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     return json.loads(lines[-1])
@@ -666,7 +665,7 @@ def benchmark_rust_grover(
     result = BenchmarkResult(
         wall_time_median_ms=median_ms,
         wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=0.0,  # measured in-process by the Rust binary; not exposed here
+        peak_memory_rss_mb=float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
         cv=cv,
         startup_time_ms=0.0,
         build_time_ms=0.0,
@@ -703,7 +702,7 @@ def benchmark_rust_grover(
         "runtime_version": "rust (cargo --release)",
         "num_shots": config.num_shots,
         "n_repetitions": config.n_repetitions,
-        "framework_version": "rust-binary",
+        "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
         **dataclasses.asdict(result),
         "wall_time_mean_ms": wall_time_mean_ms,
         "wall_time_std_ms": wall_time_std_ms,
