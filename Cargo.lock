@@ -1773,7 +1773,6 @@ name = "q1tsim-bench"
 version = "0.1.0"
 dependencies = [
  "clap",
- "num-complex 0.4.6",
  "num-integer",
  "num-rational",
  "q1tsim",
@@ -1809,7 +1808,6 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "num-integer",
- "num-rational",
  "qcgpu",
  "rand 0.8.6",
  "serde",
@@ -1831,9 +1829,7 @@ name = "quantr-bench"
 version = "0.1.0"
 dependencies = [
  "clap",
- "num-complex 0.4.6",
  "num-integer",
- "num-rational",
  "quantr",
  "rand 0.8.6",
  "serde",

@@ -13,10 +13,9 @@ path = "src/bin/shor.rs"
 
 [dependencies]
 q1tsim = "0.5"
-num-complex = "0.4"
 num-integer = "0.1"
 num-rational = "0.4"
-rand = "0.8"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-clap = { version = "4", features = ["derive"] }
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+clap.workspace = true

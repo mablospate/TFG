@@ -9,10 +9,6 @@ dependencies = [
     "scipy==1.15.2",
     "qiskit==2.0.0",
     "qiskit-aer==0.17.0",
-    "qiskit-ibm-runtime==0.39.0",
-    "symengine==0.13.0",
-    "sympy==1.13.3",
-    "pytest>=8.3.5",
     "cirq>=1.6.1",
     "psutil>=5.9",
 ]
@@ -29,8 +25,6 @@ gpu = [
 ]
 dev = [
     "pytest==8.3.5",
-    "ipykernel==6.29.5",
-    "ipython==9.2.0",
     "ruff>=0.9",
 ]
 
@@ -50,8 +44,3 @@ exclude = ["memory/"]
 
 [tool.ruff.lint]
 per-file-ignores = {"tests/**/*.py" = ["E402"]}
-
-[dependency-groups]
-dev = [
-    "ruff>=0.15.12",
-]
