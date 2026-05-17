@@ -216,7 +216,7 @@ function Run-Benchmark {
     }
 
     if ($PassthroughArgs) {
-        $dockerRunArgs += $PassthroughArgs
+        $dockerRunArgs += @($PassthroughArgs | Where-Object { -not [string]::IsNullOrEmpty("$_") })
     }
 
     # Build a properly-quoted command line (CommandLineToArgvW rules) so that
