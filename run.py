@@ -1301,7 +1301,7 @@ def main() -> None:
         "contributor": contributor_name,
         "platform_id": args.platform,
         "benchmark_image": DOCKER_IMAGE,
-        "gpu_enabled": not args.no_gpu,
+        "gpu_enabled": not args.no_gpu and bool(hw.gpu_model),
         "emulated": args.emulated,
         "cpu_model": hw.cpu_model,
         "cpu_physical_cores": hw.cpu_cores_physical,

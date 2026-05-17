@@ -352,7 +352,7 @@ collect_run_args() {
     if [[ "$DEV_MODE" -ne 1 ]]; then
         ask_time_budget
     fi
-    [[ "$DEV_MODE" -eq 1 ]] && EXTRA_ARGS+=("--dev")
+    if [[ "$DEV_MODE" -eq 1 ]]; then EXTRA_ARGS+=("--dev"); fi
 }
 
 _parse_flags() {
