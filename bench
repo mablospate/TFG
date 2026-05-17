@@ -8,14 +8,20 @@ exec </dev/tty
 IMAGE="${BENCHMARK_IMAGE:-mablospate/tfg-bench:latest}"
 DEV_MODE=0
 
-# Load .env from the script's directory if it exists
+# Load .env — check script dir first, then cwd, then ~/tfg-bench/ (curl fallback)
 _BENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
-if [[ -f "$_BENCH_DIR/.env" ]]; then
-    set -a
-    # shellcheck disable=SC1091
-    source "$_BENCH_DIR/.env"
-    set +a
-fi
+_ENV_LOADED=0
+for _env_candidate in "$_BENCH_DIR/.env" "$PWD/.env" "$HOME/tfg-bench/.env"; do
+    if [[ -f "$_env_candidate" ]]; then
+        set -a
+        # shellcheck disable=SC1091
+        source "$_env_candidate"
+        set +a
+        _ENV_LOADED=1
+        break
+    fi
+done
+unset _env_candidate _ENV_LOADED
 
 CPU_MODEL="unknown"
 CPU_PHYSICAL=1
