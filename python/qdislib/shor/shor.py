@@ -134,6 +134,8 @@ def find_order_with_cutting(
         else generate_preset_pass_manager(backend=AerSimulator())
     )
     qc_isa = _pm.run(qc)
+    if not hasattr(qc_isa, 'nqubits'):
+        qc_isa.nqubits = qc_isa.num_qubits
 
     max_sub_qubits = max(2, math.ceil(qc_isa.num_qubits / 2))
     t0 = time.perf_counter()
