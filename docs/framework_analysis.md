@@ -7,7 +7,6 @@
 | Qiskit | 151 | 754 (adder 473 + qft 38 + shor 243) | 905 |
 | Cirq | 161 | 272 (modular_exp 73 + shor 199) | 433 |
 | CUDA-Q | 206 | 368 (permutation 130 + qft 41 + shor 197) | 574 |
-| ProjectQ | 171 | 234 | 405 |
 | QDisLib | 115 | 176 | 291 |
 
 ---
@@ -91,83 +90,59 @@
 
 ---
 
-## ProjectQ (ETH Zurich)
-
-### Bondades generales
-- **Sintaxis inspirada en Dirac**: `H | qubit` lee como H aplicado a |qubit⟩
-- **`with Control(eng, ctrls):`**: cualquier bloque de codigo se hace controlado automaticamente
-- **`All(H) | qureg`**: aplica una puerta a todo el registro en una linea
-- **Math library built-in**: `MultiplyByConstantModN`, `AddConstantModN`
-- **Emulacion clasica**: el simulador puede ejecutar math gates sin descomponerlas
-- **Simulador C++ con OpenMP y SIMD**: alto rendimiento sin dependencias GPU
-
-### Beneficio en Grover
-- `with Control(eng, qureg[:-1]): Z | qureg[-1]` — MCZ en 2 lineas con context manager
-- `All(H) | qureg` y `All(X) | qureg` — difusor expresado de forma muy natural
-- El patron `Control` permite que el compilador interno decida la descomposicion optima del MCZ
-
-### Beneficio en Shor
-- **`MultiplyByConstantModN(a, N) | target`**: la exponenciacion modular es **una sola linea** de codigo cuantico
-- **Semi-classical QFT** con un unico qubit de control reutilizado: minimo uso de qubits
-- El simulador emula `MultiplyByConstantModN` clasicamente → permite factorizar numeros grandes en laptop sin explotar el state vector
-- **Menor cantidad de codigo para Shor** entre los frameworks nativos (234 lineas)
-
-### Desventaja
-- **Modelo imperativo sin circuito reutilizable**: cada shot requiere crear un engine nuevo y reaplicar todas las puertas desde cero
-- La emulacion clasica de math gates "hace trampa": no genera el circuito cuantico real
-- Para benchmarking justo, habria que forzar descomposicion con `InstructionFilter`
-- Proyecto menos activo que Qiskit o Cirq
-
----
-
 ## QDisLib (BSC)
 
 ### Bondades generales
-- **Unica libreria de circuit cutting**: divide circuitos grandes en subcircuitos ejecutables en hardware pequeno
-- **Distribucion HPC via PyCOMPSs**: paraleliza la ejecucion de subcircuitos en multiples nodos/GPUs
-- **FindCut automatico**: usa algoritmos de grafos para encontrar cortes optimos
-- **Agnositca al framework**: acepta circuitos Qiskit y Qibo
+- **Unica libreria de circuit cutting del benchmark**: divide circuitos grandes en subcircuitos ejecutables en hardware pequeno
+- **Distribucion HPC via PyCOMPSs**: la API esta disenada para paralelizar la ejecucion de subcircuitos en multiples nodos/GPUs (PyCOMPSs NO esta instalado en la imagen del benchmark; ver Desventaja)
+- **FindCut automatico**: usa algoritmos de grafos para encontrar cortes optimos (depende de `pymetis`)
+- **Agnostica al framework**: acepta circuitos Qiskit y Qibo
+- **Doble ruta de medicion en el benchmark**:
+  - Ruta **directa**: `search()` / `find_factor()` ejecutan el circuito con `AerSampler` igual que cualquier otro framework
+  - Ruta de **cutting** (IMPLEMENTADA y ejecutandose en el benchmark): `search_with_cutting()` / `find_order_with_cutting()` llaman a `find_cut()` y, si devuelve cortes, a `wire_cutting(backend="numpy")`. El resultado aporta los campos extra `cutting_wall_time_ms`, `cutting_find_time_ms`, `cutting_expectation_value`
 
 ### Beneficio en Grover
 - Para n grande, puede cortar el oraculo MCZ en subcircuitos que quepan en QPUs pequenas
-- La distribucion permite ejecutar los 6^k o 8^k subcircuitos en paralelo
+- En presencia de PyCOMPSs, los 6^K u 8^K subcircuitos se distribuyen en paralelo entre nodos
 
 ### Beneficio en Shor
 - La exponenciacion modular de Beauregard tiene muchas puertas de 2 qubits → candidato ideal para gate cutting
-- Puede distribuir las multiplicaciones modulares entre multiples nodos
+- Puede distribuir las multiplicaciones modulares entre multiples nodos cuando PyCOMPSs esta disponible
 
 ### Desventaja
-- **No aporta valor para simulacion local**: el cutting tiene overhead exponencial (6^k, 8^k) que empeora el rendimiento
-- **Es un wrapper**: no implementa logica cuantica propia, delega a Qiskit
-- Requiere PyCOMPSs para la ventaja real (distribucion)
+- **Sin PyCOMPSs en la imagen Docker**, la ruta de cutting ejecuta `wire_cutting` **localmente y en serie**: el overhead exponencial del cutting (8^K subcircuitos) anula el beneficio comparado con la ejecucion directa
+- **Circuitos pequenos (n ≤ 5)**: `find_cut()` devuelve `[]` (no encuentra cortes utiles), por lo que el cutting no se aplica y `cutting_expectation_value = 0.0`
+- **Puertas de 3+ qubits (Toffoli, presentes en Shor)**: tambien hacen que `find_cut()` devuelva `[]`
+- **Monkey-patch requerido**: QDisLib usa la API antigua de Qiskit (`.nqubits`); el benchmark inyecta una propiedad compatible al importar el modulo para mantener compatibilidad con Qiskit 2.0
+- **Wrapper sobre Qiskit**: no implementa logica cuantica propia; la "ventaja real" requiere PyCOMPSs + cluster
 - Menor cantidad de codigo (291 lineas) precisamente porque no implementa nada propio
+- Excluido en Linux aarch64 porque `pymetis` (dependencia de `find_cut`) no tiene wheel arm64
 
 ---
 
 ## Tabla comparativa: features clave por framework
 
-| Feature | Qiskit | Cirq | CUDA-Q | ProjectQ | QDisLib |
-|---|---|---|---|---|---|
-| MCZ nativo | `ZGate().control(n-1)` | `Z.controlled(n-1)` | `cz(controls, tgt)` | `Control(eng, ctrls)` | (Qiskit) |
-| QFT built-in | `QFTGate` + aproximada | `cirq.qft()` | Manual | `QFT` gate | (Qiskit) |
-| Math modular | Manual (Beauregard) | `ArithmeticGate` | Manual (permutaciones) | `MultiplyByConstantModN` | (Qiskit) |
-| Transpiler | Pass manager (0-3) | Transformers | MLIR (interno) | Engine pipeline | (Qiskit) |
-| GPU | Via Aer (cuQuantum) | Via qsim (cuStateVec) | Nativa (cuStateVec) | No | Via cuQuantum |
-| Composicion | `compose(inplace)` | `circuit +=` | Inline (no compone) | Imperativo | (Qiskit) |
-| Multi-shot | 1 llamada | 1 llamada | 1 llamada | N engines | 1 llamada |
-| Circuit cutting | No | No | No | No | Si |
+| Feature | Qiskit | Cirq | CUDA-Q | QDisLib |
+|---|---|---|---|---|
+| MCZ nativo | `ZGate().control(n-1)` | `Z.controlled(n-1)` | `cz(controls, tgt)` | (Qiskit) |
+| QFT built-in | `QFTGate` + aproximada | `cirq.qft()` | Manual | (Qiskit) |
+| Math modular | Manual (Beauregard) | `ArithmeticGate` | Manual (permutaciones) | (Qiskit) |
+| Transpiler | Pass manager (0-3) | Transformers | MLIR (interno) | (Qiskit) |
+| GPU | Via Aer (cuQuantum) | Via qsim (cuStateVec) | Nativa (cuStateVec) | Via cuQuantum (Qiskit) |
+| Composicion | `compose(inplace)` | `circuit +=` | Inline (no compone) | (Qiskit) |
+| Multi-shot | 1 llamada | 1 llamada | 1 llamada | 1 llamada |
+| Circuit cutting | No | No | No | Sí (local, serie; PyCOMPSs para distribución HPC) |
 
 ## Conclusiones por algoritmo
 
 ### Grover
-- **Mas conciso**: Cirq y ProjectQ (sintaxis expresiva para MCZ y H-on-all)
+- **Mas conciso**: Cirq (sintaxis expresiva para MCZ y H-on-all)
 - **Mas rapido en simulacion**: CUDA-Q (GPU + compilacion MLIR)
-- **Mas escalable**: CUDA-Q con multi-GPU o QDisLib con circuit cutting
+- **Mas escalable**: CUDA-Q con multi-GPU o QDisLib con circuit cutting (con PyCOMPSs)
 - **Mejor para hardware real**: Qiskit (transpiler optimiza para topologia)
 
 ### Shor
-- **Menos codigo**: ProjectQ (MultiplyByConstantModN resuelve todo en 1 linea)
+- **Menos codigo (que genere circuito real)**: Cirq (ArithmeticGate encapsula la matematica pero genera circuito real)
 - **Mas fiel al paper**: Qiskit (Beauregard completo con Draper adder)
-- **Mas corto sin trampa**: Cirq (ArithmeticGate encapsula la matematica pero genera circuito real)
 - **Mas rapido en simulacion grande**: CUDA-Q (GPU absorbe el permutation network)
-- **Mas escalable**: QDisLib (circuit cutting de la exponenciacion modular)
+- **Mas escalable**: QDisLib (circuit cutting de la exponenciacion modular, con PyCOMPSs)

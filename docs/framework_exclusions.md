@@ -1,6 +1,6 @@
 # Framework Exclusions and Limitations
 
-> Document generated 2026-05-13. Records which frameworks are excluded from specific platforms and why.
+> Document last updated 2026-05-17. Records which frameworks are excluded from specific platforms and why.
 
 ## 1. Introduction — Criteria for Exclusion
 
@@ -17,7 +17,9 @@ Frameworks that are included with caveats are marked as **degraded** rather than
 
 ## 2. Python Frameworks
 
-### projectq (v0.8.0) — Included with warnings on all platforms except Windows
+### projectq (v0.8.0) — Eliminado del benchmark (histórico)
+
+> **Estado actual: ProjectQ ha sido eliminado de todos los `PLATFORM_CONFIGS` y no participa en ninguna pasada del benchmark.** Esta sección se conserva como referencia histórica.
 
 **Last PyPI release:** v0.8.0, October 2022. No commits since then. Effectively abandoned.
 
@@ -27,13 +29,13 @@ Frameworks that are included with caveats are marked as **degraded** rather than
 AttributeError: 'Compiler' object has no attribute 'dry_run'
 ```
 
-The C++ simulator (`_cppsim`) cannot be built without `distutils`. Python 3.11 must be used (where `distutils` is still present in the stdlib).
+The C++ simulator (`_cppsim`) cannot be built without `distutils`. The benchmark image is based on Python 3.12, so projectq cannot be installed in the runtime environment.
 
-**ARM performance degradation (macOS arm64 / Linux aarch64):** The `_cppsim` extension compiles without SIMD ARM optimizations. There is no NEON or SVE vectorization in the projectq codebase. On arm64 hosts, performance is approximately 800× slower than native SIMD simulators. This is not solely an ARM issue — the dominant cost is the per-shot Python overhead (projectq creates a full `MainEngine` cycle per shot) — but the absence of ARM SIMD vectorization makes the gap wider than on x86_64 with AVX2.
+**ARM performance degradation (macOS arm64 / Linux aarch64):** The `_cppsim` extension compiles without SIMD ARM optimizations. There is no NEON or SVE vectorization in the projectq codebase. On arm64 hosts, performance was approximately 800× slower than native SIMD simulators. The dominant cost was the per-shot Python overhead (projectq creates a full `MainEngine` cycle per shot); the absence of ARM SIMD vectorization made the gap wider than on x86_64 with AVX2.
 
-**Included because:** projectq is functionally correct and produces valid probability distributions. It is useful as a historical baseline and for verifying JSD metrics against other simulators. Latency results are explicitly annotated as non-comparable.
+**Windows (x86_64 and arm64):** No precompiled wheel on PyPI. Building the C++ extension on Windows requires a manually configured MSVC toolchain with steps not documented by the projectq project.
 
-**Windows (x86_64 and arm64):** Excluded completely. There is no precompiled Windows wheel on PyPI. Building the C++ extension on Windows requires a manually configured MSVC toolchain with steps not documented by the projectq project.
+**Razón de la eliminación:** la combinación de abandono, incompatibilidad con Python 3.12, ausencia de SIMD ARM y falta de wheels Windows hace que ProjectQ no pueda ejecutarse en la imagen Docker actual (Python 3.12, base multi-arquitectura). Mantenerlo solo en x86_64 con Python 3.11 desviaba la base de la imagen del resto del benchmark sin aportar valor comparativo.
 
 **When this might change:**
 - If the projectq project merges an ARM SIMD (NEON/SVE) pull request.
@@ -42,19 +44,50 @@ The C++ simulator (`_cppsim`) cannot be built without `distutils`. Python 3.11 m
 
 ---
 
-### cudaq / CUDA-Q (v0.14.0) — Excluded on macOS x86_64 and Windows
+### cudaq / CUDA-Q (v0.14.0) — Excluded on macOS x86_64, Linux aarch64, and Windows
+
+**Linux aarch64 — excluded:**
+
+No `manylinux_aarch64` wheels are published for `cuda-quantum-cu13` (the real installable package). cudaq is only available on Linux x86_64.
 
 **macOS x86_64 (Intel Mac) — excluded completely:**
 
-The real installable package is `cuda-quantum-cu13` (not the stub `cudaq` on PyPI). As of May 2026, only `macosx_arm64` wheels are published. No `macosx_x86_64` wheels exist for any version from v0.14 onward. Intel Mac support was not announced and is not expected given Apple's transition to Apple Silicon.
+As of May 2026, only `macosx_arm64` wheels are published. No `macosx_x86_64` wheels exist for any version from v0.14 onward. Intel Mac support was not announced and is not expected given Apple's transition to Apple Silicon.
+
+**macOS arm64 (Apple Silicon) — included:**
+
+Wheels are published for `macosx_arm64`. cudaq is active in the `macos-arm64` platform config.
 
 **Windows — excluded completely:**
 
 There is no native Windows support for cudaq. The official workaround is WSL2 (Linux subsystem), which is not applicable to a native Windows benchmark runner. No `win_amd64` or `win_arm64` wheels are published on PyPI.
 
+**ARM host running emulated AMD64 (QEMU) — excluded at runtime:**
+
+Even though cudaq is configured for `linux-x86_64-*` platforms, when an ARM host runs the AMD64 pass via QEMU (`--platform linux/amd64`), cudaq is skipped automatically. cudaq's AVX-optimized code paths trigger `SIGILL` under QEMU emulation.
+
 **When this might change:**
-- macOS x86_64: only if NVIDIA publishes Intel Mac wheels. This is considered very unlikely given the Apple Silicon transition and the direction of Apple's platform roadmap.
-- Windows: only if NVIDIA adds native Windows support. No public roadmap indication of this as of May 2026.
+- macOS x86_64: only if NVIDIA publishes Intel Mac wheels. Very unlikely.
+- Windows: only if NVIDIA adds native Windows support.
+- Linux aarch64: only if NVIDIA publishes arm64 wheels.
+
+---
+
+### qdislib / QDisLib — Excluded on Linux aarch64
+
+**Linux aarch64 (nvidia and cpu) — excluded:**
+
+QDisLib's `find_cut` function depends on `pymetis`, a Python binding for the METIS graph partitioning library. `pymetis` does **not** publish a `manylinux_aarch64` wheel on PyPI. Installing it would require building from source inside the container, which in turn requires GCC and METIS development headers — these are not part of the slim arm64 base image, and adding them would significantly increase image size for a single dependency.
+
+In `pyproject.toml`, qdislib is declared under the `x86only` extra; `uv sync --extra x86only` is only invoked in amd64 image builds. On Windows arm64, qdislib **is** included because the platform extra rules differ (Windows installs use precompiled paths that avoid pymetis source builds for the basic API; the cutting path then degrades gracefully).
+
+**All other platforms — included:**
+
+QDisLib is in `macos-arm64`, `macos-x86_64`, `linux-x86_64-nvidia`, `linux-x86_64-cpu`, `windows-x86_64-gpu`, `windows-x86_64-cpu`, `windows-arm64-gpu`, and `windows-arm64-cpu`.
+
+**When this might change:**
+- If `pymetis` publishes a `manylinux_aarch64` wheel on PyPI.
+- If the arm64 base image is switched to one that includes GCC and METIS dev headers (would increase image size).
 
 ---
 
@@ -76,11 +109,25 @@ There is no native Windows support for cudaq. The official workaround is WSL2 (L
 
 ## 3. Rust Frameworks
 
-### qcgpu (v0.1.0) — Linux x86_64 and Windows x86_64 only
+### qcgpu (v0.1.0) — Linux x86_64 (NVIDIA) and Windows x86_64 (GPU) only
 
 **Last release:** April 2018. This is the only release. The project has been abandoned for 8+ years.
 
 **OpenCL requirement:** qcgpu requires OpenCL as a mandatory dependency (not optional). OpenCL is the only compute backend.
+
+**Cross-compilation note (Dockerfile `qcgpu-amd64` stage):** qcgpu depends on OpenCL headers that are not available when cross-compiling from ARM to AMD64. To avoid excluding qcgpu from cross-compiled amd64 images, the Dockerfile introduces a dedicated stage:
+
+```
+Stage 0: qcgpu-amd64
+  FROM --platform=linux/amd64 rust:slim-bookworm
+  · Compiles qcgpu natively for amd64
+  · Runs under QEMU when the host is ARM
+  · Produces /qcgpu-bins/qcgpu-grover and /qcgpu-bins/qcgpu-shor
+```
+
+The `rust-builder` stage then copies these prebuilt binaries when `$TARGETARCH == amd64`. **Result: qcgpu is now present in cross-compiled amd64 images, which was not the case before this stage existed.**
+
+**Active platforms:** `linux-x86_64-nvidia` and `windows-x86_64-gpu`. In the CPU pass of the AMD64+NVIDIA double-pass run, qcgpu is **skipped** because the OpenCL/GPU backend cannot run without a GPU.
 
 **macOS — excluded:** Apple deprecated OpenCL in macOS 10.14 Mojave (2018) and has since removed it in favor of Metal. qcgpu cannot function on current macOS versions without a compatibility layer such as MoltenVK's OpenCL support, which is not a standard system component and is not part of the benchmark environment.
 
@@ -88,7 +135,7 @@ There is no native Windows support for cudaq. The official workaround is WSL2 (L
 
 **Windows arm64 — excluded:** OpenCL availability on Windows arm64 is uncertain. No evidence of a working build has been found.
 
-**Included on x86_64 (Linux and Windows) for:** historical reference value. qcgpu represents an early approach (2018) to GPU-accelerated quantum simulation using OpenCL. Its inclusion provides a comparison point for how the field has evolved.
+**Included on x86_64 (Linux NVIDIA and Windows GPU) for:** historical reference value. qcgpu represents an early approach (2018) to GPU-accelerated quantum simulation using OpenCL.
 
 **When this might change:** Only if the project is forked and ported to Vulkan or Metal, which would require a substantial rewrite of the compute backend.
 
@@ -114,27 +161,9 @@ There is no native Windows support for cudaq. The official workaround is WSL2 (L
 
 **CI:** Only `ubuntu-latest` in the CI matrix. No macOS or Windows CI. Cross-platform behavior is untested upstream.
 
-**Qubit limit:** quantr's state vector grows as 2^n. The library is designed for small circuits and the practical qubit limit is approximately 16 qubits. It is excluded from any benchmark configuration involving more than 16 qubits.
+**Qubit limit:** quantr's state vector grows as 2^n. The library is designed for small circuits and the practical qubit limit is approximately 16 qubits. The benchmark sweep (`n = [3, 5, 7, 9, 11]`) stays comfortably within this limit.
 
 **Included for:** small-circuit benchmarks where its simplicity and API clarity are relevant comparison points.
-
----
-
-### qip / RustQIP (v1.5.0) — Excluded on Windows
-
-**Activity:** Last commit December 2025. 26+ open issues without triage. No CI on any platform.
-
-**Windows (x86_64 and arm64) — excluded:** There is no CI evidence of a working Windows build. With 26 untriaged issues and no CI, correctness on Windows cannot be verified. Excluded from all Windows benchmark configurations.
-
-**Linux and macOS — included as best-effort:** qip is included on Linux and macOS platforms as a best-effort inclusion. Results carry a note that no CI guarantees are in place.
-
----
-
-### roqoqo (v1.21.0) — Included on all platforms
-
-roqoqo is actively maintained by HQS Quantum Simulations with EU funding (PlanQK, QSolid, PhoQuant). CI covers all platforms. No exclusions.
-
-**Note on the `qoqo_quest` backend:** The `qoqo_quest` simulation backend depends on the QuEST C library (a C/Fortran external dependency). This adds build complexity, particularly for cross-compilation. The project documents this dependency and its CI handles it, but local builds on non-standard environments may require additional setup.
 
 ---
 
@@ -152,14 +181,18 @@ quantrs2 is in active development with CI on all platforms. No platform-level ex
 |---|---|---|
 | cudaq + AMD GPU (ROCm) | Not supported | cudaq is NVIDIA/CUDA-only; no ROCm backend exists |
 | cudaq + Intel GPU (oneAPI) | Not supported | cudaq is NVIDIA/CUDA-only; no oneAPI backend exists |
-| quantrs2 GPU on CPU-only runners | Disabled intentionally | GPU not guaranteed; disabled for reproducibility |
-| qcgpu on macOS | Excluded | OpenCL removed from macOS; MoltenVK OpenCL layer not standard |
-| projectq on Python 3.12+ | Broken | `distutils` removed; C++ extension fails to build |
+| cudaq on Linux aarch64 | Excluded | No `manylinux_aarch64` wheels published |
 | cudaq on macOS x86_64 | Excluded | No wheels published for Intel Mac |
 | cudaq on Windows (native) | Excluded | No native Windows support; WSL2 workaround not applicable |
-| projectq on Windows | Excluded | No precompiled wheel; MSVC build undocumented |
+| cudaq under QEMU emulation | Skipped at runtime | SIGILL on AVX instructions |
+| qdislib on Linux aarch64 | Excluded | `pymetis` (required by `find_cut`) has no arm64 wheel; build-from-source needs GCC + METIS headers not present in slim arm64 base image |
+| quantrs2 GPU on CPU-only runners | Disabled intentionally | GPU not guaranteed; disabled for reproducibility |
+| qcgpu on macOS | Excluded | OpenCL removed from macOS; MoltenVK OpenCL layer not standard |
+| qcgpu on Linux aarch64 | Excluded | OpenCL runtime not guaranteed |
+| qcgpu on Windows arm64 | Excluded | OpenCL availability uncertain |
+| qcgpu in the CPU pass of AMD64+NVIDIA double run | Skipped at runtime | Requires GPU; cannot run with `--no-gpu` |
+| projectq (any platform) | Removed from benchmark | Abandoned; Python 3.12 incompatibility; no ARM SIMD; no Windows wheels |
 | qiskit-aer on Windows arm64 | Excluded | No wheel published for `win_arm64` |
-| qip on Windows | Excluded | No CI; build unverified |
 
 ---
 
@@ -167,13 +200,12 @@ quantrs2 is in active development with CI on all platforms. No platform-level ex
 
 | Exclusion | Condition for change |
 |---|---|
-| projectq on Python 3.12+ | projectq adds Python 3.12 compatibility via setuptools distutils shim |
-| projectq ARM performance | ARM SIMD (NEON/SVE) PR merged into projectq |
-| projectq on Windows | projectq publishes precompiled Windows wheels |
+| projectq (re-inclusion) | Python 3.12 compatibility shim + ARM SIMD support + Windows wheels |
+| cudaq on Linux aarch64 | NVIDIA publishes `manylinux_aarch64` wheels |
 | cudaq on macOS x86_64 | NVIDIA releases Intel Mac wheels (assessed as very unlikely) |
 | cudaq on Windows | NVIDIA adds native Windows support (no public roadmap) |
+| qdislib on Linux aarch64 | `pymetis` publishes arm64 wheel, OR base image switched to one with GCC + METIS headers |
 | qcgpu on macOS / arm64 | Project is forked and ported to Vulkan or Metal |
 | q1tsim dependency conflicts | Fork updates ndarray and rand to modern versions |
-| qip on Windows | CI is added and a working Windows build is verified |
 | qiskit-aer-gpu ROCm | qiskit-aer publishes official ROCm wheels to PyPI |
 | qiskit-aer on Windows arm64 | Qiskit adds Windows arm64 to CI and publishes wheel |
