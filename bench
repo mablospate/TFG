@@ -49,9 +49,10 @@ ask_time_budget() {
 }
 
 _on_exit() {
+    set +e
     if [[ -n "$TIMER_PID" ]]; then
         kill "$TIMER_PID" 2>/dev/null
-        wait "$TIMER_PID" 2>/dev/null
+        wait "$TIMER_PID" 2>/dev/null || true
     fi
     [[ -n "${BENCH_CONTAINER_NAME:-}" ]] && docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
     cleanup_image
@@ -315,7 +316,7 @@ restore_colima() {
     elif (( COLIMA_RESTARTED )); then
         echo "→ Restoring Colima to original state (${COLIMA_ORIG_GB}g RAM, ${COLIMA_ORIG_CPU} CPUs)..."
         colima stop 2>/dev/null || true
-        colima start --memory "$COLIMA_ORIG_GB" --cpu "$COLIMA_ORIG_CPU"
+        colima start --memory "$COLIMA_ORIG_GB" --cpu "$COLIMA_ORIG_CPU" || true
     fi
 }
 
