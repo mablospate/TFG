@@ -60,15 +60,31 @@ pub struct Args {
     pub seed: Option<u64>,
 }
 
+fn peak_rss_mb() -> f64 {
+    #[cfg(target_os = "linux")]
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                if let Some(kb) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
+                    return kb as f64 / 1024.0;
+                }
+            }
+        }
+    }
+    0.0
+}
+
 /// Per-run JSON record emitted on stdout.
 #[derive(Serialize)]
 pub struct Output {
     pub framework: &'static str,
+    pub framework_version: &'static str,
     pub algorithm: &'static str,
     #[serde(rename = "N")]
     pub n_val: u64,
     pub factor: u64,
     pub time_ms: f64,
+    pub mem_mb: f64,
 }
 
 /// Build the order-finding circuit for base `a` modulo `n_val` with `m` bits
@@ -211,15 +227,20 @@ pub fn find_factor(
 /// Entry point used by the thin `bin/shor.rs` wrapper.
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    eprintln!("Shor: factoring N={} (tries={}, shots={})", args.n_val, args.tries, args.shots);
     let start = Instant::now();
     let factor = find_factor(args.n_val, args.shots, args.tries, args.seed)?;
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+    let time_ms = start.elapsed().as_secs_f64() * 1000.0;
+    let mem_mb = peak_rss_mb();
+    eprintln!("Shor: factor={} for N={} in {:.1}ms", factor, args.n_val, time_ms);
     let out = Output {
         framework: "quantr",
+        framework_version: env!("CARGO_PKG_VERSION"),
         algorithm: "shor",
         n_val: args.n_val,
         factor,
-        time_ms: elapsed,
+        time_ms,
+        mem_mb,
     };
     println!("{}", serde_json::to_string(&out)?);
     Ok(())

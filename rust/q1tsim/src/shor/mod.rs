@@ -49,14 +49,30 @@ pub struct Args {
     pub seed: Option<u64>,
 }
 
+fn peak_rss_mb() -> f64 {
+    #[cfg(target_os = "linux")]
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                if let Some(kb) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
+                    return kb as f64 / 1024.0;
+                }
+            }
+        }
+    }
+    0.0
+}
+
 #[derive(Serialize)]
 pub struct Output {
     pub framework: &'static str,
+    pub framework_version: &'static str,
     pub algorithm: &'static str,
     #[serde(rename = "N")]
     pub n: u64,
     pub factor: u64,
     pub time_ms: f64,
+    pub mem_mb: f64,
 }
 
 // ----- order-finding circuit -----
@@ -198,6 +214,7 @@ pub fn find_factor(args: &Args) -> QResult<u64> {
 
 pub fn run() -> ! {
     let args = Args::parse();
+    eprintln!("Shor: factoring N={} (tries={}, shots={})", args.n, args.tries, args.shots);
     let start = Instant::now();
     let factor = match find_factor(&args) {
         Ok(f) => f,
@@ -207,12 +224,17 @@ pub fn run() -> ! {
         }
     };
     let elapsed = start.elapsed();
+    let time_ms = elapsed.as_secs_f64() * 1000.0;
+    let mem_mb = peak_rss_mb();
+    eprintln!("Shor: factor={} for N={} in {:.1}ms", factor, args.n, time_ms);
     let out = Output {
         framework: "q1tsim",
+        framework_version: env!("CARGO_PKG_VERSION"),
         algorithm: "shor",
         n: args.n,
         factor,
-        time_ms: elapsed.as_secs_f64() * 1000.0,
+        time_ms,
+        mem_mb,
     };
     println!("{}", serde_json::to_string(&out).expect("serialize"));
     // suppress unused-import warning for Error
