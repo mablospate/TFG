@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.metadata
 import json
+import math
 import platform
 import sys
 import time
@@ -34,7 +35,6 @@ def write_error(message: str) -> None:
 
 
 def _n_qubits_shor(N: int) -> int:
-    import math
     return math.ceil(math.log2(N)) * 2
 
 

@@ -5,6 +5,8 @@ import sys
 import time
 import traceback
 
+import numpy as np
+
 from python.benchmark_core import BenchmarkConfig
 from python.hardware import detect_hardware
 from python.workers._base import (
@@ -99,8 +101,7 @@ def main() -> None:
                 cutting_times.append((time.perf_counter() - t0) * 1000.0)
                 last_exp = exp_val
                 last_find_ms = find_ms
-            import numpy as _np
-            result["cutting_wall_time_ms"] = round(float(_np.median(cutting_times)), 3)
+            result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
             result["cutting_find_time_ms"] = round(last_find_ms, 3)
             result["cutting_expectation_value"] = round(last_exp, 6)
         elif algo == "shor":
@@ -118,8 +119,7 @@ def main() -> None:
                 cutting_times.append((time.perf_counter() - t0) * 1000.0)
                 last_exp = exp_val
                 last_find_ms = find_ms
-            import numpy as _np
-            result["cutting_wall_time_ms"] = round(float(_np.median(cutting_times)), 3)
+            result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
             result["cutting_find_time_ms"] = round(last_find_ms, 3)
             result["cutting_expectation_value"] = round(last_exp, 6)
         else:

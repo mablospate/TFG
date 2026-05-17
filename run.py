@@ -137,13 +137,12 @@ def _cudaq_cpu_warning(os_name: str, arch: str) -> tuple[str, str, list[str]]:
 
 _QDISLIB_WARNING: tuple[str, str, list[str]] = (
     "qdislib",
-    "circuit cutting no conectado — actúa como alias de qiskit-aer",
+    "circuit cutting activo (serial); PyCOMPSs para ejecución HPC distribuida",
     [
-        "La implementación actual ejecuta AerSampler.run() directamente en ambas ramas",
-        "(con y sin QDisLib importado). No hay subcircuitos ni recombinación.",
-        "Tiempos y resultados son estadísticamente idénticos a qiskit.",
-        "El cutting real requiere PyCOMPSs ≥ 3.3 instalado por separado",
-        "y está diseñado para clusters HPC Linux x86_64 (MareNostrum 5, BSC).",
+        "find_cut() + wire_cutting() se ejecutan localmente en serie (sin paralelismo).",
+        "PyCOMPSs no está instalado — el speedup distribuido requiere PyCOMPSs ≥ 3.3",
+        "y un cluster HPC Linux x86_64 (MareNostrum 5, BSC).",
+        "En circuitos pequeños find_cut() puede no encontrar cortes válidos (cuts=[]).",
         "Referencia: Tejedor et al., arXiv:2505.01184 (may 2025).",
     ],
 )

@@ -2,6 +2,20 @@
 # Global ARG — injected by buildx per platform; also used for FROM substitution
 ARG TARGETARCH
 
+# ── Stage 0: qcgpu — always built natively for linux/amd64 ───────────────────
+# Runs via QEMU when host is ARM. Only the amd64 runtime stage uses these bins.
+FROM --platform=linux/amd64 rust:slim-bookworm AS qcgpu-amd64
+WORKDIR /build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ocl-icd-opencl-dev clang pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+COPY Cargo.toml Cargo.lock ./
+COPY rust/ ./rust/
+RUN mkdir -p /qcgpu-bins && \
+    cargo build --release -p qcgpu-bench && \
+    cp target/release/qcgpu-grover /qcgpu-bins/ && \
+    cp target/release/qcgpu-shor   /qcgpu-bins/
+
 # ── Stage 1: Rust builder — always runs natively on build machine ─────────────
 FROM --platform=$BUILDPLATFORM rust:slim-bookworm AS rust-builder
 ARG TARGETARCH
@@ -78,6 +92,14 @@ RUN mkdir -p /binaries && \
         cp target/release/quantrs2-shor     /binaries/ && \
         cp target/release/qcgpu-grover     /binaries/ && \
         cp target/release/qcgpu-shor        /binaries/; \
+    fi
+
+# When cross-compiling to amd64 from an ARM host, supplement with qcgpu binaries
+# built natively in the qcgpu-amd64 stage (via QEMU).
+COPY --from=qcgpu-amd64 /qcgpu-bins/ /tmp/qcgpu-bins/
+RUN if [ "$TARGETARCH" = "amd64" ] && [ "$(uname -m)" != "x86_64" ]; then \
+        cp /tmp/qcgpu-bins/qcgpu-grover /binaries/ && \
+        cp /tmp/qcgpu-bins/qcgpu-shor   /binaries/; \
     fi
 
 # ── Stage 2a: amd64 base — CUDA runtime (enables cudaq-nvidia + qcgpu OpenCL) ─

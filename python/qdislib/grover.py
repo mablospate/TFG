@@ -154,8 +154,12 @@ def search_with_cutting(
 
     max_sub_qubits = max(2, math.ceil(n / 2))
     t0 = time.perf_counter()
-    cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
-                   wire_cut=True, gate_cut=True)
+    try:
+        cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
+                       wire_cut=True, gate_cut=True)
+    except Exception as e:
+        print(f"[QDisLib cutting] find_cut error: {e}")
+        cuts = []
     find_time_ms = (time.perf_counter() - t0) * 1000.0
 
     print(f"[QDisLib cutting] Grover n={n} target={target} cuts={cuts}")
