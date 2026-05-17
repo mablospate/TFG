@@ -105,8 +105,9 @@ class _CpuSampler:
         return float(np.mean(self._samples)) if self._samples else 0.0
 
     def _run(self) -> None:
-        while not self._stop.wait(self._interval):
+        while not self._stop.is_set():
             self._samples.append(self._proc.cpu_percent())
+            self._stop.wait(self._interval)
 
 
 # ---------------------------------------------------------------------------

@@ -16,12 +16,14 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
 import numpy as np
+import psutil
 
 from python.benchmark_core import (
     BenchmarkConfig,
@@ -580,6 +582,23 @@ def _run_rust_binary(
         stderr=sys.stderr,
         text=True,
     )
+    cpu_samples: list[float] = []
+    _stop = threading.Event()
+    _cpu_thread: threading.Thread | None = None
+    try:
+        _psutil_proc = psutil.Process(proc.pid)
+        _psutil_proc.cpu_percent()
+        def _sample() -> None:
+            while not _stop.is_set():
+                try:
+                    cpu_samples.append(_psutil_proc.cpu_percent())
+                except psutil.NoSuchProcess:
+                    break
+                _stop.wait(0.05)
+        _cpu_thread = threading.Thread(target=_sample, daemon=True)
+        _cpu_thread.start()
+    except psutil.NoSuchProcess:
+        pass
     lines: list[str] = []
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -591,6 +610,9 @@ def _run_rust_binary(
                 json.loads(line)
             except json.JSONDecodeError:
                 print(line)
+    _stop.set()
+    if _cpu_thread is not None:
+        _cpu_thread.join(timeout=1.0)
     try:
         proc.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
@@ -600,7 +622,9 @@ def _run_rust_binary(
         raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
-    return json.loads(lines[-1])
+    payload = json.loads(lines[-1])
+    payload["cpu_percent_mean"] = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    return payload
 
 
 def benchmark_rust_grover(
@@ -620,6 +644,7 @@ def benchmark_rust_grover(
     n_main = 5
     target_main = 5
     times_ms: list[float] = []
+    cpu_percents: list[float] = []
     last_payload: dict | None = None
 
     # Warmup + repetitions (matches benchmark_run semantics).
@@ -628,6 +653,7 @@ def benchmark_rust_grover(
     for _ in range(config.n_repetitions):
         payload = _run_rust_binary(binary, n_main, target_main, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
+        cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         last_payload = payload
 
     arr = np.array(times_ms) if times_ms else np.array([0.0])
@@ -694,7 +720,7 @@ def benchmark_rust_grover(
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
         "simulation_time_ms": median_ms,
-        "cpu_percent_mean": 0.0,
+        "cpu_percent_mean": float(np.mean(cpu_percents)) if cpu_percents else 0.0,
         "jsd": jsd,
         "scaling_alpha": alpha,
         "scaling_beta": beta,
@@ -813,6 +839,23 @@ def _run_rust_shor_binary(
         stderr=sys.stderr,
         text=True,
     )
+    cpu_samples: list[float] = []
+    _stop = threading.Event()
+    _cpu_thread: threading.Thread | None = None
+    try:
+        _psutil_proc = psutil.Process(proc.pid)
+        _psutil_proc.cpu_percent()
+        def _sample() -> None:
+            while not _stop.is_set():
+                try:
+                    cpu_samples.append(_psutil_proc.cpu_percent())
+                except psutil.NoSuchProcess:
+                    break
+                _stop.wait(0.05)
+        _cpu_thread = threading.Thread(target=_sample, daemon=True)
+        _cpu_thread.start()
+    except psutil.NoSuchProcess:
+        pass
     lines: list[str] = []
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -824,6 +867,9 @@ def _run_rust_shor_binary(
                 json.loads(line)
             except json.JSONDecodeError:
                 print(line)
+    _stop.set()
+    if _cpu_thread is not None:
+        _cpu_thread.join(timeout=1.0)
     try:
         proc.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
@@ -833,7 +879,9 @@ def _run_rust_shor_binary(
         raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
-    return json.loads(lines[-1])
+    payload = json.loads(lines[-1])
+    payload["cpu_percent_mean"] = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    return payload
 
 
 
@@ -853,10 +901,12 @@ def benchmark_rust_shor_at_n(
     factors: list[int] = []
     last_payload: dict | None = None
 
+    cpu_percents_shor: list[float] = []
     for _ in range(config.n_repetitions):
         payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
+        cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
         last_payload = payload
 
     if not times_ms:
@@ -893,12 +943,12 @@ def benchmark_rust_shor_at_n(
         "success_rate": success_rate,
         "wall_time_median_ms": median_ms,
         "wall_time_iqr_ms": iqr_ms,
-        "peak_memory_rss_mb": 0.0,
+        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
         "cv": cv,
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
         "simulation_time_ms": median_ms,
-        "cpu_percent_mean": 0.0,
+        "cpu_percent_mean": float(np.mean(cpu_percents_shor)) if cpu_percents_shor else 0.0,
         "jsd": 0.0,
         "scaling_alpha": 0.0,
         "scaling_beta": 0.0,

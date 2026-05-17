@@ -10,6 +10,7 @@ import time
 from datetime import datetime, timezone
 
 import numpy as np
+import psutil
 
 from python.benchmark_core import (
     BenchmarkConfig,
@@ -76,7 +77,7 @@ def run_grover_worker(
     result.startup_time_ms = startup_ms
     result.build_time_ms = build_ms
     result.simulation_time_ms = max(
-        0.0, result.wall_time_median_ms - startup_ms - build_ms
+        0.0, result.wall_time_median_ms - build_ms
     )
 
     try:
@@ -132,13 +133,22 @@ def run_shor_worker(
     """
     n_qubits = _n_qubits_shor(N)
 
+    _proc = psutil.Process()
+    _proc.cpu_percent()  # discard first call
+
     times_ms: list[float] = []
     factors: list[int] = []
+    peak_rss_mb: float = 0.0
+    cpu_samples: list[float] = []
     for _ in range(config.n_repetitions):
         t0 = time.perf_counter()
         f = factor_call(N)
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
+        peak_rss_mb = max(peak_rss_mb, _proc.memory_info().rss / 1024 / 1024)
+        cpu_samples.append(_proc.cpu_percent())
+
+    cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición")
@@ -160,12 +170,12 @@ def run_shor_worker(
     result = BenchmarkResult(
         wall_time_median_ms=median_ms,
         wall_time_iqr_ms=iqr_ms,
-        peak_memory_rss_mb=0.0,
+        peak_memory_rss_mb=peak_rss_mb,
         cv=cv,
         startup_time_ms=startup_ms,
         build_time_ms=0.0,
         simulation_time_ms=max(0.0, median_ms - startup_ms),
-        cpu_percent_mean=0.0,
+        cpu_percent_mean=cpu_mean,
         jsd=0.0,
         scaling_alpha=0.0,
         scaling_beta=0.0,
