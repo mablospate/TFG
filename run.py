@@ -1670,4 +1670,16 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import signal as _signal
+
+    def _sigterm(_sig: int, _frame: object) -> None:
+        print("\n→ Benchmark detenido.", flush=True)
+        sys.exit(0)
+
+    _signal.signal(_signal.SIGTERM, _sigterm)
+
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n→ Benchmark interrumpido por el usuario.", flush=True)
+        sys.exit(130)
