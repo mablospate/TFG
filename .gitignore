@@ -25,3 +25,6 @@ uv.lock
 
 # Local docs
 docs/pending_documentation.md
+
+# Supabase credentials
+.env

@@ -38,6 +38,19 @@ $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
 
+# Load .env from the script's directory if it exists
+$_envFile = if ($PSCommandPath) {
+    Join-Path (Split-Path $PSCommandPath) ".env"
+} else {
+    Join-Path $env:USERPROFILE "tfg-bench\.env"
+}
+if (Test-Path $_envFile) {
+    Get-Content $_envFile | Where-Object { $_ -match '^[^#\s]' -and $_ -match '=' } | ForEach-Object {
+        $k, $v = $_ -split '=', 2
+        [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
+    }
+}
+
 # Results directory: next to the script when running from a file, otherwise
 # fall back to the user profile to avoid writing into protected system dirs.
 $RESULTS_DIR = if ($PSCommandPath) {
@@ -203,6 +216,8 @@ function Run-Benchmark {
         "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
         "-e", "BENCH_OS=Windows",
         "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
+        "-e", "SUPABASE_URL=$($env:SUPABASE_URL)",
+        "-e", "SUPABASE_KEY=$($env:SUPABASE_KEY)",
         "-v", "${RESULTS_DIR}:/app/results",
         $IMAGE
     )

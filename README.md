@@ -169,3 +169,34 @@
 [quantrs]: https://github.com/Entropy-Foundation/quantrs "quantrs — Quantum computing in Rust"
 [quantr]: https://docs.rs/quantr "quantr — Quantum circuit simulator in Rust"
 [q1tsim]: https://docs.rs/q1tsim "q1tsim — Quantum simulator in Rust"
+
+## How to run
+
+### Quick start
+
+```bash
+./bench [--time-budget MINUTES] [--dev]
+```
+
+On Windows:
+
+```powershell
+.\bench.ps1 [-TimeBudget MINUTES] [-Dev]
+```
+
+**Options:**
+- `--time-budget` / `-TimeBudget`: Set maximum runtime in minutes (default: 60). The benchmark stops cleanly when time expires.
+- `--dev`: Dev mode — results saved as JSON in `results/` locally. No database connection required.
+
+### Configuración Supabase (modo normal)
+
+Crea un fichero `.env` junto al script `bench` / `bench.ps1`:
+
+```
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_KEY=<secret-key>
+```
+
+Ejecuta el SQL de `docs/supabase_schema.sql` en el SQL Editor de tu proyecto Supabase para crear la tabla.
+
+En modo `--dev` Supabase se ignora y los resultados se guardan como JSON en `results/`.

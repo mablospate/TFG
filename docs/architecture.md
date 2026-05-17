@@ -471,3 +471,24 @@ Intercalar Grover y Shor por tamaño permite que, si la ejecución se interrumpe
 ### j. qcgpu en builds cross-compilados
 
 El crate `qcgpu` requiere headers OpenCL al compilarse. En cross-compilación ARM→AMD64, esos headers no están disponibles para la arquitectura objetivo. La solución es la etapa `qcgpu-amd64` (`FROM --platform=linux/amd64 rust:slim-bookworm`): se compila **nativamente** para amd64; si el host es ARM, Docker ejecuta esta etapa **vía QEMU** durante el build. Los binarios resultantes (`/qcgpu-bins/qcgpu-grover`, `/qcgpu-bins/qcgpu-shor`) se copian luego al rust-builder, garantizando que `qcgpu` aparezca en imágenes amd64 construidas desde hosts ARM, en lugar de excluirse por imposibilidad de cross-compilación.
+
+## 11. Persistencia de datos
+
+### Dev mode (`--dev`)
+Los resultados se escriben como JSON en `results/` (volumen montado desde el host). Sin conexión de red. Los ficheros siguen el patrón `grover_{timestamp}.json` / `shor_{timestamp}.json` con checkpoints por n/N.
+
+### Normal mode
+Los resultados se envían a Supabase (tabla `benchmark_runs`) via PostgREST REST API. Los ficheros JSON locales **no se escriben**.
+
+**Timing de envío:**
+- **Incremental** — tras completar cada valor de n (Grover) o N (Shor) para todos los frameworks, se insertan las filas de esa serie (una fila por repetición individual).
+- **Scaling backfill** — al finalizar cada algoritmo se hace `PATCH` a todas las filas del run para poblar `scaling_alpha`, `scaling_beta`, `scaling_data`.
+
+**Filas por resultado:**
+- `status='ok'`: una fila por repetición (expandida desde `raw_times_ms`). 8 frameworks × 5 n_values × 10 reps ≈ 400 filas por algoritmo por run.
+- `status='error'`: una fila con `wall_time_ms=NULL`.
+- `status='skip'`: no se envían.
+
+**Credenciales:** `SUPABASE_URL` y `SUPABASE_KEY` leídas del fichero `.env` junto a `bench` / `bench.ps1`, inyectadas al contenedor como variables de entorno. El `.env` está en `.gitignore` y nunca se sube al repositorio.
+
+**Schema completo:** `docs/supabase_schema.sql`.

@@ -17,6 +17,8 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
 import numpy as np
@@ -1022,6 +1024,116 @@ def to_db_rows(doc: dict) -> list[dict]:
     return rows
 
 
+def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
+    """Expand a result dict into one Supabase row per repetition.
+
+    Error results → single row (repetition_index=0, wall_time_ms=None).
+    Skip results  → no rows.
+    """
+    status = result.get("status", "ok")
+    if status == "skip":
+        return []
+    base = {
+        **run_meta,
+        "algorithm":                    result.get("algorithm"),
+        "framework":                    result.get("framework"),
+        "framework_version":            result.get("framework_version"),
+        "n_qubits":                     result.get("n_qubits"),
+        "num_shots":                    result.get("num_shots"),
+        "n_repetitions":                result.get("n_repetitions"),
+        "runtime_version":              result.get("runtime_version"),
+        "python_version":               result.get("python_version"),
+        "timestamp":                    result.get("timestamp"),
+        "wall_time_median_ms":          result.get("wall_time_median_ms"),
+        "wall_time_iqr_ms":             result.get("wall_time_iqr_ms"),
+        "wall_time_mean_ms":            result.get("wall_time_mean_ms"),
+        "wall_time_std_ms":             result.get("wall_time_std_ms"),
+        "build_time_ms":                result.get("build_time_ms"),
+        "simulation_time_ms":           result.get("simulation_time_ms"),
+        "startup_time_ms":              result.get("startup_time_ms"),
+        "subprocess_wall_time_ms":      result.get("subprocess_wall_time_ms"),
+        "peak_memory_rss_mb":           result.get("peak_memory_rss_mb"),
+        "cpu_percent_mean":             result.get("cpu_percent_mean"),
+        "jsd":                          result.get("jsd"),
+        "cv":                           result.get("cv"),
+        "status":                       status,
+        "error":                        result.get("error"),
+        "scaling_alpha":                None,
+        "scaling_beta":                 None,
+        "scaling_data":                 None,
+        "n_to_factor":                  result.get("n_to_factor"),
+        "factor_found":                 result.get("factor_found"),
+        "success_rate":                 result.get("success_rate"),
+        "cutting_wall_time_ms":         result.get("cutting_wall_time_ms"),
+        "cutting_find_time_ms":         result.get("cutting_find_time_ms"),
+        "cutting_expectation_value":    result.get("cutting_expectation_value"),
+    }
+    if status == "error":
+        return [{**base, "repetition_index": 0, "wall_time_ms": None}]
+    raw_times = result.get("raw_times_ms") or []
+    if not raw_times:
+        return [{**base, "repetition_index": 0, "wall_time_ms": result.get("wall_time_median_ms")}]
+    return [{**base, "repetition_index": i, "wall_time_ms": t} for i, t in enumerate(raw_times)]
+
+
+def _supabase_insert(rows: list[dict], url: str, key: str) -> bool:
+    if not rows:
+        return True
+    endpoint = f"{url}/rest/v1/benchmark_runs"
+    payload = json.dumps(rows, default=str).encode()
+    req = urllib.request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Prefer": "return=minimal",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            print(f"  → Supabase: {len(rows)} filas insertadas ({resp.status})")
+            return True
+    except Exception as exc:
+        print(f"  ⚠ Supabase insert falló: {exc}")
+        return False
+
+
+def _supabase_patch_scaling(
+    run_id: str, algorithm: str, framework: str,
+    alpha: float, beta: float, scaling_data: dict,
+    url: str, key: str,
+) -> None:
+    endpoint = (
+        f"{url}/rest/v1/benchmark_runs"
+        f"?run_id=eq.{urllib.parse.quote(run_id)}"
+        f"&algorithm=eq.{urllib.parse.quote(algorithm)}"
+        f"&framework=eq.{urllib.parse.quote(framework)}"
+    )
+    payload = json.dumps(
+        {"scaling_alpha": alpha, "scaling_beta": beta, "scaling_data": scaling_data},
+        default=str,
+    ).encode()
+    req = urllib.request.Request(
+        endpoint,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Prefer": "return=minimal",
+        },
+        method="PATCH",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30):
+            pass
+    except Exception as exc:
+        print(f"  ⚠ Supabase patch scaling falló ({framework}): {exc}")
+
+
 def _save_json(path: str, doc: dict) -> None:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2, ensure_ascii=False)
@@ -1180,6 +1292,27 @@ def main() -> None:
 
     os.makedirs("results", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_id = timestamp
+    _supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    _supabase_key = os.getenv("SUPABASE_KEY", "")
+    USE_SUPABASE = not args.dev and bool(_supabase_url and _supabase_key)
+    _supabase_run_meta: dict = {
+        "run_id": run_id,
+        "contributor": contributor_name,
+        "platform_id": args.platform,
+        "benchmark_image": DOCKER_IMAGE,
+        "gpu_enabled": not args.no_gpu,
+        "emulated": args.emulated,
+        "cpu_model": hw.cpu_model,
+        "cpu_physical_cores": hw.cpu_cores_physical,
+        "cpu_logical_cores": hw.cpu_cores_logical,
+        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "os": hw.os,
+        "os_version": hw.os_version,
+    }
     final_path = os.path.join("results", f"grover_{timestamp}.json")
     partial_path = os.path.join("results", f"grover_{timestamp}_partial.json")
     shor_timestamp = timestamp
@@ -1294,24 +1427,28 @@ def main() -> None:
                     statuses[fw_name] = "ERROR"
                     print(f"[ERROR] {fw_name} grover n={n}: {e}")
 
-            # Checkpoint after this qubit series
-            checkpoint_path = os.path.join("results", f"grover_{timestamp}_n{n}.json")
-            _save_json(checkpoint_path, {
-                "schema_version": "1.0",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "emulated": args.emulated,
-                "n_qubits": n,
-                "n_repetitions": config.n_repetitions,
-                "num_shots": config.num_shots,
-                "results": n_series_results,
-            })
-            print(f"\n→ Checkpoint grover n={n}: {checkpoint_path}")
-
-            partial_doc = _build_output_doc(
-                contributor_name, hw, config, results,
-                platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
-            )
-            _save_json(partial_path, partial_doc)
+            if USE_SUPABASE:
+                _rows = []
+                for r in n_series_results:
+                    _rows.extend(_expand_result_to_rows(r, _supabase_run_meta))
+                _supabase_insert(_rows, _supabase_url, _supabase_key)
+            else:
+                checkpoint_path = os.path.join("results", f"grover_{timestamp}_n{n}.json")
+                _save_json(checkpoint_path, {
+                    "schema_version": "1.0",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "emulated": args.emulated,
+                    "n_qubits": n,
+                    "n_repetitions": config.n_repetitions,
+                    "num_shots": config.num_shots,
+                    "results": n_series_results,
+                })
+                print(f"\n→ Checkpoint grover n={n}: {checkpoint_path}")
+                partial_doc = _build_output_doc(
+                    contributor_name, hw, config, results,
+                    platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
+                )
+                _save_json(partial_path, partial_doc)
 
         # --- Shor at N_shor ---
         if N_shor is not None:
@@ -1366,23 +1503,29 @@ def main() -> None:
                     shor_statuses.setdefault(fw, "ERROR")
                     print(f"[ERROR] {fw} shor N={N_shor}: {e}")
 
-            checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_shor}.json")
-            _save_json(checkpoint_path, {
-                "schema_version": "1.0",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "emulated": args.emulated,
-                "n_to_factor": N_shor,
-                "n_qubits": n_qubits_val,
-                "n_repetitions": config.n_repetitions,
-                "results": shor_n_series,
-            })
-            print(f"\n→ Checkpoint shor N={N_shor}: {checkpoint_path}")
-            if shor_results:
-                shor_partial_doc = _build_output_doc(
-                    contributor_name, hw, config, shor_results,
-                    platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
-                )
-                _save_json(shor_partial_path, shor_partial_doc)
+            if USE_SUPABASE:
+                _rows = []
+                for r in shor_n_series:
+                    _rows.extend(_expand_result_to_rows(r, _supabase_run_meta))
+                _supabase_insert(_rows, _supabase_url, _supabase_key)
+            else:
+                checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_shor}.json")
+                _save_json(checkpoint_path, {
+                    "schema_version": "1.0",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "emulated": args.emulated,
+                    "n_to_factor": N_shor,
+                    "n_qubits": n_qubits_val,
+                    "n_repetitions": config.n_repetitions,
+                    "results": shor_n_series,
+                })
+                print(f"\n→ Checkpoint shor N={N_shor}: {checkpoint_path}")
+                if shor_results:
+                    shor_partial_doc = _build_output_doc(
+                        contributor_name, hw, config, shor_results,
+                        platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
+                    )
+                    _save_json(shor_partial_path, shor_partial_doc)
 
     # ---- Backfill Grover scaling curves ----
     for result in results:
@@ -1403,26 +1546,24 @@ def main() -> None:
         contributor_name, hw, config, results,
         platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
     )
-    _save_json(final_path, final_doc)
+    if not USE_SUPABASE:
+        _save_json(final_path, final_doc)
 
-    db_endpoint = os.getenv("DB_ENDPOINT")
-    if db_endpoint:
-        import urllib.request
-        rows = to_db_rows(final_doc)
-        payload = json.dumps(rows).encode()
-        req = urllib.request.Request(
-            db_endpoint,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                print(f"  → Datos enviados a BD ({resp.status})")
-        except Exception as exc:
-            print(f"  ⚠ No se pudo enviar a BD: {exc}")
+    if USE_SUPABASE:
+        _fw_seen: set[str] = set()
+        for _r in results:
+            _fw = _r.get("framework")
+            if _fw and _fw not in _fw_seen:
+                _fw_seen.add(_fw)
+                _supabase_patch_scaling(
+                    run_id, "grover", _fw,
+                    _r.get("scaling_alpha", 0.0),
+                    _r.get("scaling_beta", 0.0),
+                    _r.get("scaling_data", {}),
+                    _supabase_url, _supabase_key,
+                )
 
-    if os.path.exists(partial_path):
+    if not USE_SUPABASE and os.path.exists(partial_path):
         try:
             os.remove(partial_path)
         except OSError:
@@ -1430,7 +1571,8 @@ def main() -> None:
 
     print_summary_table(results, statuses)
     print()
-    print(f"Resultados Grover guardados en: {final_path}")
+    if not USE_SUPABASE:
+        print(f"Resultados Grover guardados en: {final_path}")
 
     # ---- Backfill Shor scaling curves and finalize ----
     print("\n" + "=" * 58)
@@ -1452,14 +1594,29 @@ def main() -> None:
         r["scaling_beta"] = beta
 
     if shor_results:
-        _save_json(shor_final_path, _build_output_doc(
-            contributor_name, hw, config, shor_results,
-            platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
-        ))
+        if not USE_SUPABASE:
+            _save_json(shor_final_path, _build_output_doc(
+                contributor_name, hw, config, shor_results,
+                platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
+            ))
+        if USE_SUPABASE:
+            _fw_seen_shor: set[str] = set()
+            for _r in shor_results:
+                _fw = _r.get("framework")
+                if _fw and _fw not in _fw_seen_shor:
+                    _fw_seen_shor.add(_fw)
+                    _supabase_patch_scaling(
+                        run_id, "shor", _fw,
+                        _r.get("scaling_alpha", 0.0),
+                        _r.get("scaling_beta", 0.0),
+                        _r.get("scaling_data", {}),
+                        _supabase_url, _supabase_key,
+                    )
         print_shor_summary_table(shor_results, shor_statuses)
-        if os.path.exists(shor_partial_path):
+        if not USE_SUPABASE and os.path.exists(shor_partial_path):
             os.remove(shor_partial_path)
-        print(f"\nResultados Shor guardados en: {shor_final_path}")
+        if not USE_SUPABASE:
+            print(f"\nResultados Shor guardados en: {shor_final_path}")
 
 
 if __name__ == "__main__":
