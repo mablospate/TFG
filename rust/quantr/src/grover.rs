@@ -183,7 +183,7 @@ fn peak_rss_mb() -> f64 {
     #[cfg(target_os = "linux")]
     if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
         for line in status.lines() {
-            if line.starts_with("VmRSS:") {
+            if line.starts_with("VmHWM:") {
                 if let Some(kb) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
                     return kb as f64 / 1024.0;
                 }
