@@ -576,6 +576,7 @@ def _run_rust_binary(
     Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
     failure (caller is expected to catch and convert to a SKIP/ERROR row).
     """
+    _t_start = time.perf_counter()
     proc = subprocess.Popen(
         [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
         stdout=subprocess.PIPE,
@@ -624,6 +625,7 @@ def _run_rust_binary(
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
     payload["cpu_percent_mean"] = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    payload["subprocess_wall_time_ms"] = (time.perf_counter() - _t_start) * 1000.0
     return payload
 
 
@@ -644,6 +646,7 @@ def benchmark_rust_grover(
     n_main = 5
     target_main = 5
     times_ms: list[float] = []
+    subprocess_wall_times_ms: list[float] = []
     cpu_percents: list[float] = []
     last_payload: dict | None = None
 
@@ -653,6 +656,7 @@ def benchmark_rust_grover(
     for _ in range(config.n_repetitions):
         payload = _run_rust_binary(binary, n_main, target_main, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
+        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         last_payload = payload
 
@@ -729,11 +733,12 @@ def benchmark_rust_grover(
         "algorithm": "grover",
         "n_qubits": n_main,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "python_version": sys.version,
+        "python_version": None,
         "platform_info": platform.platform(),
         "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
+        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
     }
     return enriched
 
@@ -752,6 +757,7 @@ def benchmark_rust_grover_at_n(
     """Run config.n_repetitions of Grover at qubit count n using a Rust binary."""
     target = n
     times_ms: list[float] = []
+    subprocess_wall_times_ms: list[float] = []
     last_payload: dict | None = None
 
     for _ in range(max(0, config.warmup_runs)):
@@ -759,6 +765,7 @@ def benchmark_rust_grover_at_n(
     for _ in range(config.n_repetitions):
         payload = _run_rust_binary(binary, n, target, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
+        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         last_payload = payload
 
     arr = np.array(times_ms) if times_ms else np.array([0.0])
@@ -812,11 +819,12 @@ def benchmark_rust_grover_at_n(
         "algorithm": "grover",
         "n_qubits": n,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "python_version": sys.version,
+        "python_version": None,
         "platform_info": platform.platform(),
         "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
+        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
     }
 
 
@@ -898,12 +906,15 @@ def benchmark_rust_shor_at_n(
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
     times_ms: list[float] = []
+    subprocess_wall_times_ms: list[float] = []
     factors: list[int] = []
     last_payload: dict | None = None
 
     cpu_percents_shor: list[float] = []
     for _ in range(config.n_repetitions):
+        _t_sub = time.perf_counter()
         payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
+        subprocess_wall_times_ms.append((time.perf_counter() - _t_sub) * 1000.0)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
@@ -957,11 +968,12 @@ def benchmark_rust_shor_at_n(
         "algorithm": "shor",
         "n_qubits": n_qubits,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "python_version": sys.version,
+        "python_version": None,
         "platform_info": platform.platform(),
         "raw_times_ms": times_ms,
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
+        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
     }
 
 

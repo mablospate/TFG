@@ -18,7 +18,7 @@ class HardwareInfo:
     cpu_model: str
     cpu_cores_physical: int
     cpu_cores_logical: int
-    cpu_freq_mhz: float
+    cpu_freq_mhz: float | None
     ram_total_gb: float
     gpu_model: str | None
     gpu_vram_gb: float | None
@@ -105,6 +105,19 @@ def _detect_cpu_freq_mhz() -> float:
                     return float(val)
     except Exception:
         pass
+    if platform.system() == "Darwin":
+        try:
+            out = subprocess.run(
+                ["sysctl", "-n", "hw.cpufrequency_max"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if out.returncode == 0:
+                val = int(out.stdout.strip())
+                if val > 0:
+                    return val / 1_000_000  # Hz → MHz
+        except Exception:
+            pass
+        return None
     return 0.0
 
 
@@ -151,7 +164,7 @@ def detect_hardware() -> HardwareInfo:
                                         str(psutil.cpu_count(logical=False) or 1))),
         cpu_cores_logical=int(_env_or("BENCH_CPU_CORES_LOGICAL",
                                        str(psutil.cpu_count(logical=True) or 1))),
-        cpu_freq_mhz=float(_env_or("BENCH_CPU_FREQ_MHZ", str(_detect_cpu_freq_mhz()))),
+        cpu_freq_mhz=float(os.environ["BENCH_CPU_FREQ_MHZ"]) if os.environ.get("BENCH_CPU_FREQ_MHZ") else _detect_cpu_freq_mhz(),
         ram_total_gb=float(_env_or("BENCH_RAM_GB",
                                     str(round(psutil.virtual_memory().total / (1024**3), 1)))),
         gpu_model=gpu_model,
