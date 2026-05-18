@@ -65,8 +65,8 @@ const CL_GL_SHARING_EXT: &'static str = "cl_APPLE_gl_sharing";
 const CL_GL_SHARING_EXT: &'static str = "cl_khr_gl_sharing";
 
 const KERNEL_DEBUG_SLEEP_DURATION_MS: u64 = 150;
-const PLATFORM_IDS_ATTEMPT_TIMEOUT_MS: u64 = 2000;
-const PLATFORM_IDS_ATTEMPT_COUNT: u64 = 5;
+const PLATFORM_IDS_ATTEMPT_TIMEOUT_MS: u64 = 200;
+const PLATFORM_IDS_ATTEMPT_COUNT: u64 = 1;
 
 //============================================================================
 //============================================================================
