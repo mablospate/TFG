@@ -92,6 +92,22 @@ def main() -> None:
                 "qdislib", n, config, hw, contributor,
                 startup_ms, search_call, build_call,
             )
+        elif algo == "shor":
+            startup_ms, factor_call, cutting_factor_call = _setup_shor(config)
+            result = run_shor_worker(
+                "qdislib", n, config, hw, contributor,
+                startup_ms, factor_call,
+            )
+        else:
+            write_error(f"unknown algo: {algo}")
+            return
+    except Exception as e:
+        traceback.print_exc(file=sys.stderr)
+        write_error(f"qdislib {algo} n={n} failed: {e}")
+        return
+
+    if algo == "grover":
+        try:
             cutting_times: list[float] = []
             last_exp = 0.0
             last_find_ms = 0.0
@@ -104,12 +120,11 @@ def main() -> None:
             result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
             result["cutting_find_time_ms"] = round(last_find_ms, 3)
             result["cutting_expectation_value"] = round(last_exp, 6)
-        elif algo == "shor":
-            startup_ms, factor_call, cutting_factor_call = _setup_shor(config)
-            result = run_shor_worker(
-                "qdislib", n, config, hw, contributor,
-                startup_ms, factor_call,
-            )
+        except Exception as e:
+            traceback.print_exc(file=sys.stderr)
+            print(f"[QDisLib cutting] grover n={n} failed: {e}", file=sys.stderr)
+    elif algo == "shor":
+        try:
             cutting_times = []
             last_exp = 0.0
             last_find_ms = 0.0
@@ -122,13 +137,9 @@ def main() -> None:
             result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
             result["cutting_find_time_ms"] = round(last_find_ms, 3)
             result["cutting_expectation_value"] = round(last_exp, 6)
-        else:
-            write_error(f"unknown algo: {algo}")
-            return
-    except Exception as e:
-        traceback.print_exc(file=sys.stderr)
-        write_error(f"qdislib {algo} n={n} failed: {e}")
-        return
+        except Exception as e:
+            traceback.print_exc(file=sys.stderr)
+            print(f"[QDisLib cutting] shor n={n} failed: {e}", file=sys.stderr)
 
     write_result(result)
 

@@ -34,7 +34,7 @@ from scipy.spatial.distance import jensenshannon
 class BenchmarkConfig:
     """Parámetros globales del experimento."""
 
-    n_repetitions: int = 10  # Repeticiones para estadísticas
+    n_repetitions: int = 30  # Repeticiones para estadísticas
     warmup_runs: int = 1  # Ejecuciones de calentamiento (no se miden)
     n_values: list[int] = field(
         default_factory=lambda: [3, 5, 7, 9, 11]

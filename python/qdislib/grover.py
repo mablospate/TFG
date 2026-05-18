@@ -156,7 +156,7 @@ def search_with_cutting(
     t0 = time.perf_counter()
     try:
         cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
-                       wire_cut=True, gate_cut=True)
+                       wire_cut=True, gate_cut=False)
     except Exception as e:
         print(f"[QDisLib cutting] find_cut error: {e}")
         cuts = []
