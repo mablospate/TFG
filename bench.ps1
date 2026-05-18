@@ -38,16 +38,19 @@ $ErrorActionPreference = "Stop"
 $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/tfg-bench:latest" }
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
 
-# Load .env from the script's directory if it exists
-$_envFile = if ($PSCommandPath) {
-    Join-Path (Split-Path $PSCommandPath) ".env"
-} else {
+# Load .env — check script dir first, then cwd, then ~/tfg-bench/ (curl fallback)
+$_envCandidates = @(
+    if ($PSCommandPath) { Join-Path (Split-Path $PSCommandPath) ".env" } else { $null }
+    Join-Path (Get-Location).Path ".env"
     Join-Path $env:USERPROFILE "tfg-bench\.env"
-}
-if (Test-Path $_envFile) {
-    Get-Content $_envFile | Where-Object { $_ -match '^[^#\s]' -and $_ -match '=' } | ForEach-Object {
-        $k, $v = $_ -split '=', 2
-        [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
+) | Where-Object { $_ }
+foreach ($_envFile in $_envCandidates) {
+    if (Test-Path $_envFile) {
+        Get-Content $_envFile | Where-Object { $_ -match '^[^#\s]' -and $_ -match '=' } | ForEach-Object {
+            $k, $v = $_ -split '=', 2
+            [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
+        }
+        break
     }
 }
 

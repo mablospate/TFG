@@ -139,17 +139,6 @@ def _cudaq_cpu_warning(os_name: str, arch: str) -> tuple[str, str, list[str]]:
     )
 
 
-_QDISLIB_WARNING: tuple[str, str, list[str]] = (
-    "qdislib",
-    "circuit cutting activo (serial); PyCOMPSs para ejecución HPC distribuida",
-    [
-        "find_cut() + wire_cutting() se ejecutan localmente en serie (sin paralelismo).",
-        "PyCOMPSs no está instalado — el speedup distribuido requiere PyCOMPSs ≥ 3.3",
-        "y un cluster HPC Linux x86_64 (MareNostrum 5, BSC).",
-        "En circuitos pequeños find_cut() puede no encontrar cortes válidos (cuts=[]).",
-        "Referencia: Tejedor et al., arXiv:2505.01184 (may 2025).",
-    ],
-)
 
 
 # --- Rust framework warnings -------------------------------------------------
@@ -230,7 +219,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         quantrs2_gpu=True,
         warnings=[
             _cudaq_cpu_warning("macos", "arm64"),
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),
@@ -246,7 +234,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=True,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),
@@ -264,7 +251,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="nvidia",
         quantrs2_gpu=True,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
         ],
     ),
@@ -282,7 +268,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         quantrs2_gpu=False,
         warnings=[
             _cudaq_cpu_warning("linux", "x86_64"),
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
         ],
     ),
@@ -327,7 +312,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=True,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
         ],
     ),
@@ -343,7 +327,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=False,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_ALL,
         ],
     ),
@@ -358,7 +341,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=True,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),
@@ -373,7 +355,6 @@ PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
         cudaq_target="qpp-cpu",
         quantrs2_gpu=False,
         warnings=[
-            _QDISLIB_WARNING,
             *_RUST_WARNINGS_NO_QCGPU,
         ],
     ),

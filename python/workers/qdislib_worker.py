@@ -4,6 +4,10 @@ from __future__ import annotations
 import sys
 import time
 import traceback
+import warnings
+
+# QDisLib uses \( in docstrings which triggers SyntaxWarning in Python 3.12+
+warnings.filterwarnings("ignore", "invalid escape sequence", SyntaxWarning)
 
 import numpy as np
 
