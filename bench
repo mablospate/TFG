@@ -261,8 +261,8 @@ run_benchmark() {
         -e BENCH_RAM_GB="$DOCKER_MEM_GB" \
         -e BENCH_OS="$(uname -s)" \
         -e BENCH_OS_VERSION="$(sw_vers -productVersion 2>/dev/null || uname -r)" \
-        -e SUPABASE_URL="${SUPABASE_URL:-}" \
-        -e SUPABASE_KEY="${SUPABASE_KEY:-}" \
+        ${SUPABASE_URL:+-e SUPABASE_URL="$SUPABASE_URL"} \
+        ${SUPABASE_KEY:+-e SUPABASE_KEY="$SUPABASE_KEY"} \
         -v "$(pwd)/results:/app/results" \
         "$IMAGE" \
         $EMULATED_FLAG \
