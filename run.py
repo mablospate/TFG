@@ -516,6 +516,24 @@ def _run_python_worker(
     proc.stdin.write(payload)
     proc.stdin.close()
 
+    cpu_samples: list[float] = []
+    _cpu_stop = threading.Event()
+    _cpu_thread: threading.Thread | None = None
+    try:
+        _psutil_proc = psutil.Process(proc.pid)
+        _psutil_proc.cpu_percent()
+        def _sample_cpu() -> None:
+            while not _cpu_stop.is_set():
+                try:
+                    cpu_samples.append(_psutil_proc.cpu_percent())
+                except psutil.NoSuchProcess:
+                    break
+                _cpu_stop.wait(0.1)
+        _cpu_thread = threading.Thread(target=_sample_cpu, daemon=True)
+        _cpu_thread.start()
+    except psutil.NoSuchProcess:
+        pass
+
     lines: list[str] = []
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -559,7 +577,11 @@ def _run_python_worker(
         else:
             exit_msg = f"exit {proc.returncode}"
         return _error_result(framework, algo, n, hw, contributor_name, exit_msg)
+    _cpu_stop.set()
+    if _cpu_thread is not None:
+        _cpu_thread.join(timeout=1.0)
     result["subprocess_wall_time_ms"] = round(subprocess_wall_ms, 3)
+    result["cpu_percent_mean"] = round(float(np.mean(cpu_samples)), 2) if cpu_samples else 0.0
     return result
 
 
