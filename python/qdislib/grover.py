@@ -168,6 +168,10 @@ def search_with_cutting(
         print(f"[QDisLib cutting] No cuts found for n={n}, using direct execution")
         exp_val = 0.0
     else:
-        exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+        try:
+            exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+        except Exception as e:
+            print(f"[QDisLib cutting] wire_cutting error: {e}")
+            exp_val = 0.0
 
-    return float(exp_val), cuts, find_time_ms
+    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms

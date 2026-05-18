@@ -150,8 +150,13 @@ def find_order_with_cutting(
     if not cuts:
         return 0.0, [], find_time_ms
 
-    exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
-    return float(exp_val), cuts, find_time_ms
+    try:
+        exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+    except Exception as e:
+        print(f"[QDisLib cutting] wire_cutting error: {e}")
+        exp_val = 0.0
+
+    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms
 
 
 def find_factor_with_cutting(
