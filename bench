@@ -280,6 +280,7 @@ run_benchmark() {
     echo "(Pulsa 'q' para detener el benchmark)"
 
     (
+        trap '' SIGTTIN SIGTTOU
         while true; do
             if IFS= read -r -n1 -s -t 0.3 key </dev/tty 2>/dev/null; then
                 if [[ "$key" == "q" || "$key" == "Q" ]]; then
