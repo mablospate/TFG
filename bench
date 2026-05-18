@@ -49,7 +49,7 @@ TIMER_PID=""
 ask_time_budget() {
     local ans
     read -r -p "Tiempo límite en minutos (Enter = sin límite): " ans
-    if [[ "$ans" =~ ^[0-9]+$ ]] && (( ans > 0 )); then
+    if [[ "$ans" =~ ^[0-9]+(\.[0-9]+)?$ ]] && awk "BEGIN{exit !($ans > 0)}"; then
         TIME_BUDGET_MINS=$ans
     fi
 }
@@ -273,7 +273,7 @@ run_benchmark() {
     # Start shell timer if time budget is set
     TIMER_PID=""
     if (( TIME_BUDGET_MINS > 0 )); then
-        ( sleep $(( TIME_BUDGET_MINS * 60 )) && docker stop "$BENCH_CONTAINER_NAME" 2>/dev/null ) &
+        ( sleep "$(awk "BEGIN{print $TIME_BUDGET_MINS * 60}")" && docker stop "$BENCH_CONTAINER_NAME" 2>/dev/null ) &
         TIMER_PID=$!
     fi
 
