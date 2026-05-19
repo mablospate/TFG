@@ -60,7 +60,10 @@ _on_exit() {
         kill "$TIMER_PID" 2>/dev/null
         wait "$TIMER_PID" 2>/dev/null || true
     fi
-    [[ -n "${BENCH_CONTAINER_NAME:-}" ]] && docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
+    if [[ -n "${BENCH_CONTAINER_NAME:-}" ]]; then
+        docker stop "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
+        docker rm -f "$BENCH_CONTAINER_NAME" >/dev/null 2>&1 || true
+    fi
     cleanup_image
     restore_colima
 }
