@@ -308,38 +308,42 @@ Pull-Image
 Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
 Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
-if ($HAS_NVIDIA) {
-    Write-Host "-> Primera pasada: con GPU (CUDA)..."
-    Run-Benchmark @extraArgs @args
+try {
+    if ($HAS_NVIDIA) {
+        Write-Host "-> Primera pasada: con GPU (CUDA)..."
+        Run-Benchmark @extraArgs @args
 
-    Write-Host ""
-    Write-Host "-> Segunda pasada: sin GPU (CPU only)..."
-    $GPU_FLAGS = @()
-    Run-Benchmark -NoGpu @extraArgs @args
-} elseif ($HOST_ARCH -eq "ARM64") {
-    Write-Host "-> Primera pasada: build nativo arm64..."
-    Run-Benchmark @extraArgs @args
-
-    if (Test-QemuAvailable) {
         Write-Host ""
-        Write-Host "-> Segunda pasada: build amd64 via emulacion..."
-        Write-Host "  Descargando variante amd64..."
-        & docker pull --platform linux/amd64 $IMAGE 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Run-Benchmark -DockerPlatform linux/amd64 -Emulated -NoGpu @extraArgs @args
+        Write-Host "-> Segunda pasada: sin GPU (CPU only)..."
+        $GPU_FLAGS = @()
+        Run-Benchmark -NoGpu @extraArgs @args
+    } elseif ($HOST_ARCH -eq "ARM64") {
+        Write-Host "-> Primera pasada: build nativo arm64..."
+        Run-Benchmark @extraArgs @args
+
+        if (Test-QemuAvailable) {
+            Write-Host ""
+            Write-Host "-> Segunda pasada: build amd64 via emulacion..."
+            Write-Host "  Descargando variante amd64..."
+            & docker pull --platform linux/amd64 $IMAGE 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Run-Benchmark -DockerPlatform linux/amd64 -Emulated -NoGpu @extraArgs @args
+            } else {
+                Write-Host "  [WARN] No se pudo descargar la imagen amd64, omitiendo segunda pasada."
+            }
         } else {
-            Write-Host "  [WARN] No se pudo descargar la imagen amd64, omitiendo segunda pasada."
+            Write-Host "  [INFO] Emulacion amd64 no disponible, omitiendo segunda pasada."
         }
     } else {
-        Write-Host "  [INFO] Emulacion amd64 no disponible, omitiendo segunda pasada."
+        Run-Benchmark @extraArgs @args
     }
-} else {
-    Run-Benchmark @extraArgs @args
+} finally {
+    if ($script:BENCH_CONTAINER_NAME) {
+        docker stop $script:BENCH_CONTAINER_NAME 2>$null
+    }
+    if ($Env:KEEP_IMAGE -ne "1") {
+        Write-Host "-> Removing image $IMAGE..."
+        docker rmi $IMAGE 2>$null
+    }
+    Restore-Docker
 }
-
-if ($Env:KEEP_IMAGE -ne "1") {
-    Write-Host "-> Removing image $IMAGE..."
-    docker rmi $IMAGE 2>$null
-}
-
-Restore-Docker
