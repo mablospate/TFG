@@ -18,7 +18,7 @@ class HardwareInfo:
     cpu_model: str
     cpu_cores_physical: int
     cpu_cores_logical: int
-    cpu_freq_mhz: float | None
+    cpu_gflops: float
     ram_total_gb: float
     gpu_model: str | None
     gpu_vram_gb: float | None
@@ -85,40 +85,30 @@ def _detect_cpu_model() -> str:
     return platform.processor() or "unknown"
 
 
-def _detect_cpu_freq_mhz() -> float:
-    freq = psutil.cpu_freq()
-    if freq and freq.max and freq.max > 0:
-        return float(freq.max)
-    # Docker/VM fallback: kernel cpufreq sysfs
+def _measure_cpu_gflops() -> float:
+    """64×64 float64 matmul microbenchmark, K=200 iterations.
+
+    Score = (2 × 64³ × K) / elapsed_ns × 1000
+    (1000× conventional GFLOPS; consistent scale across all platforms.)
+    Returns 0.0 on any failure.
+    """
     try:
-        with open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq") as fh:
-            return float(fh.read().strip()) / 1000.0  # kHz → MHz
+        import numpy as np
+        import time
+
+        n, K = 64, 200
+        A = np.random.rand(n, n)
+        B = np.random.rand(n, n)
+        _ = A @ B  # warmup: initialise BLAS thread pool
+        t0 = time.perf_counter_ns()
+        for _ in range(K):
+            _C = A @ B
+        elapsed_ns = time.perf_counter_ns() - t0
+        if elapsed_ns <= 0:
+            return 0.0
+        return (2 * n**3 * K) / elapsed_ns * 1000
     except Exception:
-        pass
-    # lscpu fallback
-    try:
-        out = subprocess.run(["lscpu"], capture_output=True, text=True, timeout=5)
-        if out.returncode == 0:
-            for line in out.stdout.splitlines():
-                if "CPU max MHz" in line or "CPU MHz" in line:
-                    val = line.split(":", 1)[1].strip().split()[0]
-                    return float(val)
-    except Exception:
-        pass
-    if platform.system() == "Darwin":
-        try:
-            out = subprocess.run(
-                ["sysctl", "-n", "hw.cpufrequency_max"],
-                capture_output=True, text=True, timeout=5,
-            )
-            if out.returncode == 0:
-                val = int(out.stdout.strip())
-                if val > 0:
-                    return val / 1_000_000  # Hz → MHz
-        except Exception:
-            pass
-        return None
-    return 0.0
+        return 0.0
 
 
 def _detect_gpu() -> tuple[str | None, float | None]:
@@ -164,7 +154,7 @@ def detect_hardware() -> HardwareInfo:
                                         str(psutil.cpu_count(logical=False) or 1))),
         cpu_cores_logical=int(_env_or("BENCH_CPU_CORES_LOGICAL",
                                        str(psutil.cpu_count(logical=True) or 1))),
-        cpu_freq_mhz=float(os.environ["BENCH_CPU_FREQ_MHZ"]) if float(os.environ.get("BENCH_CPU_FREQ_MHZ") or 0) > 0 else _detect_cpu_freq_mhz(),
+        cpu_gflops=float(os.environ["BENCH_CPU_GFLOPS"]) if float(os.environ.get("BENCH_CPU_GFLOPS") or 0) > 0 else _measure_cpu_gflops(),
         ram_total_gb=float(_env_or("BENCH_RAM_GB",
                                     str(round(psutil.virtual_memory().total / (1024**3), 1)))),
         gpu_model=gpu_model,

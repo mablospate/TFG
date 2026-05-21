@@ -26,13 +26,13 @@ PYTHON_GROVER_NONZERO = {
 }
 PYTHON_GROVER_PRESENT = {
     "status", "framework", "algorithm", "contributor_name",
-    "hostname", "os", "cpu_model", "cpu_freq_mhz", "ram_total_gb",
+    "hostname", "os", "cpu_model", "cpu_gflops", "ram_total_gb",
     "runtime_version", "framework_version",
     "wall_time_iqr_ms", "wall_time_std_ms", "cv",
     "build_time_ms", "raw_times_ms",
 }
 
-_CPU_RANGE = (0.0, 3200.0)
+_GFLOPS_RANGE = (1.0, 500_000.0)
 
 PYTHON_SHOR_EXTRA_NONZERO = {"n_to_factor"}
 PYTHON_SHOR_EXTRA_PRESENT = {"factor_found"}
@@ -228,9 +228,9 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
             present |= QDISLIB_CUTTING_PRESENT
 
         ranges = (
-            {"jsd": (0.0, 1.0), "cpu_percent_mean": _CPU_RANGE}
+            {"jsd": (0.0, 1.0), "cpu_percent_mean": (0.0, 3200.0), "cpu_gflops": _GFLOPS_RANGE}
             if algo == "grover"
-            else {"success_rate": (0.0, 1.0), "cpu_percent_mean": _CPU_RANGE}
+            else {"success_rate": (0.0, 1.0), "cpu_percent_mean": (0.0, 3200.0), "cpu_gflops": _GFLOPS_RANGE}
         )
         crit = _check_fields(result, present, nonzero, issues, ranges=ranges)
 

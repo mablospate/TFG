@@ -1011,7 +1011,7 @@ POST https://umbmvwkkjphjqpvdgbpr.supabase.co/rest/v1/
   "cpu_model": "Apple M3 Pro",
   "cpu_cores_physical": 11,
   "cpu_cores_logical": 11,
-  "cpu_freq_mhz": 3200,
+  "cpu_gflops": 172000,
   "ram_total_gb": 18,
   "gpu_model": null,
   "gpu_vram_gb": null,

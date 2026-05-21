@@ -217,7 +217,6 @@ function Run-Benchmark {
         "-e", "BENCH_CPU_MODEL=$CPU_MODEL",
         "-e", "BENCH_CPU_CORES_PHYSICAL=$DOCKER_CPUS",
         "-e", "BENCH_CPU_CORES_LOGICAL=$DOCKER_CPUS",
-        "-e", "BENCH_CPU_FREQ_MHZ=$CPU_FREQ_MHZ",
         "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
         "-e", "BENCH_OS=Windows",
         "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
@@ -309,7 +308,7 @@ if ($DEV_MODE) { $extraArgs += "--dev" }
 
 Pull-Image
 
-Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
+Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | GFLOPS measured in container | ${RAM_GB_F}GB RAM"
 Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
 try {

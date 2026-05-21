@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     cpu_model                   TEXT,
     cpu_physical_cores          INT,
     cpu_logical_cores           INT,
-    cpu_freq_mhz                REAL,
+    cpu_gflops                  REAL,
     ram_total_gb                REAL,
     gpu_model                   TEXT,
     gpu_vram_gb                 REAL,
@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     cutting_find_time_ms        REAL,
     cutting_expectation_value   REAL
 );
+
+
+-- Migration (already applied): ALTER TABLE benchmark_runs RENAME COLUMN cpu_freq_mhz TO cpu_gflops;
 
 CREATE INDEX IF NOT EXISTS idx_br_run_id  ON benchmark_runs (run_id);
 CREATE INDEX IF NOT EXISTS idx_br_fw_algo ON benchmark_runs (framework, algorithm);

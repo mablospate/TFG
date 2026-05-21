@@ -398,7 +398,7 @@ def print_hardware_summary(hw: HardwareInfo) -> None:
     print(f"  CPU         : {hw.cpu_model}")
     print(
         f"  Cores       : {hw.cpu_cores_physical} físicos / "
-        f"{hw.cpu_cores_logical} lógicos @ {hw.cpu_freq_mhz:.0f} MHz"
+        f"{hw.cpu_cores_logical} lógicos @ {hw.cpu_gflops:.0f} GFLOPS (matmul)"
     )
     print(f"  RAM         : {hw.ram_total_gb:.1f} GB")
     if hw.gpu_model:
@@ -436,7 +436,7 @@ def _error_result(
         "cpu_model": hw.cpu_model,
         "cpu_cores_physical": hw.cpu_cores_physical,
         "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "cpu_gflops": hw.cpu_gflops,
         "ram_total_gb": hw.ram_total_gb,
         "gpu_model": hw.gpu_model,
         "gpu_vram_gb": hw.gpu_vram_gb,
@@ -712,7 +712,7 @@ def benchmark_rust_grover(
         "cpu_model": hw.cpu_model,
         "cpu_cores_physical": hw.cpu_cores_physical,
         "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "cpu_gflops": hw.cpu_gflops,
         "ram_total_gb": hw.ram_total_gb,
         "gpu_model": hw.gpu_model,
         "gpu_vram_gb": hw.gpu_vram_gb,
@@ -798,7 +798,7 @@ def benchmark_rust_grover_at_n(
         "cpu_model": hw.cpu_model,
         "cpu_cores_physical": hw.cpu_cores_physical,
         "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "cpu_gflops": hw.cpu_gflops,
         "ram_total_gb": hw.ram_total_gb,
         "gpu_model": hw.gpu_model,
         "gpu_vram_gb": hw.gpu_vram_gb,
@@ -944,7 +944,7 @@ def benchmark_rust_shor_at_n(
         "cpu_model": hw.cpu_model,
         "cpu_cores_physical": hw.cpu_cores_physical,
         "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "cpu_gflops": hw.cpu_gflops,
         "ram_total_gb": hw.ram_total_gb,
         "gpu_model": hw.gpu_model,
         "gpu_vram_gb": hw.gpu_vram_gb,
@@ -1069,7 +1069,7 @@ def to_db_rows(doc: dict) -> list[dict]:
         "cpu_model": doc.get("hardware", {}).get("cpu_model"),
         "cpu_physical_cores": doc.get("hardware", {}).get("cpu_cores_physical"),
         "cpu_logical_cores": doc.get("hardware", {}).get("cpu_cores_logical"),
-        "cpu_freq_mhz": doc.get("hardware", {}).get("cpu_freq_mhz"),
+        "cpu_gflops": doc.get("hardware", {}).get("cpu_gflops"),
         "ram_total_gb": doc.get("hardware", {}).get("ram_total_gb"),
         "gpu_model": doc.get("hardware", {}).get("gpu_model"),
         "gpu_vram_gb": doc.get("hardware", {}).get("gpu_vram_gb"),
@@ -1371,7 +1371,7 @@ def main() -> None:
         "cpu_model": hw.cpu_model,
         "cpu_physical_cores": hw.cpu_cores_physical,
         "cpu_logical_cores": hw.cpu_cores_logical,
-        "cpu_freq_mhz": hw.cpu_freq_mhz,
+        "cpu_gflops": hw.cpu_gflops,
         "ram_total_gb": hw.ram_total_gb,
         "gpu_model": hw.gpu_model,
         "gpu_vram_gb": hw.gpu_vram_gb,

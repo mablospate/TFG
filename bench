@@ -261,7 +261,6 @@ run_benchmark() {
         -e BENCH_CPU_MODEL="$CPU_MODEL" \
         -e BENCH_CPU_CORES_PHYSICAL="$DOCKER_CPUS" \
         -e BENCH_CPU_CORES_LOGICAL="$DOCKER_CPUS" \
-        -e BENCH_CPU_FREQ_MHZ="$CPU_FREQ_MHZ" \
         -e BENCH_RAM_GB="$DOCKER_MEM_GB" \
         -e BENCH_OS="$(uname -s)" \
         -e BENCH_OS_VERSION="$(sw_vers -productVersion 2>/dev/null || uname -r)" \
@@ -327,6 +326,11 @@ restore_colima() {
     elif (( COLIMA_RESTARTED )); then
         echo "→ Restoring Colima to original state (${COLIMA_ORIG_GB}g RAM, ${COLIMA_ORIG_CPU} CPUs)..."
         colima stop 2>/dev/null || true
+        local i=0
+        while colima status &>/dev/null && (( i < 30 )); do
+            sleep 1
+            (( i++ )) || true
+        done
         colima start --memory "$COLIMA_ORIG_GB" --cpu "$COLIMA_ORIG_CPU" || true
     fi
 }
@@ -385,7 +389,7 @@ main() {
     cap_to_docker_limits
     collect_run_args "$@"
     pull_image
-    echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
+    echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | GFLOPS measured in container | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
     if [[ "$TEST_MODE" -eq 1 ]]; then

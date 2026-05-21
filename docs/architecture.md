@@ -355,7 +355,7 @@ Cada sweep produce checkpoints y un documento final en `./results/`.
 
 ### Campos hardware
 
-`hostname`, `os`, `os_version`, `cpu_model`, `cpu_cores_physical`, `cpu_cores_logical`, `cpu_freq_mhz`, `ram_total_gb`, `gpu_model`, `gpu_vram_gb`.
+`hostname`, `os`, `os_version`, `cpu_model`, `cpu_cores_physical`, `cpu_cores_logical`, `cpu_gflops`, `ram_total_gb`, `gpu_model`, `gpu_vram_gb`.
 
 ### Campos de resultado por framework
 
