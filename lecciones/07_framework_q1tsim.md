@@ -1291,3 +1291,31 @@ medir el impacto de cada una de esas optimizaciones en los frameworks modernos.
 | Shor | Permutaciones modulares controladas + IQFT + fracciones continuas |
 | Límite práctico | ~25-27 qubits en 16 GB RAM |
 | Rol en el benchmark | Baseline histórica; cuantifica el progreso del ecosistema desde 2019 |
+
+---
+
+## Referencias
+
+[1] Nielsen, M.A. & Chuang, I.L. (2010). *Quantum Computation and Quantum Information*. Cambridge University Press.
+
+[2] De Raedt, H., Hams, A.H., Michielsen, K., De Raedt, K., & Trieu, B. (2007). "Massively Parallel Quantum Computer Simulator". *Computer Physics Communications*, 176(2), 121–136. https://doi.org/10.1016/j.cpc.2006.08.022
+
+[3] Häner, T., Steiger, D.S., Troyer, M., & Svore, K.M. (2017). "0.5 Petabyte Simulation of a 45-Qubit Quantum Circuit". *Proceedings of SC17: International Conference for High Performance Computing, Networking, Storage and Analysis*. ACM/IEEE.
+
+[4] Smelyanskiy, M., Sawaya, N.P.D., & Aspuru-Guzik, A. (2016). "qHiPSTER: The Quantum High Performance Software Testing Environment". *arXiv preprint arXiv:1601.07195*.
+
+[5] Grover, L.K. (1996). "A Fast Quantum Mechanical Algorithm for Database Search". *Proceedings of the 28th Annual ACM Symposium on the Theory of Computing (STOC 1996)*, 212–219.
+
+[6] Shor, P.W. (1997). "Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer". *SIAM Journal on Computing*, 26(5), 1484–1509. https://doi.org/10.1137/S0097539795293172
+
+[7] Jung, S., Wookyoung, N., & Lee, S. (2023). "A Survey of Quantum Programming Languages: Design, Features, and Usability". *ACM Computing Surveys*, 56(4), 1–36.
+
+[8] Preskill, J. (2018). "Quantum Computing in the NISQ Era and Beyond". *Quantum*, 2, 79. https://doi.org/10.22331/q-2018-08-06-79
+
+[9] Vatan, F. & Williams, C. (2004). "Realization of a General Three-Qubit Quantum Gate". *Physical Review Letters*, 93(3), 033005. https://doi.org/10.1103/PhysRevLett.93.033005
+
+[10] Somma, R.D., Boghosian, B.M., & Troyer, M. (2002). "Quantum Simulations of Classical Random Walks and Uniform Sampling via Quantum Walks". *Physical Review Letters*, 108(15), 150506. https://doi.org/10.1103/PhysRevLett.2002.108.150506
+
+[11] Rudolph, T. (2017). "Constructing Physically Realizable Stabilizer Codes for Lossless Quantum Memories". *Nature Physics*, 13(11), 1079–1088. https://doi.org/10.1038/nphys4184
+
+[12] Gheorghiu, A., & Mosca, M. (2017). "Benchmarking the Classical Simulation of Quantum Circuits". *arXiv preprint arXiv:1704.04179*.

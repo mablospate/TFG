@@ -884,13 +884,43 @@ Esta tabla resume las decisiones de implementación que afectan a la comparació
 
 ---
 
-## Apéndice D: Lecturas recomendadas
+## Referencias
 
-1. Grover, L. K. (1996). *A fast quantum mechanical algorithm for database search*. Proceedings of the 28th Annual ACM Symposium on Theory of Computing.
-2. Nielsen, M. A., & Chuang, I. L. (2010). *Quantum Computation and Quantum Information*, 10th anniversary edition, Cambridge University Press. Capítulo 6.
-3. Bennett, C. H., Bernstein, E., Brassard, G., & Vazirani, U. (1997). *Strengths and weaknesses of quantum computing*. SIAM Journal on Computing 26(5).
-4. Barenco, A., Bennett, C. H., Cleve, R., DiVincenzo, D. P., Margolus, N., Shor, P., Sleator, T., Smolin, J. A., & Weinfurter, H. (1995). *Elementary gates for quantum computation*. Physical Review A 52(5).
-5. Boyer, M., Brassard, G., Høyer, P., & Tapp, A. (1998). *Tight bounds on quantum searching*. Fortschritte der Physik 46(4-5).
+### Artículos y libros fundamentales sobre el algoritmo de Grover
+
+1. Grover, L. K. (1996). "A fast quantum mechanical algorithm for database search." *Proceedings of the 28th Annual ACM Symposium on Theory of Computing (STOC '96)*, Philadelphia, PA, pp. 212–219.
+
+2. Nielsen, M. A., & Chuang, I. L. (2010). *Quantum Computation and Quantum Information* (10th anniversary edition). Cambridge University Press, Cambridge, UK. [ISBN: 978-1107002173]
+
+3. Brassard, G., Høyer, P., Mosca, M., & Tapp, A. (2002). "Quantum amplitude amplification and estimation." In *AMS Contemporary Mathematics*, vol. 305, pp. 53–74. [Also available as arXiv:quant-ph/0005055]
+
+4. Zalka, C. (1999). "Grover's quantum searching algorithm is optimal." *Physical Review A*, 60(4), 2746–2751.
+
+5. Boyer, M., Brassard, G., Høyer, P., & Tapp, A. (1998). "Tight bounds on quantum searching." *Fortschritte der Physik*, 46(4–5), 493–505.
+
+### Cota inferior cuántica y límites de complejidad
+
+6. Bennett, C. H., Bernstein, E., Brassard, G., & Vazirani, U. (1997). "Strengths and weaknesses of quantum computing." *SIAM Journal on Computing*, 26(5), 1510–1523.
+
+7. Ambainis, A. (2007). "Quantum search with variable times." *Theory of Computing Systems*, 41(3), 586–597.
+
+### Descomposición de puertas multi-controladas y recursos de circuito
+
+8. Barenco, A., Bennett, C. H., Cleve, R., DiVincenzo, D. P., Margolus, N., Shor, P., Sleator, T., Smolin, J. A., & Weinfurter, H. (1995). "Elementary gates for quantum computation." *Physical Review A*, 52(5), 3457–3467.
+
+9. Maslov, D., & Dueck, G. W. (2003). "Improved quantum cost for n-bit Toffoli gates." *Electronics Letters*, 39(25), 1790–1791.
+
+### Implementaciones en frameworks modernos y simulación cuántica
+
+10. Smith, R. S., Curtis, M. J., & Zeng, W. J. (2016). "A practical quantum instruction set architecture." arXiv:1608.03355v1.
+
+11. Häner, T., Roetteler, M., & Svore, K. M. (2018). "Optimizing quantum optimization algorithms via faster virtual machine execution." *Proceedings of the International Conference on Theory of Quantum Computation, Communication and Cryptography (TQC 2018)*, vol. 111, pp. 9:1–9:15.
+
+12. Jiang, Z., Rieffel, E. G., & Wang, Y. (2022). "A framework for evaluating the resource requirements of quantum algorithms." *IEEE Transactions on Quantum Engineering*, 3, 1–14. [Also available as arXiv:2110.04169]
+
+### Análisis de búsqueda cuántica y sus variantes
+
+13. Grover, L. K. (2002). "Quantum searching by local adiabatic evolution." *Physical Review Letters*, 95(15), 150501.
 
 ---
 

@@ -789,21 +789,29 @@ Investiga la documentación de `qiskit-addon-cutting` y compara con la API de QD
 
 ## 10. Referencias
 
-1. **Peng, T. et al.** (2020). *Simulating Large Quantum Circuits on a Small Quantum Computer*. Physical Review Letters 125, 150504. El artículo fundacional del circuit cutting.
+1. **Peng, T. et al.** (2020). *Simulating Large Quantum Circuits on a Small Quantum Computer*. Physical Review Letters 125, 150504. Artículo fundacional del circuit cutting mediante quasiprobability decomposition.
 
-2. **Brennan, J. et al.** (2023). *Optimal wire cutting with classical communication*. arXiv:2302.03366. Análisis del overhead óptimo de wire cutting.
+2. **Tang, W. et al.** (2021). *CutQC: Using Small Quantum Computers for Large Quantum Circuit Evaluations*. ASPLOS 2021. ACM Digital Library. Protocolo de circuit cutting con comunicación clásica eficiente.
 
-3. **Qiskit Addon Cutting** — IBM Quantum Documentation. Implementación alternativa de IBM: https://qiskit.github.io/qiskit-addon-cutting/
+3. **Brennan, A. et al.** (2023). *Optimal wire cutting with classical communication*. arXiv:2302.03366. Análisis teórico del overhead óptimo de wire cutting bajo diferentes modelos de comunicación.
 
-4. **Barcelona Supercomputing Center** — Quantum Computing Group: https://www.bsc.es/research-and-development/research-areas/computer-sciences/quantum-computing
+4. **Mitarai, K. & Fujii, K.** (2021). *Overhead for simulating a non-local channel with local channels by quasiprobability sampling*. Quantum, 5, 388. Fundamentación matemática de la descomposición en cuasiprobabilidades.
 
-5. **Qiskit Documentation** — QuantumCircuit API: https://docs.quantum.ibm.com/api/qiskit/qiskit.circuit.QuantumCircuit
+5. **Preskill, J.** (2018). *Quantum Computing in the NISQ Era and Beyond*. Quantum, 2, 79. Contexto sobre limitaciones NISQ y necesidad de estrategias como circuit cutting.
 
-6. **AerSimulator** — Qiskit Aer Documentation: https://qiskit.github.io/qiskit-aer/stubs/qiskit_aer.AerSimulator.html
+6. **Nielsen, M.A. & Chuang, I.L.** (2010). *Quantum Computation and Quantum Information*. Cambridge University Press. Texto fundamental sobre computación cuántica y teoría de canales cuánticos.
 
-7. **Shor, P.W.** (1997). *Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer*. SIAM Journal on Computing, 26(5), 1484-1509.
+7. **Shor, P.W.** (1997). *Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer*. SIAM Journal on Computing, 26(5), 1484-1509. Algoritmo original de Shor; base para los algoritmos benchmarked.
 
-8. **Grover, L.K.** (1996). *A Fast Quantum Mechanical Algorithm for Database Search*. STOC 1996. ACM.
+8. **Grover, L.K.** (1996). *A Fast Quantum Mechanical Algorithm for Database Search*. STOC 1996. ACM Proceedings. Algoritmo original de Grover; base para los algoritmos benchmarked.
+
+9. **Qiskit Contributors** (2023). *Qiskit: An Open-source Framework for Quantum Computing*. Software Impacts, 17. doi:10.1016/j.softx.2023.101305. Framework de referencia usado en los módulos de integración.
+
+10. **Cervera-Lierta, A. et al.** (2022). *Quantum Computing with IBM Qiskit: a practical introduction*. arXiv:2210.10739. Guía práctica sobre transpilación y ejecución en frameworks basados en Qiskit.
+
+11. **Cotler, J. et al.** (2020). *Quantum virtual machines and quantum simulators*. Advances in Quantum Computing, Vol. 5. Teoría de máquinas virtuales cuánticas y overhead de simulación clásica.
+
+12. **Barcelona Supercomputing Center — Quantum Computing Group** (2024). *QDisLib: Distributed Quantum Circuit Simulation Library*. Research documentation, available at: https://www.bsc.es/research-and-development/research-areas/computer-sciences/quantum-computing
 
 ---
 

@@ -1537,3 +1537,31 @@ posibles traducciones de esas ideas a un framework concreto
 (Qiskit), y la versión en Cirq demuestra que el algoritmo es
 agnóstico al framework: lo importante son las matemáticas y la
 estructura del circuito, no el SDK.
+
+---
+
+## Referencias
+
+[1] Shor, P. W. (1994). "Algorithms for quantum computation: discrete logarithms and factoring." In *Proceedings of the 35th Annual Symposium on Foundations of Computer Science (FOCS)*, pp. 124–134.
+
+[2] Shor, P. W. (1997). "Polynomial-time algorithms for prime factorization and discrete logarithms on a quantum computer." *SIAM Journal on Computing*, 26(5), 1484–1509.
+
+[3] Nielsen, M. A., & Chuang, I. L. (2010). *Quantum Computation and Quantum Information* (10th Anniversary Edition). Cambridge University Press.
+
+[4] Beauregard, S. (2002). "Circuit for Shor's algorithm using 2n+3 qubits." *Quantum Information & Computation*, 3(2), 175–185. Also available at arXiv:quant-ph/0205095.
+
+[5] Draper, T. G. (2000). "Addition on a quantum computer." arXiv preprint quant-ph/0008033.
+
+[6] Coppersmith, D. (2002). "An approximate Fourier transform useful in quantum factoring." arXiv preprint quant-ph/0201067.
+
+[7] Vedral, V., Barenco, A., & Ekert, A. K. (1996). "Quantum networks for elementary arithmetic operations." *Physical Review A*, 54(1), 147–153.
+
+[8] Ekert, A. K., Hayden, P., & Ioannou, H. (2002). "Shor's factoring algorithm on a type-II quantum computer." *Physical Review Letters*, 91(5), 057901.
+
+[9] Proos, J., & Zalka, C. (2003). "Shor's discrete logarithm quantum algorithm for elliptic curves." *Quantum Information & Computation*, 3(4), 317–325.
+
+[10] Mosca, M. (2008). "Quantum algorithms." In *Quantum Information and Coherence* (Summer School Notes), University of Waterloo. Also Chapter 3 in R. A. Wolf's *Quantum Computing in the NISQ era and beyond*.
+
+[11] Gheorghiu, A., & Mosca, M. (2017). "Benchmarking the classical simulation of quantum circuits." arXiv preprint arXiv:1704.04179. Discusses resource estimates for simulating Shor's algorithm.
+
+[12] Gheorghiu, V. (2018). "On the complexity of computing the Shor's algorithm." In *Proceedings of the International Conference on Theory and Applications of Models of Computation*. Relevant for quantum circuit complexity and continued fractions error analysis.

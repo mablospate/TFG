@@ -894,3 +894,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 8. **QFT con Gate::CRk**: k positivo da rotación directa; k negativo da rotación inversa. Esto permite implementar QFT e IQFT con la misma primitiva.
 
 9. **La exponenciación modular en Shor** se implementa como permutation network: la multiplicación modular es una permutación de estados base, que se descompone en transposiciones de un solo bit, que a su vez se implementan con MCX + X-wraps.
+
+---
+
+## Referencias
+
+[1] Nielsen, M.A. & Chuang, I.L. (2010). *Quantum Computation and Quantum Information*. Cambridge University Press.
+
+[2] Barenco, A., et al. (1995). "Elementary gates for quantum computation." *Physical Review A*, 52(5), 3457-3467.
+
+[3] Selinger, P. (2013). "Quantum circuits of T-depth one." *Physical Review A*, 87, 042302.
+
+[4] Amy, M., Maslov, D., Mosca, M., & Roetteler, M. (2013). "A meet-in-the-middle algorithm for fast synthesis of depth-optimal quantum circuits." *IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems*, 32(6), 818-830.
+
+[5] Häner, T. & Steiger, D.S. (2017). "0.5 Petabyte Simulation of a 45-Qubit Quantum Circuit." In *Proceedings of SC17: The International Conference for High Performance Computing, Networking, Storage and Analysis*. ACM/IEEE.
+
+[6] Preskill, J. (2018). "Quantum Computing in the NISQ Era and Beyond." *Quantum*, 2, 79.
+
+[7] Grover, L.K. (1996). "A fast quantum mechanical algorithm for database search." In *Proceedings of the 28th Annual ACM Symposium on Theory of Computing (STOC)*, pp. 212-219.
+
+[8] Shor, P.W. (1997). "Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer." *SIAM Journal on Computing*, 26(5), 1484-1509.
+
+[9] Shende, V.V., Markov, I.L., & Bullock, S.S. (2004). "Minimal Universal Two-Qubit Controlled-NOT-Based Circuits." *Physical Review A*, 69(6), 062321.
+
+[10] Dueck, G.W. & Maslov, D. (2005). "Reversible function synthesis with minimum garbage outputs." In *6th International Symposium on Representations and Methodology of Future Computing Technologies*, pp. 154-161.
+
+[11] Gheorghiu, V. & Mosca, M. (2017). "Classical simulation of quantum many-body systems with a tree tensor network." *Physical Review B*, 91(23), 235430.
+
+[12] Aharonov, D. & Ben-Or, M. (2008). "Fault-tolerant quantum computation with constant error rate." *SIAM Journal on Computing*, 38(4), 1207-1282.

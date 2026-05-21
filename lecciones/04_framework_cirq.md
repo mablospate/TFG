@@ -954,9 +954,30 @@ Para algoritmos de búsqueda (Grover) la diferencia con Qiskit es principalmente
 
 ## Referencias
 
-- Cirq documentation: https://quantumai.google/cirq
-- Barenco et al. (1995). Elementary gates for quantum computation. *Physical Review A*, 52(5), 3457.
-- Grover, L. K. (1996). A fast quantum mechanical algorithm for database search. *STOC '96*.
-- Shor, P. W. (1994). Algorithms for quantum computation: discrete logarithms and factoring. *FOCS '94*.
-- Arrazola et al. (2022). Universal quantum circuits for quantum chemistry. *Quantum*, 6, 688.
-- Nielsen & Chuang (2010). *Quantum Computation and Quantum Information*. Cambridge University Press.
+### Citas Obligatorias
+
+1. Cirq Developers (2023). "Cirq." Zenodo. https://doi.org/10.5281/zenodo.4062499.
+
+2. Arute, F., et al. (2019). "Quantum supremacy using a programmable superconducting processor." *Nature*, 574, 505–510. https://doi.org/10.1038/s41586-019-1666-5.
+
+3. Nielsen, M.A. & Chuang, I.L. (2010). *Quantum Computation and Quantum Information*. Cambridge University Press.
+
+4. Harrigan, M.P., et al. (2021). "Quantum approximate optimization of non-planar graph problems on a planar superconducting processor." *Nature Physics*, 17, 332–336. https://doi.org/10.1038/s41567-021-01333-4.
+
+5. Babbush, R., et al. (2021). "Focus beyond quadratic speedups for error-corrected quantum advantage." *PRX Quantum*, 2, 010103. https://doi.org/10.1103/PRXQuantum.2.010103.
+
+6. Boixo, S., et al. (2018). "Characterizing quantum supremacy in near-term devices." *Nature Physics*, 14, 595–600. https://doi.org/10.1038/s41567-018-0124-x.
+
+### Citas Adicionales: NISQ, Simulación Cuántica y Algoritmos en Cirq
+
+7. Preskill, J. (2018). "Quantum Computing in the NISQ era and beyond." *Quantum*, 2, 79. https://doi.org/10.22331/q-2018-08-06-79.
+
+8. Barenco, A., et al. (1995). "Elementary gates for quantum computation." *Physical Review A*, 52(5), 3457. https://doi.org/10.1103/PhysRevA.52.3457.
+
+9. Grover, L. K. (1996). "A fast quantum mechanical algorithm for database search." In *Proceedings of the 28th Annual ACM Symposium on Theory of Computing* (STOC '96), pp. 212–219. https://doi.org/10.1145/237814.237866.
+
+10. Shor, P. W. (1994). "Algorithms for quantum computation: discrete logarithms and factoring." In *Proceedings of the 35th Annual Symposium on Foundations of Computer Science* (FOCS '94), pp. 124–134. https://doi.org/10.1109/SFCS.1994.365700.
+
+11. Google Quantum AI (2022). "Suppressing quantum errors by scaling a surface code." *Nature*, 614, 676–681. https://doi.org/10.1038/s41586-022-05434-3.
+
+12. Bruzewicz, C.D., et al. (2019). "Trapped-ion quantum computing: progress and challenges." *Applied Physics Reviews*, 6, 021314. https://doi.org/10.1063/1.5088164.
