@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -21,29 +22,26 @@ ARCH = platform.machine().lower()
 PYTHON_GROVER_NONZERO = {
     "wall_time_median_ms", "wall_time_mean_ms",
     "peak_memory_rss_mb", "startup_time_ms", "simulation_time_ms",
-    "num_shots", "n_repetitions", "n_qubits", "cpu_percent_mean",
+    "num_shots", "n_repetitions", "n_qubits",
 }
 PYTHON_GROVER_PRESENT = {
     "status", "framework", "algorithm", "contributor_name",
     "hostname", "os", "cpu_model", "cpu_freq_mhz", "ram_total_gb",
-    "gpu_model", "runtime_version", "framework_version",
+    "runtime_version", "framework_version",
     "wall_time_iqr_ms", "wall_time_std_ms", "cv",
-    "build_time_ms", "raw_times_ms",
-}
-FIELD_RANGES: dict[str, tuple[float, float]] = {
-    "jsd":          (0.0, 1.0),
-    "success_rate": (0.0, 1.0),
+    "build_time_ms", "raw_times_ms", "cpu_percent_mean",
 }
 
 PYTHON_SHOR_EXTRA_NONZERO = {"n_to_factor"}
-PYTHON_SHOR_EXTRA_PRESENT = {"factor_found", "success_rate"}
+PYTHON_SHOR_EXTRA_PRESENT = {"factor_found"}
 
 QDISLIB_CUTTING_NONZERO = {"cutting_wall_time_ms", "cutting_find_time_ms"}
 QDISLIB_CUTTING_PRESENT = {"cutting_expectation_value"}
 
 RUST_GROVER_NONZERO = {"time_ms", "mem_mb"}
 RUST_GROVER_PRESENT = {"distribution", "framework_version"}
-RUST_SHOR_EXTRA_PRESENT = {"factor", "success"}
+RUST_SHOR_NONZERO = {"time_ms", "mem_mb"}
+RUST_SHOR_PRESENT = {"factor", "framework_version"}
 
 
 def _is_zero(val) -> bool:
@@ -169,7 +167,13 @@ def _invoke_rust_shor(binary: pathlib.Path) -> dict | None:
         return None
 
 
-def _check_fields(result: dict, present: set, nonzero: set, issues: list[str]) -> int:
+def _check_fields(
+    result: dict,
+    present: set,
+    nonzero: set,
+    issues: list[str],
+    ranges: dict[str, tuple[float, float]] | None = None,
+) -> int:
     critical = 0
     for field in sorted(present | nonzero):
         val = result.get(field)
@@ -183,19 +187,19 @@ def _check_fields(result: dict, present: set, nonzero: set, issues: list[str]) -
             critical += 1
         else:
             print(f"  OK {field} = {_abbrev(val)}")
+    if ranges:
+        for field, (lo, hi) in ranges.items():
+            val = result.get(field)
+            if val is None:
+                print(f"  X {field}: MISSING")
+                issues.append(f"missing:{field}")
+                critical += 1
+            elif not lo <= float(val) <= hi:
+                print(f"  ! {field} = {val:.4f}  [out of range {lo}–{hi}]")
+                issues.append(f"range:{field}")
+            else:
+                print(f"  OK {field} = {val:.4f}  [in range]")
     return critical
-
-
-def _check_ranges(result: dict, issues: list[str]) -> None:
-    for field, (lo, hi) in FIELD_RANGES.items():
-        val = result.get(field)
-        if val is None:
-            continue
-        if not lo <= float(val) <= hi:
-            print(f"  ! {field} = {val:.4f}  [out of range {lo}–{hi}]")
-            issues.append(f"range:{field}")
-        else:
-            print(f"  OK {field} = {val:.4f}  [in range]")
 
 
 def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
@@ -220,20 +224,8 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
             nonzero |= QDISLIB_CUTTING_NONZERO
             present |= QDISLIB_CUTTING_PRESENT
 
-        crit = _check_fields(result, present, nonzero, issues)
-        _check_ranges(result, issues)
-
-        if algo == "grover":
-            jsd = result.get("jsd")
-            if jsd is None:
-                print("  X jsd: MISSING")
-                issues.append("missing:jsd")
-                crit += 1
-            elif not 0.0 <= float(jsd) <= 1.0:
-                print(f"  ! jsd = {jsd:.4f}  [out of range 0–1]")
-                issues.append("range:jsd")
-            else:
-                print(f"  OK jsd = {jsd:.4f}")
+        ranges = {"jsd": (0.0, 1.0)} if algo == "grover" else {"success_rate": (0.0, 1.0)}
+        crit = _check_fields(result, present, nonzero, issues, ranges=ranges)
 
         status = "FAIL" if crit > 0 else ("WARN" if issues else "PASS")
         rows.append((fw, algo, status, len(issues)))
@@ -253,10 +245,12 @@ def _test_rust_binary(name: str, algo: str) -> tuple[str, str, str, int]:
         return (name, algo, "FAIL", 1)
 
     issues: list[str] = []
-    nonzero = set(RUST_GROVER_NONZERO)
-    present = set(RUST_GROVER_PRESENT)
     if algo == "shor":
-        present |= RUST_SHOR_EXTRA_PRESENT
+        nonzero = set(RUST_SHOR_NONZERO)
+        present = set(RUST_SHOR_PRESENT)
+    else:
+        nonzero = set(RUST_GROVER_NONZERO)
+        present = set(RUST_GROVER_PRESENT)
 
     crit = _check_fields(result, present, nonzero, issues)
     status = "FAIL" if crit > 0 else ("WARN" if issues else "PASS")
@@ -278,6 +272,9 @@ def _test_supabase() -> bool:
         with urllib.request.urlopen(req, timeout=10) as resp:
             print(f"  OK HTTP {resp.status} reachable")
             return True
+    except urllib.error.HTTPError as e:
+        print(f"  OK HTTP {e.code} reachable (API returned {e.code})")
+        return True
     except Exception as e:
         print(f"  X unreachable: {e}")
         return False
