@@ -1,10 +1,12 @@
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
-    [switch]$Dev
+    [switch]$Dev,
+    [switch]$Test
 )
 
-$DEV_MODE = $Dev.IsPresent
+$DEV_MODE  = $Dev.IsPresent
+$TEST_MODE = $Test.IsPresent
 
 # --- Self-elevation via UAC ---
 # Windows cannot elevate the current process in place; a new elevated window is
@@ -285,7 +287,9 @@ Cap-ToDockerLimits
 $extraArgs = @()
 
 if ($args -notcontains "--contributor") {
-    if ($DEV_MODE) {
+    if ($TEST_MODE) {
+        $contributor = "test"
+    } elseif ($DEV_MODE) {
         $contributor = "dev"
     } else {
         $contributor = Read-Host "Contributor name"
@@ -294,7 +298,7 @@ if ($args -notcontains "--contributor") {
 }
 
 $TIME_BUDGET_MINS = 0  # 0 = unlimited
-if (-not $DEV_MODE -and $args -notcontains "--time-budget") {
+if (-not $TEST_MODE -and -not $DEV_MODE -and $args -notcontains "--time-budget") {
     $ans = Read-Host "Tiempo limite en minutos (Enter = sin limite)"
     if ($ans -match '^\d+$' -and [int]$ans -gt 0) {
         $TIME_BUDGET_MINS = [int]$ans
@@ -309,7 +313,9 @@ Write-Host "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CP
 Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
 try {
-    if ($HAS_NVIDIA) {
+    if ($TEST_MODE) {
+        Run-Benchmark @extraArgs --test
+    } elseif ($HAS_NVIDIA) {
         Write-Host "-> Primera pasada: con GPU (CUDA)..."
         Run-Benchmark @extraArgs @args
 

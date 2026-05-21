@@ -16,4 +16,10 @@ else
     echo "GPU: no detectada → plataforma: $PLATFORM"
 fi
 
+for arg in "$@"; do
+    if [[ "$arg" == "--test" ]]; then
+        exec uv run --frozen python -u -m python.smoke_test
+    fi
+done
+
 exec uv run --frozen python -u run.py --platform "$PLATFORM" "$@"

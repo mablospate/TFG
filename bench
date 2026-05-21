@@ -7,6 +7,7 @@ exec </dev/tty
 
 IMAGE="${BENCHMARK_IMAGE:-mablospate/tfg-bench:latest}"
 DEV_MODE=0
+TEST_MODE=0
 
 # Load .env — check script dir first, then cwd, then ~/tfg-bench/ (curl fallback)
 _BENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
@@ -346,7 +347,9 @@ cap_to_docker_limits() {
 
 collect_run_args() {
     if [[ ! " $* " =~ " --contributor " ]]; then
-        if [[ "$DEV_MODE" -eq 1 ]]; then
+        if [[ "$TEST_MODE" -eq 1 ]]; then
+            EXTRA_ARGS+=(--contributor "test")
+        elif [[ "$DEV_MODE" -eq 1 ]]; then
             EXTRA_ARGS+=(--contributor "dev")
         else
             local name=""
@@ -360,7 +363,7 @@ collect_run_args() {
         fi
     fi
 
-    if [[ "$DEV_MODE" -ne 1 ]]; then
+    if [[ "$DEV_MODE" -ne 1 && "$TEST_MODE" -ne 1 ]]; then
         ask_time_budget
     fi
     if [[ "$DEV_MODE" -eq 1 ]]; then EXTRA_ARGS+=("--dev"); fi
@@ -368,9 +371,8 @@ collect_run_args() {
 
 _parse_flags() {
     for arg in "$@"; do
-        if [[ "$arg" == "--dev" ]]; then
-            DEV_MODE=1
-        fi
+        if [[ "$arg" == "--dev" ]];  then DEV_MODE=1;  fi
+        if [[ "$arg" == "--test" ]]; then TEST_MODE=1; fi
     done
 }
 
@@ -385,6 +387,11 @@ main() {
     pull_image
     echo "Hardware: $CPU_MODEL | ${CPU_PHYSICAL}p/${CPU_LOGICAL}l cores | ${CPU_FREQ_MHZ}MHz | ${RAM_GB_F}GB RAM"
     echo "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
+
+    if [[ "$TEST_MODE" -eq 1 ]]; then
+        run_benchmark "${EXTRA_ARGS[@]}" "$@"
+        return
+    fi
 
     HOST_ARCH="$(uname -m)"
 
