@@ -769,41 +769,7 @@ num_shots: int = 1024  # Shots para distribución empírica
 
 Es el número de veces que se ejecuta el circuito para construir la distribución empírica. `1024 = 2^10` es la convención de facto en el ecosistema de IBM Quantum y se ha estandarizado en el resto. Estadísticamente, con un acierto teórico `P ≈ 1 - 1/N`, el número esperado de aciertos es `~1024 · (1 - 1/N)` y la desviación estándar binomial es `√(1024 · (1-1/N) · 1/N) ≈ √(1024/N)`, que se mantiene pequeña frente a la media. Esto basta para resolver con holgura los modos de la distribución y para estimar la Jensen-Shannon divergence frente a la distribución teórica con error < 1 %.
 
-### 6.3 La función de escalado `t(n) = α · 2^(β·n)`
-
-En `BenchmarkResult` aparecen dos campos:
-
-```python
-scaling_alpha: float = 0.0  # Coeficiente α en α·2^(β·n)
-scaling_beta: float = 0.0  # Exponente β en α·2^(β·n)
-```
-
-La idea: el tiempo de ejecución empírico (en milisegundos) se ajusta a una ley de potencia exponencial en `n`:
-
-```
-t(n) = α · 2^(β · n)
-```
-
-donde:
-
-- `α` (ms): "constante de fricción" del framework. Captura overheads de startup, compilación, transpilación y dispatch que no dependen de `n`.
-- `β` (adimensional): exponente de escalabilidad. Su valor teórico ideal para una simulación tipo state-vector de Grover es **`β ≈ 1.5`**, correspondiente al `O(2^(3n/2))` derivado en §5.4. Valores más altos indican overheads cuadráticos o cúbicos en `n` que no se ven compensados por optimizaciones; valores más bajos indican que el framework está aprovechando paralelismo, caché o reducciones (matrix-product-states, *circuit cutting* en QDisLib, GPU en CUDA-Q).
-
-El ajuste se hace con `scipy.optimize.curve_fit`:
-
-```python
-from scipy.optimize import curve_fit
-```
-
-sobre la tupla `(n_values, median_times_ms)`. El logaritmo de `t(n)` es lineal en `n`:
-
-```
-log₂(t) = log₂(α) + β · n
-```
-
-así que un ajuste por mínimos cuadrados en escala log-lineal recupera `α` y `β` con varianza pequeña.
-
-### 6.4 Otras métricas relevantes
+### 6.3 Otras métricas relevantes
 
 - `wall_time_median_ms` y `wall_time_iqr_ms`: mediana y rango intercuartílico del tiempo total, robustos frente a outliers (preferidos sobre la media por la presencia de GC pauses, jitter de SO, etc.).
 - `peak_memory_rss_mb`: pico de RSS medido vía `psutil` (frameworks Python) o `/proc/self/status` (quantr).
@@ -811,12 +777,10 @@ así que un ajuste por mínimos cuadrados en escala log-lineal recupera `α` y `
 - `jsd`: Jensen-Shannon divergence entre la distribución empírica y la teórica. Para Grover, la distribución teórica es `P(x) = sin²((2k+1)θ)` si `x = ω` y `P(x) = cos²((2k+1)θ)/(N-1)` en otro caso. Una JSD baja (<0.01) indica que el simulador es estadísticamente fiel.
 - `simulation_time_ms`, `build_time_ms`, `startup_time_ms`: desglose temporal interno, útil para separar el coste de construir el circuito (que no escala exponencialmente) del coste de simularlo.
 
-### 6.5 Interpretación de los resultados esperados
+### 6.4 Interpretación de los resultados esperados
 
 Para Grover en este benchmark:
 
-- **β esperada**: alrededor de 1.5 para state-vector puro; alrededor de 1.0-1.3 para frameworks con optimizaciones (cuTensorNet, MPS); alrededor de 1.5-1.7 para implementaciones sin optimizaciones (quantr en CPU single-thread).
-- **α esperada**: < 1 ms para frameworks ligeros (Cirq, quantr); 10-100 ms para frameworks pesados (Qiskit con transpilación completa); >100 ms para CUDA-Q con kernel JIT en primera invocación (la *warmup_run* lo absorbe).
 - **JSD**: < 0.01 en todos los casos correctos.
 - **Probabilidad de acierto del modo**: > 95 % para `n ≥ 5`; cercana a 1.0 para `n` impar y >100 shots.
 

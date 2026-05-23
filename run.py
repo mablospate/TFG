@@ -1347,7 +1347,6 @@ def main() -> None:
     statuses: dict[str, str] = {name: "SKIP" for name in FRAMEWORKS}
     for n in RUST_FRAMEWORKS:
         statuses.setdefault(n, "SKIP")
-    scaling_by_fw: dict[str, dict[int, float]] = {}
 
     # ---- Shor state ----
     shor_results: list[dict] = []
@@ -1359,7 +1358,6 @@ def main() -> None:
         and RUST_FRAMEWORKS_SHOR[n].exists()
         and os.access(RUST_FRAMEWORKS_SHOR[n], os.X_OK)
     ]
-    shor_scaling_by_fw: dict[str, dict[int, float]] = {}
 
     grover_total = len(config.n_values) * (len(python_enabled) + len(rust_enabled))
     shor_total = len(config.n_values_shor) * (len(shor_python_enabled) + len(shor_rust_enabled))
@@ -1412,7 +1410,6 @@ def main() -> None:
                         print(f"[ERROR] {fw_name} grover n={n}: {result.get('error', 'unknown')}")
                     else:
                         statuses[fw_name] = "OK"
-                        scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
                 except Exception as e:
                     statuses[fw_name] = "ERROR"
                     print(f"[ERROR] {fw_name} grover n={n}: {e}")
@@ -1429,7 +1426,6 @@ def main() -> None:
                     results.append(result)
                     n_series_results.append(result)
                     statuses[fw_name] = "OK"
-                    scaling_by_fw.setdefault(fw_name, {})[n] = result["wall_time_median_ms"]
                 except OSError as e:
                     if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
                         statuses[fw_name] = "SKIP"
@@ -1497,7 +1493,6 @@ def main() -> None:
                         print(f"[ERROR] {fw} shor N={N_shor}: {r.get('error', 'unknown')}")
                     else:
                         shor_statuses[fw] = "OK"
-                        shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
                 except Exception as e:
                     shor_statuses.setdefault(fw, "ERROR")
                     print(f"[ERROR] {fw} shor N={N_shor}: {e}")
@@ -1511,7 +1506,6 @@ def main() -> None:
                     shor_results.append(r)
                     shor_n_series.append(r)
                     shor_statuses[fw] = "OK"
-                    shor_scaling_by_fw.setdefault(fw, {})[n_qubits_val] = r["wall_time_median_ms"]
                 except OSError as e:
                     if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
                         shor_statuses[fw] = "SKIP"

@@ -19,8 +19,6 @@ El sistema evalúa ocho frameworks de simulación cuántica —cuatro escritos e
 
 **Fidelidad cuántica (JSD).** Una simulación numéricamente incorrecta puede ser rápida sin ser útil. Para detectar errores de implementación y deriva numérica, el sistema compara la distribución de probabilidades obtenida experimentalmente con la distribución teórica ideal mediante la divergencia de Jensen-Shannon. Un JSD cercano a cero indica alta fidelidad; un JSD cercano a uno indica que la simulación ha colapsado a un resultado incorrecto.
 
-**Escalabilidad exponencial.** El número de amplitudes en un simulador de *statevector* crece como 2^n con el número de qubits n. El sistema ajusta una curva `t(n) = α · 2^(β·n)` a los tiempos medidos para distintos valores de n, lo que permite predecir cuándo cada framework se vuelve intractable y comparar la pendiente exponencial entre implementaciones.
-
 ### 1.2 Por qué un benchmark cuántico difiere de uno clásico
 
 Los benchmarks de software clásico parten del supuesto de que la misma entrada siempre produce la misma salida en el mismo tiempo. En computación cuántica esto no se cumple por tres razones estructurales:
@@ -315,25 +313,6 @@ Cuando el benchmark termina, se escribe el documento final `grover_{timestamp}.j
 
 En modo Supabase (cuando `SUPABASE_URL` y `SUPABASE_KEY` están definidos), los checkpoints se reemplazan por inserciones directas en la base de datos tras cada tamaño, eliminando la necesidad de archivos locales.
 
-### 4.7 Curva de escalado al final
-
-Al terminar todos los tamaños, el orquestador rellena los campos de escalado de cada resultado:
-
-```python
-for result in results:
-    fw = result["framework"]
-    sd = scaling_by_fw.get(fw, {})            # {n: wall_time_median_ms}
-    result["scaling_data"] = {int(k): v for k, v in sd.items()}
-    if len(sd) >= 2:
-        alpha, beta = fit_scaling_curve(sd)
-    else:
-        alpha, beta = 0.0, 0.0
-    result["scaling_alpha"] = alpha
-    result["scaling_beta"] = beta
-```
-
-`scaling_by_fw` se construye incrementalmente durante el sweep: cada vez que un framework completa un tamaño con éxito, su tiempo mediano se almacena. Si un framework falló en algunos tamaños, `scaling_by_fw[fw]` tendrá menos de cinco puntos; si tiene al menos dos, el ajuste de curva se intenta igualmente.
-
 ---
 
 ## 5. El Protocolo de Medición (`benchmark_core.py`)
@@ -477,32 +456,6 @@ donde `KL(P‖M) = Σ P(x) · log(P(x)/M(x))`.
 
 En el contexto del benchmark, `p` es la distribución empírica obtenida ejecutando el circuito con `num_shots=1024` disparos, y `q` es la distribución teórica. Para el algoritmo de Grover con n qubits y objetivo `target`, la distribución teórica ideal es un estado puro: `q = {format(target, f"0{n}b"): 1.0}`. Un JSD = 0 significa que todos los disparos midieron el estado objetivo, lo que es imposible con shots finitos pero se aproxima cuando el framework implementa correctamente las amplitudes de Grover. Un JSD alto (> 0.3) indica que la simulación está produciendo una distribución casi uniforme —el síntoma típico de una implementación incorrecta del oráculo o de una inversión de fase errónea.
 
-### 5.6 `fit_scaling_curve`: ajuste exponencial
-
-```python
-def fit_scaling_curve(scaling_data: dict[int, float]) -> tuple[float, float]:
-    ns = np.array(sorted(scaling_data.keys()), dtype=float)
-    ts = np.array([scaling_data[int(n)] for n in ns])
-
-    def model(n, alpha, beta):
-        return alpha * np.power(2.0, beta * n)
-
-    try:
-        popt, _ = curve_fit(model, ns, ts, p0=[1.0, 1.0], maxfev=10000)
-        return float(popt[0]), float(popt[1])
-    except RuntimeError:
-        # Fallback: regresión lineal en log-space
-        log_ts = np.log2(ts + 1e-12)
-        beta, log_alpha = np.polyfit(ns, log_ts, 1)
-        return float(2.0**log_alpha), float(beta)
-```
-
-El modelo `t(n) = α · 2^(β·n)` es la forma natural del escalado de un simulador de statevector: almacenar el estado de n qubits requiere 2^n amplitudes complejas, y propagar el estado a través de una puerta de k qubits requiere una multiplicación de matrices 2^k × 2^k. Para un simulador de statevector puro sin optimizaciones de circuito, β debería ser exactamente 1.
-
-Un β > 1 indica peor que exponencial (por ejemplo, cuando el simulador reconstruye el statevector completo por cada puerta en lugar de actualizar solo los elementos afectados). Un β < 1 indica mejor que exponencial (por ejemplo, cuando el simulador explota esparsidad o comprensión de estado), lo que es muy raro en simuladores de propósito general.
-
-`scipy.optimize.curve_fit` usa el algoritmo de Levenberg-Marquardt para el ajuste no lineal de mínimos cuadrados. Si no converge en 10000 evaluaciones, el código cae al fallback: una regresión lineal en espacio logarítmico (`log2(t) = log2(α) + β·n`), que es equivalente al ajuste exponencial cuando los errores de medición son pequeños.
-
 ---
 
 ## 6. El Patrón Worker (`workers/_base.py`)
@@ -608,15 +561,7 @@ Cada checkpoint (y el documento final) tiene la siguiente estructura de alto niv
 }
 ```
 
-### 7.2 `scaling_alpha`, `scaling_beta` y `scaling_data`
-
-Cada resultado individual incluye tres campos relacionados con la escalabilidad:
-
-- `scaling_data`: diccionario `{n: wall_time_median_ms}` con los tiempos medianos para cada valor de n donde el framework completó con éxito.
-- `scaling_alpha`: el coeficiente α del modelo `t(n) = α · 2^(β·n)`. Su valor absoluto (en ms) depende de la velocidad absoluta del sistema y no es comparable entre máquinas. Dentro de una misma máquina, un α menor indica un framework más rápido en el punto de referencia n=0 (extrapolado).
-- `scaling_beta`: el exponente β. Este es el campo más importante para comparación inter-plataforma porque está adimensionalizado: un β cercano a 1 indica que el framework escala como la teoría predice para simulación de statevector; un β significativamente mayor que 1 indica overhead superexponencial que sugiere ineficiencias algorítmicas.
-
-### 7.3 JSD como indicador de correctitud
+### 7.2 JSD como indicador de correctitud
 
 El JSD tiene dos usos en el sistema:
 
@@ -624,7 +569,7 @@ El JSD tiene dos usos en el sistema:
 
 2. **Comparación de fidelidad**: entre frameworks correctos (JSD bajo), la diferencia de JSD indica qué framework reproduce la distribución ideal con más precisión. Esto es relevante cuando se comparan backends que usan diferentes técnicas numéricas (float32 vs float64, álgebra real vs compleja, etc.).
 
-### 7.4 Integración con Supabase
+### 7.3 Integración con Supabase
 
 En modo producción (con `SUPABASE_URL` y `SUPABASE_KEY` definidos), los resultados se envían directamente a Supabase en lugar de escribir archivos JSON locales:
 
@@ -736,8 +681,7 @@ bench (script anfitrión)
                    └─ checkpoint JSON / Supabase insert
                         │
                         └─ tras todos los n:
-                             ├─ fit_scaling_curve()  [benchmark_core]
-                             └─ JSON final / Supabase patch scaling
+                             └─ JSON final / Supabase insert
 ```
 
 ---

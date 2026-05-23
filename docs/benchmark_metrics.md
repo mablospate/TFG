@@ -25,11 +25,10 @@ Sistema agnóstico de framework y algoritmo para medir, comparar y reproducir el
 | 3 | Tiempo de startup del framework | ms | `perf_counter` antes de primera puerta | `Instant` antes del primer gate | Sí |
 | 4 | Tiempo de construcción del circuito | ms | `perf_counter` antes de `execute()` | `Instant` antes de `run()` | Sí |
 | 5 | Tiempo de simulación pura | ms | `total − startup − build` | ídem | Sí |
-| 6 | Escalabilidad con n | curva `α·2^(βn)` | 5 tamaños; `scipy.optimize.curve_fit` | 5 tamaños; regresión manual | Sí |
-| 7 | Varianza entre ejecuciones (CV) | adimensional | `σ/μ` sobre ≥10 repeticiones | `std_dev / mean` | Sí |
-| 8 | CPU medio durante simulación | % | `psutil` muestreo 50 ms | `/proc/stat` muestreo | Sí |
-| 9 | Precisión numérica | Jensen-Shannon div. | distribución empírica vs. teórica | ídem | Sí |
-| 10 | Consumo energético | J / mJ | `pyRAPL` / `nvidia-smi` | `RAPL` vía `/sys/class/powercap` | Sí |
+| 6 | Varianza entre ejecuciones (CV) | adimensional | `σ/μ` sobre ≥10 repeticiones | `std_dev / mean` | Sí |
+| 7 | CPU medio durante simulación | % | `psutil` muestreo 50 ms | `/proc/stat` muestreo | Sí |
+| 8 | Precisión numérica | Jensen-Shannon div. | distribución empírica vs. teórica | ídem | Sí |
+| 9 | Consumo energético | J / mJ | `pyRAPL` / `nvidia-smi` | `RAPL` vía `/sys/class/powercap` | Sí |
 
 Todas las métricas son obligatorias.
 
@@ -52,19 +51,16 @@ Tiempo empleado únicamente en la definición de puertas y registros, hasta el m
 #### 5. Tiempo de simulación pura
 Tiempo del paso de ejecución cuántica propiamente dicho: evolución del estado, medición y postproceso de shots. Se obtiene como `total − startup − build`. Es el número más relevante para comparar la eficiencia del motor de simulación.
 
-#### 6. Escalabilidad con n
-Cómo crece el tiempo de ejecución al aumentar el número de qubits. Se ejecuta el algoritmo para 5 valores distintos de `n` y se ajusta la curva `t(n) = α · 2^(β·n)` por mínimos cuadrados. Los coeficientes `α` y `β` son las cifras de comparación entre frameworks.
-
-#### 7. Varianza entre ejecuciones (CV)
+#### 6. Varianza entre ejecuciones (CV)
 Coeficiente de variación `CV = σ / μ` calculado sobre ≥10 repeticiones de la misma configuración. Un CV bajo indica un simulador determinista y estable; un CV alto puede revelar contención de recursos, JIT inestable o dependencia del estado de la memoria. Se reporta junto con la mediana y el IQR para evitar distorsión por outliers.
 
-#### 8. CPU medio durante simulación
+#### 7. CPU medio durante simulación
 Porcentaje medio de CPU del proceso (y opcionalmente del sistema) durante el paso de simulación, muestreado cada 50 ms. Detecta si el framework aprovecha múltiples núcleos o delega en GPU. Un valor cercano a `100 × n_cores` indica paralelismo efectivo.
 
-#### 9. Precisión numérica
+#### 8. Precisión numérica
 Divergencia de Jensen-Shannon entre la distribución de probabilidad empírica (obtenida con `num_shots` mediciones) y la distribución teórica ideal (calculada analíticamente o con un statevector exacto). Valor en `[0, 1]`; cuanto más bajo, más fiel es la simulación. Permite detectar errores de implementación enmascarados por resultados visualmente correctos.
 
-#### 10. Consumo energético
+#### 9. Consumo energético
 Energía total consumida durante la simulación, medida en julios. En CPU x86 con Intel RAPL se lee de `/sys/class/powercap/intel-rapl/*/energy_uj`. En GPU NVIDIA se muestrea `nvidia-smi --query-gpu=power.draw` cada 100 ms y se integra. Permite calcular la eficiencia energética real (`operaciones / julio`) para comparar implementaciones en hardware equivalente.
 
 ---
@@ -98,7 +94,6 @@ from typing import Callable, Any
 
 import numpy as np
 import psutil
-from scipy.optimize import curve_fit
 from scipy.spatial.distance import jensenshannon
 
 
@@ -134,11 +129,6 @@ class BenchmarkResult:
     cpu_percent_mean: float = 0.0      # CPU medio durante simulación (%)
     jsd: float = 0.0                   # Jensen-Shannon divergence vs. teórico
     energy_j: float = 0.0              # Energía consumida (J); 0.0 = no medido
-
-    # --- Escalabilidad ---
-    scaling_alpha: float = 0.0         # Coeficiente α en α·2^(β·n)
-    scaling_beta: float = 0.0          # Exponente β en α·2^(β·n)
-    scaling_data: dict[int, float] = field(default_factory=dict)
 
     # --- Metadatos ---
     framework: str = ""
@@ -300,59 +290,6 @@ def measure_build_time(build_fn: Callable[[], Any], *args: Any) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Escalabilidad con n
-# ---------------------------------------------------------------------------
-
-def measure_scaling(
-    run_fn: Callable[..., Any],
-    n_values: list[int] | None = None,
-    config: BenchmarkConfig | None = None,
-    **kwargs: Any,
-) -> dict[int, float]:
-    """
-    Ejecuta `run_fn` para distintos valores de `n` y devuelve los tiempos medianos.
-
-    `run_fn` debe aceptar `n` como primer argumento posicional.
-    Los `kwargs` adicionales se pasan directamente a `run_fn`.
-
-    Retorna ``{n: wall_time_median_ms}``.
-    """
-    if config is None:
-        config = BenchmarkConfig()
-    if n_values is None:
-        n_values = config.n_values
-
-    scaling: dict[int, float] = {}
-    for n in n_values:
-        result = benchmark_run(lambda n=n: run_fn(n, **kwargs), config=config)
-        scaling[n] = result.wall_time_median_ms
-    return scaling
-
-
-def fit_scaling_curve(scaling_data: dict[int, float]) -> tuple[float, float]:
-    """
-    Ajusta la curva ``t(n) = α · 2^(β·n)`` a los datos de escalabilidad.
-
-    Retorna ``(alpha, beta)``. Un β cercano a 1 indica escalado exponencial
-    perfecto en base 2 (esperado para simulación de statevector).
-    """
-    ns = np.array(sorted(scaling_data.keys()), dtype=float)
-    ts = np.array([scaling_data[int(n)] for n in ns])
-
-    def model(n: np.ndarray, alpha: float, beta: float) -> np.ndarray:
-        return alpha * np.power(2.0, beta * n)
-
-    try:
-        popt, _ = curve_fit(model, ns, ts, p0=[1.0, 1.0], maxfev=10000)
-        return float(popt[0]), float(popt[1])
-    except RuntimeError:
-        # Si no converge, estimación lineal en log-space
-        log_ts = np.log2(ts + 1e-12)
-        beta, log_alpha = np.polyfit(ns, log_ts, 1)
-        return float(2.0 ** log_alpha), float(beta)
-
-
-# ---------------------------------------------------------------------------
 # Precisión numérica: Jensen-Shannon divergence
 # ---------------------------------------------------------------------------
 
@@ -477,14 +414,6 @@ pub struct BenchmarkResult {
     /// Coeficiente de variación σ/μ.
     pub cv: f64,
 
-    // --- Escalabilidad ---
-    /// Coeficiente α en α·2^(β·n).
-    pub scaling_alpha: f64,
-    /// Exponente β en α·2^(β·n).
-    pub scaling_beta: f64,
-    /// Datos crudos de escalabilidad: n → wall_time_median_ms.
-    pub scaling_data: HashMap<usize, f64>,
-
     // --- Métricas complementarias ---
     /// Tiempo de startup del framework (ms).
     pub startup_time_ms: f64,
@@ -512,9 +441,6 @@ impl Default for BenchmarkResult {
             wall_time_iqr_ms: 0.0,
             peak_memory_rss_bytes: 0,
             cv: 0.0,
-            scaling_alpha: 0.0,
-            scaling_beta: 0.0,
-            scaling_data: HashMap::new(),
             startup_time_ms: 0.0,
             build_time_ms: 0.0,
             simulation_time_ms: 0.0,
@@ -684,76 +610,6 @@ where
 
 
 // ---------------------------------------------------------------------------
-// Escalabilidad
-// ---------------------------------------------------------------------------
-
-/// Ejecuta el algoritmo para distintos valores de `n` y devuelve tiempos medianos.
-///
-/// - `build_fn(n)` construye y devuelve cualquier tipo `F` (el circuito, el objeto
-///   de simulación, etc.).
-/// - `run_fn(f)` ejecuta ese objeto. La separación permite medir el tiempo de
-///   construcción por separado si se desea.
-///
-/// Retorna `{n → wall_time_median_ms}`.
-pub fn measure_scaling<B, F, R>(
-    build_fn: impl Fn(usize) -> B,
-    run_fn: impl Fn(B) -> R,
-    n_values: &[usize],
-    config: &BenchmarkConfig,
-) -> HashMap<usize, f64>
-where
-    B: Clone,
-{
-    let mut results = HashMap::new();
-    for &n in n_values {
-        // Reconstruir el circuito dentro de la closure para incluir solo run_fn
-        let built = build_fn(n);
-        let result = benchmark_run(
-            || {
-                let b = built.clone();
-                run_fn(b)
-            },
-            config,
-        );
-        results.insert(n, result.wall_time_median_ms);
-    }
-    results
-}
-
-/// Ajusta la curva `t(n) = α · 2^(β·n)` usando regresión lineal en log-space.
-///
-/// Retorna `(alpha, beta)`.
-pub fn fit_scaling_curve(scaling_data: &HashMap<usize, f64>) -> (f64, f64) {
-    if scaling_data.len() < 2 {
-        return (0.0, 0.0);
-    }
-
-    let mut ns: Vec<f64> = scaling_data.keys().map(|&n| n as f64).collect();
-    ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let ts: Vec<f64> = ns.iter().map(|n| *scaling_data.get(&(*n as usize)).unwrap()).collect();
-
-    // Regresión lineal de log2(t) sobre n: log2(t) = log2(α) + β·n
-    let log_ts: Vec<f64> = ts.iter().map(|t| t.max(1e-12_f64).log2()).collect();
-    let n_pts = ns.len() as f64;
-    let mean_n = ns.iter().sum::<f64>() / n_pts;
-    let mean_lt = log_ts.iter().sum::<f64>() / n_pts;
-
-    let cov = ns.iter().zip(&log_ts).map(|(n, lt)| (n - mean_n) * (lt - mean_lt)).sum::<f64>();
-    let var_n = ns.iter().map(|n| (n - mean_n).powi(2)).sum::<f64>();
-
-    if var_n == 0.0 {
-        return (0.0, 0.0);
-    }
-
-    let beta = cov / var_n;
-    let log_alpha = mean_lt - beta * mean_n;
-    let alpha = 2_f64.powf(log_alpha);
-
-    (alpha, beta)
-}
-
-
-// ---------------------------------------------------------------------------
 // Serialización
 // ---------------------------------------------------------------------------
 
@@ -786,8 +642,6 @@ from benchmark_core import (
     benchmark_run,
     measure_startup_time,
     measure_build_time,
-    measure_scaling,
-    fit_scaling_curve,
     compute_jsd,
     save_results,
 )
@@ -812,23 +666,12 @@ result.startup_time_ms = startup_ms
 result.build_time_ms = build_ms
 result.simulation_time_ms = result.wall_time_median_ms - startup_ms - build_ms
 
-# 4. Escalabilidad
-scaling_data = measure_scaling(
-    run_fn=lambda n: mi_framework.search(n=n, target=3),
-    n_values=config.n_values,
-    config=config,
-)
-alpha, beta = fit_scaling_curve(scaling_data)
-result.scaling_data = scaling_data
-result.scaling_alpha = alpha
-result.scaling_beta = beta
-
-# 5. Precisión numérica (si se dispone de distribución teórica)
+# 4. Precisión numérica (si se dispone de distribución teórica)
 _, empirical = mi_framework.search(n=5, target=3)
 theoretical = {"00101": 1.0}  # estado correcto con probabilidad 1 en el ideal
 result.jsd = compute_jsd(empirical, theoretical)
 
-# 6. Guardar
+# 5. Guardar
 save_results([result], "results/mi_framework_busqueda.json")
 ```
 
@@ -836,7 +679,7 @@ save_results([result], "results/mi_framework_busqueda.json")
 
 ```rust
 use benchmark_core::{
-    benchmark_run, measure_scaling, fit_scaling_curve,
+    benchmark_run,
     save_results, BenchmarkConfig, BenchmarkResult,
 };
 
@@ -853,19 +696,7 @@ fn main() {
     result.algorithm = "busqueda".to_string();
     result.n_qubits = 5;
 
-    // 2. Escalabilidad
-    let scaling_data = measure_scaling(
-        |n| n,                               // build_fn: aquí no hay fase separada
-        |n| { mi_framework::search(n, 3); }, // run_fn
-        &config.n_values,
-        &config,
-    );
-    let (alpha, beta) = fit_scaling_curve(&scaling_data);
-    result.scaling_data = scaling_data;
-    result.scaling_alpha = alpha;
-    result.scaling_beta = beta;
-
-    // 3. Guardar
+    // 2. Guardar
     save_results(&[result], "results/mi_framework_busqueda.json")
         .expect("Error al guardar resultados");
 }
@@ -897,9 +728,6 @@ El fichero JSON tiene dos niveles: una cabecera de metadatos del experimento y u
       "cpu_percent_mean": "number",
       "jsd": "number",
       "energy_j": "number",
-      "scaling_alpha": "number",
-      "scaling_beta": "number",
-      "scaling_data": { "n": "wall_time_median_ms" },
       "framework": "string",
       "algorithm": "string",
       "n_qubits": "integer",
@@ -934,15 +762,6 @@ Resultado de ejecutar el algoritmo de Shor (n=15, factorizar 15) con Qiskit en u
       "cpu_percent_mean": 98.4,
       "jsd": 0.0031,
       "energy_j": 0.0,
-      "scaling_alpha": 0.00142,
-      "scaling_beta": 0.993,
-      "scaling_data": {
-        "3": 12.4,
-        "4": 24.7,
-        "5": 49.1,
-        "6": 98.8,
-        "8": 401.3
-      },
       "framework": "qiskit",
       "algorithm": "shor",
       "n_qubits": 8,
@@ -1024,8 +843,6 @@ POST https://umbmvwkkjphjqpvdgbpr.supabase.co/rest/v1/
   "startup_time_ms": 312.4,
   "build_time_ms": 18.2,
   "simulation_time_ms": 124.5,
-  "scaling_alpha": 0.034,
-  "scaling_beta": 0.91,
   "cv_wall_time": 0.058,
   "cpu_mean_percent": 61.2,
   "jsd_precision": 0.0023,

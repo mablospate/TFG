@@ -93,7 +93,7 @@ qcgpu se OMITE                                      AVX bajo QEMU)
 │    │        · Args CLI: --n / --N / --shots / --target              │
 │    │        · Reporta time_ms propio (sin overhead subprocess)      │
 │    ├─ Checkpoint por tamaño: results/{algo}_{ts}_{n|N}{v}.json      │
-│    └─ Tras el sweep: scaling fit t(n) = α · 2^(β·n)                 │
+│    └─ Tras el sweep: consolidación de resultados y exportación      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ volumen montado
                                ▼
@@ -230,7 +230,6 @@ ProjectQ ha sido eliminado del benchmark. Ver `docs/framework_exclusions.md` par
 | `nvidia-smi` | Detección de GPU en host y en contenedor |
 | `nvidia-container-toolkit` | Acceso GPU en contenedores (auto-instalado en WSL2 si falta) |
 | `tracemalloc` + `psutil` | Medición de pico de memoria y CPU |
-| `scipy.optimize.curve_fit` | Ajuste de la curva de escalado post-sweep |
 
 ---
 
@@ -288,7 +287,7 @@ Todas las mediciones pasan por una API uniforme:
 
 - `BenchmarkConfig(n_repetitions, warmup_runs, n_values, n_values_shor, num_shots, cpu_sample_interval)` — parámetros del run.
 - `benchmark_run(fn, config, ...)` — ejecuta `warmup_runs` repeticiones de calentamiento (sin medir), luego `n_repetitions` repeticiones medidas con `tracemalloc` para memoria, `psutil` RSS para pico residente y un sampler en segundo plano para `cpu_percent_mean`.
-- `BenchmarkResult` — dataclass con: `wall_time_median_ms`, `wall_time_iqr_ms`, `wall_time_mean_ms`, `wall_time_std_ms`, `peak_memory_rss_mb`, `cv`, `startup_time_ms`, `build_time_ms`, `simulation_time_ms`, `cpu_percent_mean`, `jsd`, `scaling_alpha`, `scaling_beta`, `scaling_data`, `raw_times_ms`.
+- `BenchmarkResult` — dataclass con: `wall_time_median_ms`, `wall_time_iqr_ms`, `wall_time_mean_ms`, `wall_time_std_ms`, `peak_memory_rss_mb`, `cv`, `startup_time_ms`, `build_time_ms`, `simulation_time_ms`, `cpu_percent_mean`, `jsd`, `raw_times_ms`.
 - `compute_jsd` — Jensen-Shannon divergence entre la distribución empírica de medidas y la distribución teórica `{|target⟩: 1.0}`.
 - `measure_build_time` — tiempo de construcción del circuito sin ejecución.
 
@@ -334,7 +333,7 @@ Una vez completado (o interrumpido) el sweep, se ajusta una curva exponencial:
 t(n) = α · 2^(β · n)
 ```
 
-mediante `scipy.optimize.curve_fit` sobre los `wall_time_median_ms` por tamaño. Los coeficientes `scaling_alpha` y `scaling_beta`, junto con los puntos `scaling_data`, se incluyen en el resultado final.
+mediante las estadísticas acumuladas por tamaño. Los resultados finales incluyen las métricas de tiempo, memoria, CPU y JSD calculadas durante el sweep.
 
 ---
 
@@ -359,7 +358,7 @@ Cada sweep produce checkpoints y un documento final en `./results/`.
 
 ### Campos de resultado por framework
 
-Comunes: `framework`, `algorithm` (`grover`|`shor`), `n` (Grover) o `n_to_factor` (Shor), `wall_time_median_ms`, `wall_time_iqr_ms`, `wall_time_mean_ms`, `wall_time_std_ms`, `peak_memory_rss_mb`, `cv`, `startup_time_ms`, `build_time_ms`, `simulation_time_ms`, `cpu_percent_mean`, `jsd`, `scaling_alpha`, `scaling_beta`, `scaling_data`, `raw_times_ms`, `status` (`ok`|`error`|`skip`), `error` (si `status=error`).
+Comunes: `framework`, `algorithm` (`grover`|`shor`), `n` (Grover) o `n_to_factor` (Shor), `wall_time_median_ms`, `wall_time_iqr_ms`, `wall_time_mean_ms`, `wall_time_std_ms`, `peak_memory_rss_mb`, `cv`, `startup_time_ms`, `build_time_ms`, `simulation_time_ms`, `cpu_percent_mean`, `jsd`, `raw_times_ms`, `status` (`ok`|`error`|`skip`), `error` (si `status=error`).
 
 Solo Python: `subprocess_wall_time_ms` (tiempo total subprocess, incluye startup).
 
@@ -466,7 +465,7 @@ PyCOMPSs sería necesario para una distribución HPC real; el benchmark mide el 
 
 ### i. Sweep interleaved con checkpoints
 
-Intercalar Grover y Shor por tamaño permite que, si la ejecución se interrumpe (por `q`, por `--time-budget` agotado o por crash), los checkpoints ya escritos contengan datos útiles para **ambos algoritmos en los tamaños pequeños**, en lugar de tener Grover completo y Shor vacío (o viceversa). El scaling fit `t(n) = α·2^(β·n)` se calcula al final con todos los `n` disponibles.
+Intercalar Grover y Shor por tamaño permite que, si la ejecución se interrumpe (por `q`, por `--time-budget` agotado o por crash), los checkpoints ya escritos contengan datos útiles para **ambos algoritmos en los tamaños pequeños**, en lugar de tener Grover completo y Shor vacío (o viceversa).
 
 ### j. qcgpu en builds cross-compilados
 
@@ -482,7 +481,6 @@ Los resultados se envían a Supabase (tabla `benchmark_runs`) via PostgREST REST
 
 **Timing de envío:**
 - **Incremental** — tras completar cada valor de n (Grover) o N (Shor) para todos los frameworks, se insertan las filas de esa serie (una fila por repetición individual).
-- **Scaling backfill** — al finalizar cada algoritmo se hace `PATCH` a todas las filas del run para poblar `scaling_alpha`, `scaling_beta`, `scaling_data`.
 
 **Filas por resultado:**
 - `status='ok'`: una fila por repetición (expandida desde `raw_times_ms`). 8 frameworks × 5 n_values × 10 reps ≈ 400 filas por algoritmo por run.
