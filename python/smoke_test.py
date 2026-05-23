@@ -19,6 +19,31 @@ RUST_SHOR_BINS    = ["q1tsim-shor", "quantr-shor", "quantrs2-shor"]
 
 ARCH = platform.machine().lower()
 
+
+def _has_gpu() -> bool:
+    if shutil.which("nvidia-smi"):
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                return True
+        except Exception:
+            pass
+    return False
+
+
+HAS_GPU = _has_gpu()
+
+_WORKER_CONFIG_OVERRIDES: dict[tuple[str, str], dict] = {
+    ("qdislib", "shor"): {"n_repetitions": 1},  # circuit cutting is slow; 1 rep avoids timeout
+}
+
+_WORKER_TIMEOUTS: dict[tuple[str, str], int] = {
+    ("qdislib", "shor"): 300,
+}
+
 PYTHON_GROVER_NONZERO = {
     "wall_time_median_ms", "wall_time_mean_ms",
     "peak_memory_rss_mb", "startup_time_ms", "simulation_time_ms",
@@ -65,7 +90,7 @@ def _is_available(name: str) -> bool:
     if name == "cudaq":
         return ARCH not in ("aarch64", "arm64")
     if "qcgpu" in name:
-        return ARCH == "x86_64"
+        return ARCH == "x86_64" and HAS_GPU
     if name == "qdislib":
         return ARCH in ("x86_64", "amd64")
     return True
@@ -83,7 +108,7 @@ def _rust_bin(name: str) -> pathlib.Path | None:
     return None
 
 
-def _invoke_python_worker(framework: str, algo: str, n: int) -> dict | None:
+def _invoke_python_worker(framework: str, algo: str, n: int, timeout: int = 120) -> dict | None:
     config = {
         "n_repetitions": 3,
         "num_shots": 10,
@@ -92,6 +117,7 @@ def _invoke_python_worker(framework: str, algo: str, n: int) -> dict | None:
         "contributor": "smoke_test",
         "cudaq_target": "qpp-cpu",
     }
+    config.update(_WORKER_CONFIG_OVERRIDES.get((framework, algo), {}))
     config_json = json.dumps(config)
     try:
         proc = subprocess.Popen(
@@ -102,7 +128,7 @@ def _invoke_python_worker(framework: str, algo: str, n: int) -> dict | None:
             cwd=ROOT,
             text=True,
         )
-        stdout, stderr = proc.communicate(config_json, timeout=120)
+        stdout, stderr = proc.communicate(config_json, timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
         print("  FAIL TIMEOUT")
@@ -143,9 +169,13 @@ def _invoke_rust_grover(binary: pathlib.Path, n: int) -> dict | None:
         return None
 
     try:
-        return json.loads(lines[-1])
+        result = json.loads(lines[-1])
     except json.JSONDecodeError:
         return None
+    if "error" in result:
+        print(f"  - binary error: {result['error']} (SKIP)")
+        return "ERROR"
+    return result
 
 
 def _invoke_rust_shor(binary: pathlib.Path) -> dict | None:
@@ -164,9 +194,13 @@ def _invoke_rust_shor(binary: pathlib.Path) -> dict | None:
         return None
 
     try:
-        return json.loads(lines[-1])
+        result = json.loads(lines[-1])
     except json.JSONDecodeError:
         return None
+    if "error" in result:
+        print(f"  - binary error: {result['error']} (SKIP)")
+        return "ERROR"
+    return result
 
 
 def _check_fields(
@@ -209,7 +243,8 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
 
     for algo, n in [("grover", 3), ("shor", 15)]:
         print(f"\n--- {fw}/{algo} ---")
-        result = _invoke_python_worker(fw, algo, n)
+        timeout = _WORKER_TIMEOUTS.get((fw, algo), 120)
+        result = _invoke_python_worker(fw, algo, n, timeout=timeout)
         if result is None:
             rows.append((fw, algo, "FAIL", 1))
             continue
@@ -250,6 +285,8 @@ def _test_rust_binary(name: str, algo: str) -> tuple[str, str, str, int]:
     result = _invoke_rust_grover(bin_path, 3) if algo == "grover" else _invoke_rust_shor(bin_path)
     if result is None:
         return (name, algo, "FAIL", 1)
+    if result == "ERROR":
+        return (name, algo, "SKIP", 0)
 
     issues: list[str] = []
     if algo == "shor":

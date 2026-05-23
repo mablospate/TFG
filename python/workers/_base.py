@@ -135,6 +135,7 @@ def run_shor_worker(
 
     _proc = psutil.Process()
     _proc.cpu_percent()  # discard first call
+    _max_cpu_pct = hw.cpu_cores_logical * 100.0
 
     times_ms: list[float] = []
     factors: list[int] = []
@@ -146,7 +147,7 @@ def run_shor_worker(
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
         peak_rss_mb = max(peak_rss_mb, _proc.memory_info().rss / 1024 / 1024)
-        cpu_samples.append(_proc.cpu_percent())
+        cpu_samples.append(min(_proc.cpu_percent(), _max_cpu_pct))
 
     cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 

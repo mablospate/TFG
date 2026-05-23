@@ -105,8 +105,9 @@ class _CpuSampler:
         return float(np.mean(self._samples)) if self._samples else 0.0
 
     def _run(self) -> None:
+        _max_pct = psutil.cpu_count(logical=True) * 100.0
         while not self._stop.is_set():
-            self._samples.append(self._proc.cpu_percent())
+            self._samples.append(min(self._proc.cpu_percent(), _max_pct))
             self._stop.wait(self._interval)
 
 
