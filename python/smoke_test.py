@@ -340,9 +340,14 @@ def _test_hardware() -> tuple[str, str, str, int]:
             [
                 sys.executable, "-c",
                 "from python.hardware import detect_hardware; "
-                "import json, dataclasses; "
+                "import json, dataclasses, psutil, numpy as np; "
                 "hw = detect_hardware(); "
-                "print(json.dumps(dataclasses.asdict(hw)))",
+                "d = dataclasses.asdict(hw); "
+                "_p = psutil.Process(); _p.cpu_percent(); "
+                "_A = np.random.rand(128,128); [_A@_A for _ in range(500)]; "
+                "_max = psutil.cpu_count(logical=True)*100.0; "
+                "d['cpu_percent_mean'] = min(_p.cpu_percent(), _max); "
+                "print(json.dumps(d))",
             ],
             capture_output=True,
             text=True,
@@ -368,7 +373,7 @@ def _test_hardware() -> tuple[str, str, str, int]:
         return ("hardware", "detect", "FAIL", 1)
 
     issues: list[str] = []
-    hw_nonzero = {"cpu_cores_physical", "cpu_cores_logical", "cpu_gflops", "ram_total_gb"}
+    hw_nonzero = {"cpu_cores_physical", "cpu_cores_logical", "cpu_gflops", "ram_total_gb", "cpu_percent_mean"}
     hw_present = {"hostname", "os", "os_version", "cpu_model", "gpu_model", "gpu_vram_gb", "python_version"}
     crit = _check_fields(result, hw_present, hw_nonzero, issues, ranges=_HW_RANGES)
     status = "FAIL" if crit > 0 else ("WARN" if issues else "PASS")
