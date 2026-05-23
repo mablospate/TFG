@@ -190,6 +190,20 @@ fn peak_rss_mb() -> f64 {
             }
         }
     }
+    #[cfg(target_os = "macos")]
+    {
+        let pid = std::process::id();
+        if let Ok(out) = std::process::Command::new("ps")
+            .args(["-o", "rss=", "-p", &pid.to_string()])
+            .output()
+        {
+            if let Ok(s) = std::str::from_utf8(&out.stdout) {
+                if let Ok(kb) = s.trim().parse::<u64>() {
+                    return kb as f64 / 1024.0;
+                }
+            }
+        }
+    }
     0.0
 }
 

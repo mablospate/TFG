@@ -56,11 +56,6 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     status                      TEXT        NOT NULL DEFAULT 'ok',  -- 'ok' | 'error'
     error                       TEXT,
 
-    -- Scaling curves (backfilled via PATCH after all n values complete)
-    scaling_alpha               REAL,
-    scaling_beta                REAL,
-    scaling_data                JSONB,
-
     -- Shor-specific (NULL for Grover rows)
     n_to_factor                 INT,
     factor_found                INT,

@@ -20,7 +20,6 @@ from typing import Callable, Any
 
 import numpy as np
 import psutil
-from scipy.optimize import curve_fit
 from scipy.spatial.distance import jensenshannon
 
 
@@ -62,11 +61,6 @@ class BenchmarkResult:
     cpu_percent_mean: float = 0.0  # CPU medio durante simulación (%)
     jsd: float = 0.0  # Jensen-Shannon divergence vs. teórico
     energy_j: float = 0.0  # Energía consumida (J); 0.0 = no medido
-
-    # --- Escalabilidad ---
-    scaling_alpha: float = 0.0  # Coeficiente α en α·2^(β·n)
-    scaling_beta: float = 0.0  # Exponente β en α·2^(β·n)
-    scaling_data: dict[int, float] = field(default_factory=dict)
 
     # --- Metadatos ---
     framework: str = ""
@@ -203,60 +197,6 @@ def measure_build_time(build_fn: Callable[[], Any], *args: Any) -> float:
     build_fn(*args)
     t1 = time.perf_counter()
     return (t1 - t0) * 1000.0
-
-
-# ---------------------------------------------------------------------------
-# Escalabilidad con n
-# ---------------------------------------------------------------------------
-
-
-def measure_scaling(
-    run_fn: Callable[..., Any],
-    n_values: list[int] | None = None,
-    config: BenchmarkConfig | None = None,
-    **kwargs: Any,
-) -> dict[int, float]:
-    """
-    Ejecuta `run_fn` para distintos valores de `n` y devuelve los tiempos medianos.
-
-    `run_fn` debe aceptar `n` como primer argumento posicional.
-    Los `kwargs` adicionales se pasan directamente a `run_fn`.
-
-    Retorna ``{n: wall_time_median_ms}``.
-    """
-    if config is None:
-        config = BenchmarkConfig()
-    if n_values is None:
-        n_values = config.n_values
-
-    scaling: dict[int, float] = {}
-    for n in n_values:
-        result = benchmark_run(lambda n=n: run_fn(n, **kwargs), config=config)
-        scaling[n] = result.wall_time_median_ms
-    return scaling
-
-
-def fit_scaling_curve(scaling_data: dict[int, float]) -> tuple[float, float]:
-    """
-    Ajusta la curva ``t(n) = α · 2^(β·n)`` a los datos de escalabilidad.
-
-    Retorna ``(alpha, beta)``. Un β cercano a 1 indica escalado exponencial
-    perfecto en base 2 (esperado para simulación de statevector).
-    """
-    ns = np.array(sorted(scaling_data.keys()), dtype=float)
-    ts = np.array([scaling_data[int(n)] for n in ns])
-
-    def model(n: np.ndarray, alpha: float, beta: float) -> np.ndarray:
-        return alpha * np.power(2.0, beta * n)
-
-    try:
-        popt, _ = curve_fit(model, ns, ts, p0=[1.0, 1.0], maxfev=10000)
-        return float(popt[0]), float(popt[1])
-    except RuntimeError:
-        # Si no converge, estimación lineal en log-space
-        log_ts = np.log2(ts + 1e-12)
-        beta, log_alpha = np.polyfit(ns, log_ts, 1)
-        return float(2.0**log_alpha), float(beta)
 
 
 # ---------------------------------------------------------------------------

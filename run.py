@@ -28,12 +28,34 @@ import psutil
 from python.benchmark_core import (
     BenchmarkConfig,
     compute_jsd,
-    fit_scaling_curve,
 )
 from python.hardware import HardwareInfo, detect_hardware
 
 
 DOCKER_IMAGE: str = os.getenv("DOCKER_IMAGE", "dev")
+
+
+def _detect_emulated() -> bool:
+    """Detect QEMU (Linux) or Rosetta 2 (macOS) emulation."""
+    system = platform.system().lower()
+    if system == "linux":
+        try:
+            with open("/proc/cpuinfo") as _f:
+                if "qemu" in _f.read().lower():
+                    return True
+        except Exception:
+            pass
+    if system == "darwin":
+        try:
+            r = subprocess.run(
+                ["sysctl", "-n", "sysctl.proc_translated"],
+                capture_output=True, text=True, timeout=2,
+            )
+            if r.stdout.strip() == "1":
+                return True
+        except Exception:
+            pass
+    return False
 
 
 BANNER = r"""
@@ -452,9 +474,6 @@ def _error_result(
         "n_repetitions": 0,
         "framework_version": "",
         "runtime_version": "",
-        "scaling_data": {},
-        "scaling_alpha": 0.0,
-        "scaling_beta": 0.0,
         "subprocess_wall_time_ms": 0.0,
     }
 
@@ -598,7 +617,7 @@ def _run_rust_binary(
                     cpu_samples.append(_psutil_proc.cpu_percent())
                 except psutil.NoSuchProcess:
                     break
-                _stop.wait(0.05)
+                _stop.wait(0.001)
         _cpu_thread = threading.Thread(target=_sample, daemon=True)
         _cpu_thread.start()
     except psutil.NoSuchProcess:
@@ -683,27 +702,6 @@ def benchmark_rust_grover(
         except Exception as e:
             print(f"  [WARN] Could not compute JSD for {framework_name}: {e}")
 
-    # Scaling sweep — 3 reps per n to mirror benchmark_grover.
-    scaling_data: dict[int, float] = {}
-    for n in config.n_values:
-        try:
-            sub_times: list[float] = []
-            for _ in range(3):
-                payload = _run_rust_binary(binary, n, n, config.num_shots)
-                sub_times.append(float(payload.get("time_ms", 0.0)))
-            scaling_data[n] = float(np.median(sub_times)) if sub_times else 0.0
-        except Exception as e:
-            print(f"  [WARN] scaling n={n} failed for {framework_name}: {e}")
-
-    if len(scaling_data) >= 2:
-        try:
-            alpha, beta = fit_scaling_curve(scaling_data)
-        except Exception as e:
-            print(f"  [WARN] curve fit failed for {framework_name}: {e}")
-            alpha, beta = 0.0, 0.0
-    else:
-        alpha, beta = 0.0, 0.0
-
     enriched = {
         "contributor_name": contributor_name,
         "hostname": hw.hostname,
@@ -729,9 +727,6 @@ def benchmark_rust_grover(
         "simulation_time_ms": median_ms,
         "cpu_percent_mean": float(np.mean(cpu_percents)) if cpu_percents else 0.0,
         "jsd": jsd,
-        "scaling_alpha": alpha,
-        "scaling_beta": beta,
-        "scaling_data": scaling_data,
         "framework": framework_name,
         "algorithm": "grover",
         "n_qubits": n_main,
@@ -817,9 +812,6 @@ def benchmark_rust_grover_at_n(
         "simulation_time_ms": median_ms,
         "cpu_percent_mean": float(np.mean(cpu_percents)) if cpu_percents else 0.0,
         "jsd": jsd,
-        "scaling_alpha": 0.0,
-        "scaling_beta": 0.0,
-        "scaling_data": {},
         "framework": framework_name,
         "algorithm": "grover",
         "n_qubits": n,
@@ -864,7 +856,7 @@ def _run_rust_shor_binary(
                     cpu_samples.append(_psutil_proc.cpu_percent())
                 except psutil.NoSuchProcess:
                     break
-                _stop.wait(0.05)
+                _stop.wait(0.001)
         _cpu_thread = threading.Thread(target=_sample, daemon=True)
         _cpu_thread.start()
     except psutil.NoSuchProcess:
@@ -966,9 +958,6 @@ def benchmark_rust_shor_at_n(
         "simulation_time_ms": median_ms,
         "cpu_percent_mean": float(np.mean(cpu_percents_shor)) if cpu_percents_shor else 0.0,
         "jsd": 0.0,
-        "scaling_alpha": 0.0,
-        "scaling_beta": 0.0,
-        "scaling_data": {},
         "framework": framework_name,
         "algorithm": "shor",
         "n_qubits": n_qubits,
@@ -1083,8 +1072,7 @@ def to_db_rows(doc: dict) -> list[dict]:
             "framework", "framework_version", "algorithm", "n_qubits",
             "wall_time_median_ms", "wall_time_iqr_ms", "build_time_ms",
             "simulation_time_ms", "startup_time_ms", "peak_memory_rss_mb",
-            "cpu_percent_mean", "jsd", "cv", "scaling_alpha", "scaling_beta",
-            "scaling_data", "timestamp",
+            "cpu_percent_mean", "jsd", "cv", "timestamp",
         ]:
             row[field] = r.get(field)
         rows.append(row)
@@ -1125,9 +1113,6 @@ def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
         "cv":                           result.get("cv"),
         "status":                       status,
         "error":                        result.get("error"),
-        "scaling_alpha":                None,
-        "scaling_beta":                 None,
-        "scaling_data":                 None,
         "n_to_factor":                  result.get("n_to_factor"),
         "factor_found":                 result.get("factor_found"),
         "success_rate":                 result.get("success_rate"),
@@ -1166,39 +1151,6 @@ def _supabase_insert(rows: list[dict], url: str, key: str) -> bool:
     except Exception as exc:
         print(f"  ⚠ Supabase insert falló: {exc}")
         return False
-
-
-def _supabase_patch_scaling(
-    run_id: str, algorithm: str, framework: str,
-    alpha: float, beta: float, scaling_data: dict,
-    url: str, key: str,
-) -> None:
-    endpoint = (
-        f"{url}/rest/v1/benchmark_runs"
-        f"?run_id=eq.{urllib.parse.quote(run_id)}"
-        f"&algorithm=eq.{urllib.parse.quote(algorithm)}"
-        f"&framework=eq.{urllib.parse.quote(framework)}"
-    )
-    payload = json.dumps(
-        {"scaling_alpha": alpha, "scaling_beta": beta, "scaling_data": scaling_data},
-        default=str,
-    ).encode()
-    req = urllib.request.Request(
-        endpoint,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Prefer": "return=minimal",
-        },
-        method="PATCH",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30):
-            pass
-    except Exception as exc:
-        print(f"  ⚠ Supabase patch scaling falló ({framework}): {exc}")
 
 
 def _save_json(path: str, doc: dict) -> None:
@@ -1283,6 +1235,9 @@ def parse_args():
 
 def main() -> None:
     args = parse_args()
+
+    if not args.emulated:
+        args.emulated = _detect_emulated()
 
     print(BANNER)
 
@@ -1595,41 +1550,12 @@ def main() -> None:
                     )
                     _save_json(shor_partial_path, shor_partial_doc)
 
-    # ---- Backfill Grover scaling curves ----
-    for result in results:
-        fw = result["framework"]
-        sd = scaling_by_fw.get(fw, {})
-        result["scaling_data"] = {int(k): v for k, v in sd.items()}
-        if len(sd) >= 2:
-            try:
-                alpha, beta = fit_scaling_curve(sd)
-            except Exception:
-                alpha, beta = 0.0, 0.0
-        else:
-            alpha, beta = 0.0, 0.0
-        result["scaling_alpha"] = alpha
-        result["scaling_beta"] = beta
-
     final_doc = _build_output_doc(
         contributor_name, hw, config, results,
         platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
     )
     if not USE_SUPABASE:
         _save_json(final_path, final_doc)
-
-    if USE_SUPABASE:
-        _fw_seen: set[str] = set()
-        for _r in results:
-            _fw = _r.get("framework")
-            if _fw and _fw not in _fw_seen:
-                _fw_seen.add(_fw)
-                _supabase_patch_scaling(
-                    run_id, "grover", _fw,
-                    _r.get("scaling_alpha", 0.0),
-                    _r.get("scaling_beta", 0.0),
-                    _r.get("scaling_data", {}),
-                    _supabase_url, _supabase_key,
-                )
 
     if not USE_SUPABASE and os.path.exists(partial_path):
         try:
@@ -1642,24 +1568,10 @@ def main() -> None:
     if not USE_SUPABASE:
         print(f"Resultados Grover guardados en: {final_path}")
 
-    # ---- Backfill Shor scaling curves and finalize ----
+    # ---- Finalize Shor ----
     print("\n" + "=" * 58)
     print("  Shor — Factorización Cuántica")
     print("=" * 58)
-
-    for r in shor_results:
-        fw = r["framework"]
-        sd = shor_scaling_by_fw.get(fw, {})
-        r["scaling_data"] = {int(k): v for k, v in sd.items()}
-        if len(sd) >= 2:
-            try:
-                alpha, beta = fit_scaling_curve(sd)
-            except Exception:
-                alpha, beta = 0.0, 0.0
-        else:
-            alpha, beta = 0.0, 0.0
-        r["scaling_alpha"] = alpha
-        r["scaling_beta"] = beta
 
     if shor_results:
         if not USE_SUPABASE:
@@ -1667,19 +1579,6 @@ def main() -> None:
                 contributor_name, hw, config, shor_results,
                 platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
             ))
-        if USE_SUPABASE:
-            _fw_seen_shor: set[str] = set()
-            for _r in shor_results:
-                _fw = _r.get("framework")
-                if _fw and _fw not in _fw_seen_shor:
-                    _fw_seen_shor.add(_fw)
-                    _supabase_patch_scaling(
-                        run_id, "shor", _fw,
-                        _r.get("scaling_alpha", 0.0),
-                        _r.get("scaling_beta", 0.0),
-                        _r.get("scaling_data", {}),
-                        _supabase_url, _supabase_key,
-                    )
         print_shor_summary_table(shor_results, shor_statuses)
         if not USE_SUPABASE and os.path.exists(shor_partial_path):
             os.remove(shor_partial_path)
