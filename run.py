@@ -761,6 +761,7 @@ def benchmark_rust_grover_at_n(
     target = n
     times_ms: list[float] = []
     subprocess_wall_times_ms: list[float] = []
+    cpu_percents: list[float] = []
     last_payload: dict | None = None
 
     for _ in range(max(0, config.warmup_runs)):
@@ -769,6 +770,7 @@ def benchmark_rust_grover_at_n(
         payload = _run_rust_binary(binary, n, target, config.num_shots)
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
+        cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         last_payload = payload
 
     arr = np.array(times_ms) if times_ms else np.array([0.0])
@@ -813,7 +815,7 @@ def benchmark_rust_grover_at_n(
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
         "simulation_time_ms": median_ms,
-        "cpu_percent_mean": 0.0,
+        "cpu_percent_mean": float(np.mean(cpu_percents)) if cpu_percents else 0.0,
         "jsd": jsd,
         "scaling_alpha": 0.0,
         "scaling_beta": 0.0,
@@ -1307,6 +1309,7 @@ def main() -> None:
         print("[DEV] Modo desarrollo: 1 repetición, n mínimo, 10 shots")
 
     hw = detect_hardware()
+    os.environ["BENCH_CPU_GFLOPS"] = str(hw.cpu_gflops)  # cache for worker subprocesses
     print_hardware_summary(hw)
 
     if args.platform not in PLATFORM_CONFIGS:
