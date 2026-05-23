@@ -333,6 +333,48 @@ def _test_supabase() -> bool:
         return False
 
 
+def _test_hardware() -> tuple[str, str, str, int]:
+    print("\n--- hardware detection ---")
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable, "-c",
+                "from python.hardware import detect_hardware; "
+                "import json, dataclasses; "
+                "hw = detect_hardware(); "
+                "print(json.dumps(dataclasses.asdict(hw)))",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=ROOT,
+        )
+    except subprocess.TimeoutExpired:
+        print("  FAIL TIMEOUT")
+        return ("hardware", "detect", "FAIL", 1)
+
+    if proc.stderr.strip():
+        print(f"  [stderr] {proc.stderr.strip()[:200]}")
+
+    lines = [l for l in proc.stdout.splitlines() if l.strip()]
+    if not lines:
+        print("  FAIL no output")
+        return ("hardware", "detect", "FAIL", 1)
+
+    try:
+        result = json.loads(lines[-1])
+    except json.JSONDecodeError:
+        print("  FAIL bad JSON")
+        return ("hardware", "detect", "FAIL", 1)
+
+    issues: list[str] = []
+    hw_nonzero = {"cpu_cores_physical", "cpu_cores_logical", "cpu_gflops", "ram_total_gb"}
+    hw_present = {"hostname", "os", "os_version", "cpu_model", "gpu_model", "gpu_vram_gb", "python_version"}
+    crit = _check_fields(result, hw_present, hw_nonzero, issues, ranges=_HW_RANGES)
+    status = "FAIL" if crit > 0 else ("WARN" if issues else "PASS")
+    return ("hardware", "detect", status, len(issues))
+
+
 def _print_summary(rows: list, supabase_ok: bool) -> None:
     print("\n============================================================")
     print("  Quantum Benchmarking Smoke Test — SUMMARY")
@@ -382,6 +424,8 @@ def main() -> None:
         rows.append(_test_rust_binary(name, "shor"))
 
     supabase_ok = _test_supabase()
+    hw_row = _test_hardware()
+    rows.append(hw_row)
     _print_summary(rows, supabase_ok)
 
     has_failures = any(status == "FAIL" for _, _, status, _ in rows) or not supabase_ok

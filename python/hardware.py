@@ -20,8 +20,8 @@ class HardwareInfo:
     cpu_cores_logical: int
     cpu_gflops: float
     ram_total_gb: float
-    gpu_model: str | None
-    gpu_vram_gb: float | None
+    gpu_model: str = ""
+    gpu_vram_gb: float = 0.0
     python_version: str
 
 
@@ -111,7 +111,7 @@ def _measure_cpu_gflops() -> float:
         return 0.0
 
 
-def _detect_gpu() -> tuple[str | None, float | None]:
+def _detect_gpu() -> tuple[str, float]:
     try:
         out = subprocess.run(
             [
@@ -124,16 +124,16 @@ def _detect_gpu() -> tuple[str | None, float | None]:
             timeout=5,
         )
         if out.returncode != 0 or not out.stdout.strip():
-            return None, None
+            return "", 0.0
         first_line = out.stdout.strip().splitlines()[0]
         parts = [p.strip() for p in first_line.split(",")]
         if len(parts) < 2:
-            return None, None
+            return "", 0.0
         name = parts[0]
         vram_mb = float(parts[1])
         return name, vram_mb / 1024.0
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
-        return None, None
+        return "", 0.0
 
 
 def _env_or(key: str, default):
