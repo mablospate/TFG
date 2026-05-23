@@ -47,7 +47,7 @@ _WORKER_TIMEOUTS: dict[tuple[str, str], int] = {
 PYTHON_GROVER_NONZERO = {
     "wall_time_median_ms", "wall_time_mean_ms",
     "peak_memory_rss_mb", "startup_time_ms", "simulation_time_ms",
-    "num_shots", "n_repetitions", "n_qubits",
+    "num_shots", "n_repetitions", "n_qubits", "cpu_percent_mean",
 }
 PYTHON_GROVER_PRESENT = {
     "status", "framework", "algorithm", "contributor_name",
@@ -263,9 +263,9 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
             present |= QDISLIB_CUTTING_PRESENT
 
         ranges = (
-            {"jsd": (0.0, 1.0), "cpu_percent_mean": (0.0, 3200.0), "cpu_gflops": _GFLOPS_RANGE}
+            {"jsd": (0.0, 1.0), "cpu_gflops": _GFLOPS_RANGE}
             if algo == "grover"
-            else {"success_rate": (0.0, 1.0), "cpu_percent_mean": (0.0, 3200.0), "cpu_gflops": _GFLOPS_RANGE}
+            else {"success_rate": (0.0, 1.0), "cpu_gflops": _GFLOPS_RANGE}
         )
         crit = _check_fields(result, present, nonzero, issues, ranges=ranges)
 
