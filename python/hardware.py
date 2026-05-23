@@ -20,9 +20,9 @@ class HardwareInfo:
     cpu_cores_logical: int
     cpu_gflops: float
     ram_total_gb: float
+    python_version: str
     gpu_model: str = ""
     gpu_vram_gb: float = 0.0
-    python_version: str
 
 
 def _normalize_os(system: str) -> str:
