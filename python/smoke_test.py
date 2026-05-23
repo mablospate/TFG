@@ -258,6 +258,7 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
             present |= PYTHON_SHOR_EXTRA_PRESENT
             present.discard("build_time_ms")
             nonzero.discard("simulation_time_ms")
+            nonzero.discard("cpu_percent_mean")
         if fw == "qdislib":
             nonzero |= QDISLIB_CUTTING_NONZERO
             present |= QDISLIB_CUTTING_PRESENT

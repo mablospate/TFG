@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import platform
 import sys
-import threading
 import time
 import tracemalloc
 from dataclasses import dataclass, field, asdict
@@ -80,38 +79,6 @@ class BenchmarkResult:
 
 
 # ---------------------------------------------------------------------------
-# Medición de uso de CPU en background
-# ---------------------------------------------------------------------------
-
-
-class _CpuSampler:
-    """Muestrea el uso de CPU del proceso actual en un hilo secundario."""
-
-    def __init__(self, interval: float = 0.05):
-        self._interval = interval
-        self._samples: list[float] = []
-        self._stop = threading.Event()
-        self._proc = psutil.Process()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-
-    def start(self) -> None:
-        self._proc.cpu_percent()  # Primer llamado siempre devuelve 0; descartar
-        self._thread.start()
-
-    def stop(self) -> float:
-        """Detiene el muestreo y devuelve el porcentaje medio."""
-        self._stop.set()
-        self._thread.join()
-        return float(np.mean(self._samples)) if self._samples else 0.0
-
-    def _run(self) -> None:
-        _max_pct = psutil.cpu_count(logical=True) * 100.0
-        while not self._stop.is_set():
-            self._samples.append(min(self._proc.cpu_percent(), _max_pct))
-            self._stop.wait(self._interval)
-
-
-# ---------------------------------------------------------------------------
 # Función principal de benchmarking
 # ---------------------------------------------------------------------------
 
@@ -140,12 +107,13 @@ def benchmark_run(
     for _ in range(config.warmup_runs):
         fn()
 
+    _proc = psutil.Process()
+    _max_pct = psutil.cpu_count(logical=True) * 100.0
+    _proc.cpu_percent()  # discard first call — always returns 0
+
     times_ms: list[float] = []
     peak_rss_mb: float = 0.0
-
-    # Sampler wraps all reps so even fast circuits (~5ms) accumulate enough samples
-    cpu_sampler = _CpuSampler(config.cpu_sample_interval)
-    cpu_sampler.start()
+    cpu_samples: list[float] = []
 
     # --- Repeticiones de medición ---
     for i in range(config.n_repetitions):
@@ -157,6 +125,7 @@ def benchmark_run(
         t0 = time.perf_counter()
         fn()
         t1 = time.perf_counter()
+        cpu_pct = min(_proc.cpu_percent(), _max_pct)  # measure immediately after fn()
 
         _, peak_traced = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -165,8 +134,9 @@ def benchmark_run(
         elapsed_ms = (t1 - t0) * 1000.0
         times_ms.append(elapsed_ms)
         peak_rss_mb = max(peak_rss_mb, rss_mb)
+        cpu_samples.append(cpu_pct)
 
-    cpu_mean = cpu_sampler.stop()
+    cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 
     # --- Estadísticas ---
     arr = np.array(times_ms)
