@@ -43,7 +43,7 @@ class BenchmarkConfig:
         default_factory=lambda: [15, 21, 35, 77, 143]
     )
     num_shots: int = 1024  # Shots para distribución empírica
-    cpu_sample_interval: float = 0.05  # Intervalo de muestreo de CPU (s)
+    cpu_sample_interval: float = 0.005  # Intervalo de muestreo de CPU (s)
 
 
 @dataclass
@@ -143,6 +143,10 @@ def benchmark_run(
     times_ms: list[float] = []
     peak_rss_mb: float = 0.0
 
+    # Sampler wraps all reps so even fast circuits (~5ms) accumulate enough samples
+    cpu_sampler = _CpuSampler(config.cpu_sample_interval)
+    cpu_sampler.start()
+
     # --- Repeticiones de medición ---
     for i in range(config.n_repetitions):
         # Memoria: tracemalloc captura asignaciones de Python;
@@ -150,14 +154,9 @@ def benchmark_run(
         proc = psutil.Process()
         tracemalloc.start()
 
-        cpu_sampler = _CpuSampler(config.cpu_sample_interval)
-        cpu_sampler.start()
-
         t0 = time.perf_counter()
         fn()
         t1 = time.perf_counter()
-
-        cpu_mean = cpu_sampler.stop()
 
         _, peak_traced = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -166,6 +165,8 @@ def benchmark_run(
         elapsed_ms = (t1 - t0) * 1000.0
         times_ms.append(elapsed_ms)
         peak_rss_mb = max(peak_rss_mb, rss_mb)
+
+    cpu_mean = cpu_sampler.stop()
 
     # --- Estadísticas ---
     arr = np.array(times_ms)
