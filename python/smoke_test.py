@@ -67,7 +67,7 @@ _HW_RANGES: dict[str, tuple[float, float]] = {
     "cpu_gflops": _GFLOPS_RANGE,
 }
 
-PYTHON_SHOR_EXTRA_NONZERO = {"n_to_factor"}
+PYTHON_SHOR_EXTRA_NONZERO = {"n_to_factor", "build_time_ms"}
 PYTHON_SHOR_EXTRA_PRESENT = {"factor_found"}
 
 QDISLIB_CUTTING_NONZERO = {"cutting_wall_time_ms", "cutting_find_time_ms"}
@@ -264,7 +264,6 @@ def _test_python_framework(fw: str) -> list[tuple[str, str, str, int]]:
         if algo == "shor":
             nonzero |= PYTHON_SHOR_EXTRA_NONZERO
             present |= PYTHON_SHOR_EXTRA_PRESENT
-            present.discard("build_time_ms")
             nonzero.discard("simulation_time_ms")
             nonzero.discard("cpu_percent_mean")
         if fw == "qdislib":

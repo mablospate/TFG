@@ -35,6 +35,7 @@ def _setup_grover(config: BenchmarkConfig, cudaq_target: str):
 
 def _setup_shor(config: BenchmarkConfig, cudaq_target: str):
     from python.cudaq.shor.shor import find_factor as _ff
+    from python.cudaq.shor.shor import order_finding_circuit
 
     t0 = time.perf_counter()
     startup_ms = (time.perf_counter() - t0) * 1000.0
@@ -47,7 +48,10 @@ def _setup_shor(config: BenchmarkConfig, cudaq_target: str):
             num_shots_per_trial=config.num_shots,
         )
 
-    return startup_ms, factor_call
+    def shor_build_call(N):
+        return order_finding_circuit(2, N)
+
+    return startup_ms, factor_call, shor_build_call
 
 
 def main() -> None:
@@ -85,10 +89,11 @@ def main() -> None:
                 startup_ms, search_call, build_call,
             )
         elif algo == "shor":
-            startup_ms, factor_call = _setup_shor(config, cudaq_target)
+            startup_ms, factor_call, shor_build_call = _setup_shor(config, cudaq_target)
             result = run_shor_worker(
                 "cudaq", n, config, hw, contributor,
                 startup_ms, factor_call,
+                shor_build_call=shor_build_call,
             )
         else:
             write_error(f"unknown algo: {algo}")

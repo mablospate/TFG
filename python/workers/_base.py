@@ -126,12 +126,19 @@ def run_shor_worker(
     contributor: str,
     startup_ms: float,
     factor_call,
+    shor_build_call=None,
 ) -> dict:
     """Run Shor for N and return enriched result dict.
 
     Mirrors the logic of run.benchmark_shor_at_n.
     """
     n_qubits = _n_qubits_shor(N)
+
+    build_time_ms = (
+        measure_build_time(lambda: shor_build_call(N))
+        if shor_build_call is not None
+        else 0.0
+    )
 
     _proc = psutil.Process()
     _proc.cpu_percent()  # discard first call
@@ -174,7 +181,7 @@ def run_shor_worker(
         peak_memory_rss_mb=peak_rss_mb,
         cv=cv,
         startup_time_ms=startup_ms,
-        build_time_ms=0.0,
+        build_time_ms=build_time_ms,
         simulation_time_ms=max(0.0, median_ms - startup_ms),
         cpu_percent_mean=cpu_mean,
         jsd=0.0,

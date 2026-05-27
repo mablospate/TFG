@@ -43,6 +43,7 @@ def _setup_grover(config: BenchmarkConfig):
 
 def _setup_shor(config: BenchmarkConfig):
     from python.qiskit.shor.shor import find_factor as _ff
+    from python.qiskit.shor.shor import order_finding_circuit
     from qiskit_aer.primitives import SamplerV2
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
@@ -54,7 +55,13 @@ def _setup_shor(config: BenchmarkConfig):
     def factor_call(N):
         return _ff(N, sampler, pm, num_tries=3, num_shots_per_trial=config.num_shots)
 
-    return startup_ms, factor_call
+    def shor_build_call(N):
+        qc = order_finding_circuit(2, N)
+        if qc == 0:
+            return None
+        return pm.run(qc)
+
+    return startup_ms, factor_call, shor_build_call
 
 
 def main() -> None:
@@ -92,10 +99,11 @@ def main() -> None:
                 startup_ms, search_call, build_call,
             )
         elif algo == "shor":
-            startup_ms, factor_call = _setup_shor(config)
+            startup_ms, factor_call, shor_build_call = _setup_shor(config)
             result = run_shor_worker(
                 "qiskit", n, config, hw, contributor,
                 startup_ms, factor_call,
+                shor_build_call=shor_build_call,
             )
         else:
             write_error(f"unknown algo: {algo}")

@@ -22,6 +22,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+import resource
+
 import numpy as np
 import psutil
 
@@ -599,13 +601,15 @@ def _run_rust_binary(
     failure (caller is expected to catch and convert to a SKIP/ERROR row).
     """
     _t_start = time.perf_counter()
+    _usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
+    _t_wall = time.perf_counter()
     proc = subprocess.Popen(
         [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         text=True,
     )
-    cpu_samples: list[float] = []
+    rss_samples: list[int] = []
     _stop = threading.Event()
     _cpu_thread: threading.Thread | None = None
     try:
@@ -614,7 +618,7 @@ def _run_rust_binary(
         def _sample() -> None:
             while not _stop.is_set():
                 try:
-                    cpu_samples.append(_psutil_proc.cpu_percent())
+                    rss_samples.append(_psutil_proc.memory_info().rss)
                 except psutil.NoSuchProcess:
                     break
                 _stop.wait(0.001)
@@ -641,12 +645,21 @@ def _run_rust_binary(
     except subprocess.TimeoutExpired:
         proc.kill()
         raise
+    _wall_s = time.perf_counter() - _t_wall
+    _usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+    _cpu_s = (
+        (_usage_after.ru_utime - _usage_before.ru_utime) +
+        (_usage_after.ru_stime - _usage_before.ru_stime)
+    )
+    _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
         raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
-    payload["cpu_percent_mean"] = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
+    peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
+    payload["mem_mb"] = peak_rss
     payload["subprocess_wall_time_ms"] = (time.perf_counter() - _t_start) * 1000.0
     return payload
 
@@ -757,6 +770,7 @@ def benchmark_rust_grover_at_n(
     times_ms: list[float] = []
     subprocess_wall_times_ms: list[float] = []
     cpu_percents: list[float] = []
+    peak_mem_mb: float = 0.0
     last_payload: dict | None = None
 
     for _ in range(max(0, config.warmup_runs)):
@@ -766,6 +780,7 @@ def benchmark_rust_grover_at_n(
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
+        peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
 
     arr = np.array(times_ms) if times_ms else np.array([0.0])
@@ -805,7 +820,7 @@ def benchmark_rust_grover_at_n(
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
         "wall_time_median_ms": median_ms,
         "wall_time_iqr_ms": iqr_ms,
-        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
+        "peak_memory_rss_mb": peak_mem_mb,
         "cv": cv,
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
@@ -838,13 +853,15 @@ def _run_rust_shor_binary(
     Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
     failure (caller is expected to catch and convert to a SKIP/ERROR row).
     """
+    _usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
+    _t_wall = time.perf_counter()
     proc = subprocess.Popen(
         [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)],
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         text=True,
     )
-    cpu_samples: list[float] = []
+    rss_samples: list[int] = []
     _stop = threading.Event()
     _cpu_thread: threading.Thread | None = None
     try:
@@ -853,7 +870,7 @@ def _run_rust_shor_binary(
         def _sample() -> None:
             while not _stop.is_set():
                 try:
-                    cpu_samples.append(_psutil_proc.cpu_percent())
+                    rss_samples.append(_psutil_proc.memory_info().rss)
                 except psutil.NoSuchProcess:
                     break
                 _stop.wait(0.001)
@@ -880,12 +897,21 @@ def _run_rust_shor_binary(
     except subprocess.TimeoutExpired:
         proc.kill()
         raise
+    _wall_s = time.perf_counter() - _t_wall
+    _usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+    _cpu_s = (
+        (_usage_after.ru_utime - _usage_before.ru_utime) +
+        (_usage_after.ru_stime - _usage_before.ru_stime)
+    )
+    _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
         raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
-    payload["cpu_percent_mean"] = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
+    peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
+    payload["mem_mb"] = peak_rss
     return payload
 
 
@@ -905,6 +931,7 @@ def benchmark_rust_shor_at_n(
     times_ms: list[float] = []
     subprocess_wall_times_ms: list[float] = []
     factors: list[int] = []
+    peak_mem_mb: float = 0.0
     last_payload: dict | None = None
 
     cpu_percents_shor: list[float] = []
@@ -915,6 +942,7 @@ def benchmark_rust_shor_at_n(
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
+        peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
 
     if not times_ms:
@@ -951,7 +979,7 @@ def benchmark_rust_shor_at_n(
         "success_rate": success_rate,
         "wall_time_median_ms": median_ms,
         "wall_time_iqr_ms": iqr_ms,
-        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
+        "peak_memory_rss_mb": peak_mem_mb,
         "cv": cv,
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
