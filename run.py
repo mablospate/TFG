@@ -1128,6 +1128,20 @@ def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
     return [{**base, "repetition_index": i, "wall_time_ms": t} for i, t in enumerate(raw_times)]
 
 
+def _supabase_ping(url: str, key: str) -> bool:
+    req = urllib.request.Request(
+        f"{url}/rest/v1/benchmark_runs?limit=0",
+        headers={"apikey": key, "Authorization": f"Bearer {key}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10):
+            return True
+    except urllib.error.HTTPError:
+        return True
+    except Exception:
+        return False
+
+
 def _supabase_insert(rows: list[dict], url: str, key: str) -> bool:
     if not rows:
         return True
@@ -1319,6 +1333,14 @@ def main() -> None:
     _supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
     _supabase_key = os.getenv("SUPABASE_KEY", "")
     USE_SUPABASE = not args.dev and bool(_supabase_url and _supabase_key)
+    if USE_SUPABASE:
+        print("Verificando conexión con Supabase...", end=" ", flush=True)
+        if not _supabase_ping(_supabase_url, _supabase_key):
+            print("FAIL")
+            print("ERROR: No se puede conectar con Supabase.")
+            print("  Verifica SUPABASE_URL y SUPABASE_KEY, o usa --dev para ejecutar sin subir resultados.")
+            sys.exit(1)
+        print("OK")
     _supabase_run_meta: dict = {
         "run_id": run_id,
         "contributor": contributor_name,
