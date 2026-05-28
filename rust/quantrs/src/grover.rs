@@ -58,16 +58,20 @@ fn peak_rss_mb() -> f64 {
     }
     #[cfg(target_os = "macos")]
     {
-        let pid = std::process::id();
-        if let Ok(out) = std::process::Command::new("ps")
-            .args(["-o", "rss=", "-p", &pid.to_string()])
-            .output()
-        {
-            if let Ok(s) = std::str::from_utf8(&out.stdout) {
-                if let Ok(kb) = s.trim().parse::<u64>() {
-                    return kb as f64 / 1024.0;
-                }
-            }
+        // getrusage(RUSAGE_SELF).ru_maxrss = peak RSS histórico (bytes en macOS)
+        #[repr(C)]
+        struct MinRusage {
+            _utime: [u8; 16],
+            _stime: [u8; 16],
+            ru_maxrss: i64,
+            _rest: [u8; 104],
+        }
+        extern "C" {
+            fn getrusage(who: i32, usage: *mut MinRusage) -> i32;
+        }
+        let mut usage = unsafe { std::mem::zeroed::<MinRusage>() };
+        if unsafe { getrusage(0, &mut usage) } == 0 {
+            return usage.ru_maxrss as f64 / (1024.0 * 1024.0);
         }
     }
     0.0
