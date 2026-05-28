@@ -24,6 +24,9 @@ from datetime import datetime, timezone
 
 import resource
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import numpy as np
 import psutil
 

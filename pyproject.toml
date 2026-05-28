@@ -11,6 +11,7 @@ dependencies = [
     "qiskit-aer==0.17.0",
     "cirq>=1.6.1",
     "psutil>=5.9",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
