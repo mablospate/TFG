@@ -1,6 +1,9 @@
 services:
   benchmark:
     image: mablospate/tfg-bench
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - ./results:/app/results
     stdin_open: true
