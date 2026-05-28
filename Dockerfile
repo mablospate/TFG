@@ -107,7 +107,7 @@ FROM --platform=linux/amd64 nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y software-properties-common curl && \
+    apt-get install -y software-properties-common curl ocl-icd-libopencl1 && \
     add-apt-repository ppa:deadsnakes/ppa -y && \
     apt-get update && \
     apt-get install -y libgomp1 python3.12 python3.12-venv python3.12-dev && \

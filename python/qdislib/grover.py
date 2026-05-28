@@ -162,10 +162,7 @@ def search_with_cutting(
         cuts = []
     find_time_ms = (time.perf_counter() - t0) * 1000.0
 
-    print(f"[QDisLib cutting] Grover n={n} target={target} cuts={cuts}")
-
     if not cuts:
-        print(f"[QDisLib cutting] No cuts found for n={n}, using direct execution")
         exp_val = 0.0
     else:
         try:

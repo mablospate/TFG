@@ -606,7 +606,7 @@ def _run_rust_binary(
     proc = subprocess.Popen(
         [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
         stdout=subprocess.PIPE,
-        stderr=sys.stderr,
+        stderr=subprocess.PIPE,
         text=True,
     )
     rss_samples: list[int] = []
@@ -653,10 +653,20 @@ def _run_rust_binary(
     )
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
-        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
+            if proc.stderr:
+                _err = proc.stderr.read().decode(errors="replace").strip()
+                if _err:
+                    print(_err, file=sys.stderr)
+            raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
+    if "error" in payload:
+        if proc.stderr:
+            _err = proc.stderr.read().decode(errors="replace").strip()
+            if _err:
+                print(_err, file=sys.stderr)
+        raise RuntimeError(f"{binary.name}: {payload['error']}")
     payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
     peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
     payload["mem_mb"] = peak_rss
@@ -858,7 +868,7 @@ def _run_rust_shor_binary(
     proc = subprocess.Popen(
         [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)],
         stdout=subprocess.PIPE,
-        stderr=sys.stderr,
+        stderr=subprocess.PIPE,
         text=True,
     )
     rss_samples: list[int] = []
@@ -905,10 +915,20 @@ def _run_rust_shor_binary(
     )
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
-        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
+            if proc.stderr:
+                _err = proc.stderr.read().decode(errors="replace").strip()
+                if _err:
+                    print(_err, file=sys.stderr)
+            raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
+    if "error" in payload:
+        if proc.stderr:
+            _err = proc.stderr.read().decode(errors="replace").strip()
+            if _err:
+                print(_err, file=sys.stderr)
+        raise RuntimeError(f"{binary.name}: {payload['error']}")
     payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
     peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
     payload["mem_mb"] = peak_rss
@@ -1306,6 +1326,13 @@ def main() -> None:
         print("[DEV] Modo desarrollo: 1 repetición, n mínimo, 10 shots")
 
     hw = detect_hardware()
+    if hw.gpu_model and "nvidia" in hw.gpu_model.lower():
+        import ctypes.util
+        if ctypes.util.find_library("OpenCL") is None:
+            print(
+                "WARN: GPU NVIDIA detectada pero libOpenCL no está instalada.\n"
+                "  qcgpu no funcionará. Instala ocl-icd-libopencl1 o usa --dev para ignorar."
+            )
     os.environ["BENCH_CPU_GFLOPS"] = str(hw.cpu_gflops)  # cache for worker subprocesses
     print_hardware_summary(hw)
 
@@ -1361,6 +1388,10 @@ def main() -> None:
     _supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
     _supabase_key = os.getenv("SUPABASE_KEY", "")
     USE_SUPABASE = not args.dev and bool(_supabase_url and _supabase_key)
+    if not args.dev and not USE_SUPABASE:
+        print("ERROR: SUPABASE_URL y SUPABASE_KEY son requeridos para ejecutar el benchmark.")
+        print("  Configura las variables de entorno o usa --dev para ejecutar sin base de datos.")
+        sys.exit(1)
     if USE_SUPABASE:
         print("Verificando conexión con Supabase...", end=" ", flush=True)
         if not _supabase_ping(_supabase_url, _supabase_key):
