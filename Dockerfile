@@ -135,6 +135,10 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv sync --no-dev --no-install-project; \
     fi
 
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        pip install pycompss || echo "WARN: pycompss install failed, skipping"; \
+    fi
+
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
 FROM base-${TARGETARCH} AS runtime
 ARG TARGETARCH
