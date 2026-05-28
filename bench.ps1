@@ -41,18 +41,37 @@ $IMAGE = if ($Env:BENCHMARK_IMAGE) { $Env:BENCHMARK_IMAGE } else { "mablospate/t
 $DOCKER_STARTED = $false   # we started Docker Desktop from scratch
 
 # Load .env — check script dir first, then cwd, then ~/tfg-bench/ (curl fallback)
+function Import-EnvFile([string]$path) {
+    Get-Content $path | Where-Object { $_ -match '^[^#\s]' -and $_ -match '=' } | ForEach-Object {
+        $k, $v = $_ -split '=', 2
+        [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
+    }
+}
+
 $_envCandidates = @(
     if ($PSCommandPath) { Join-Path (Split-Path $PSCommandPath) ".env" } else { $null }
     Join-Path (Get-Location).Path ".env"
     Join-Path $env:USERPROFILE "tfg-bench\.env"
 ) | Where-Object { $_ }
+$_envLoaded = $false
 foreach ($_envFile in $_envCandidates) {
     if (Test-Path $_envFile) {
-        Get-Content $_envFile | Where-Object { $_ -match '^[^#\s]' -and $_ -match '=' } | ForEach-Object {
-            $k, $v = $_ -split '=', 2
-            [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
-        }
+        Import-EnvFile $_envFile
+        $_envLoaded = $true
         break
+    }
+}
+if (-not $_envLoaded) {
+    Write-Host "-> .env no encontrado localmente, descargando del repositorio..."
+    $_envDest = Join-Path $env:USERPROFILE "tfg-bench\.env"
+    New-Item -ItemType Directory -Path (Split-Path $_envDest) -Force | Out-Null
+    try {
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mablospate/TFG/main/.env" `
+            -OutFile $_envDest -UseBasicParsing -ErrorAction Stop
+        Import-EnvFile $_envDest
+        Write-Host "   .env guardado en $_envDest"
+    } catch {
+        Write-Host "   WARN: no se pudo descargar .env — $_"
     }
 }
 
