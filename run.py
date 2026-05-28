@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 import resource
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(pathlib.Path(__file__).parent / ".env")
 
 import numpy as np
 import psutil
