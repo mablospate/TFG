@@ -657,7 +657,8 @@ def _run_rust_binary(
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
             if proc.stderr:
-                _err = proc.stderr.read().decode(errors="replace").strip()
+                _raw = proc.stderr.read()
+                _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
                 if _err:
                     print(_err, file=sys.stderr)
             raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
@@ -666,7 +667,8 @@ def _run_rust_binary(
     payload = json.loads(lines[-1])
     if "error" in payload:
         if proc.stderr:
-            _err = proc.stderr.read().decode(errors="replace").strip()
+            _raw = proc.stderr.read()
+            _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
             if _err:
                 print(_err, file=sys.stderr)
         raise RuntimeError(f"{binary.name}: {payload['error']}")
@@ -919,7 +921,8 @@ def _run_rust_shor_binary(
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
             if proc.stderr:
-                _err = proc.stderr.read().decode(errors="replace").strip()
+                _raw = proc.stderr.read()
+                _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
                 if _err:
                     print(_err, file=sys.stderr)
             raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
@@ -928,7 +931,8 @@ def _run_rust_shor_binary(
     payload = json.loads(lines[-1])
     if "error" in payload:
         if proc.stderr:
-            _err = proc.stderr.read().decode(errors="replace").strip()
+            _raw = proc.stderr.read()
+            _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
             if _err:
                 print(_err, file=sys.stderr)
         raise RuntimeError(f"{binary.name}: {payload['error']}")
