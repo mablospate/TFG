@@ -64,6 +64,8 @@ except Exception as e:
 
 Si `Qdislib` no puede importarse (sea por arquitectura, sistema operativo, o ausencia de instalación), el worker aborta limpiamente en lugar de continuar con resultados incorrectos.
 
+Esta limitación de arquitectura se propaga a las dependencias opcionales: **PyCOMPSs**, el backend de paralelismo distribuido que QDisLib puede usar, tampoco se instala en la imagen Docker `arm64`. El `Dockerfile` refleja explícitamente esta restricción instalando PyCOMPSs únicamente en la fase `python-deps` de la imagen `amd64` (ver sección 7.1 para más detalle).
+
 ---
 
 ## 2. El Concepto de Circuit Cutting
@@ -373,10 +375,7 @@ Workaround para la incompatibilidad de atributos entre Qiskit y QDisLib (explica
 Este bloque es el corazón del proceso: `find_cut` analiza el circuito y encuentra la partición óptima en subcircuitos de como máximo `max_sub_qubits` qubits. El tiempo se mide con `perf_counter` (resolución de microsegundos) porque en circuitos pequeños la búsqueda puede completarse en pocos milisegundos. El bloque `try/except` captura cualquier error de QDisLib (por ejemplo, si el circuito es demasiado profundo o demasiado pequeño para cortar) y devuelve una lista vacía de cortes.
 
 ```python
-    print(f"[QDisLib cutting] Grover n={n} target={target} cuts={cuts}")
-
     if not cuts:
-        print(f"[QDisLib cutting] No cuts found for n={n}, using direct execution")
         exp_val = 0.0
     else:
         try:
@@ -389,6 +388,8 @@ Este bloque es el corazón del proceso: `find_cut` analiza el circuito y encuent
 ```
 
 Si no se encontraron cortes, se devuelve `exp_val=0.0` (indicando que no hubo ejecución real). Si sí hay cortes, `wire_cutting` ejecuta todos los subcircuitos, realiza la recombinación QPD y devuelve el valor de expectación. El check final `if not isinstance(exp_val, tuple)` maneja el caso donde QDisLib devuelve una tupla en lugar de un escalar (comportamiento interno de ciertas versiones de la API).
+
+> **Nota sobre los prints de diagnóstico**: versiones anteriores del código incluían dos líneas de `print` que informaban del estado del cutting en cada invocación (`[QDisLib cutting] Grover n=... target=... cuts=...` y `[QDisLib cutting] No cuts found for n=..., using direct execution`). Estos mensajes se han eliminado porque aparecían en cada repetición del bucle de benchmark para valores de $n$ pequeños, generando ruido en la salida sin aportar información nueva. El comportamiento de cutting —se corten o no los circuitos— no ha cambiado; solo desaparece el logging verboso.
 
 ---
 
@@ -582,7 +583,19 @@ warnings.filterwarnings("ignore", "invalid escape sequence", SyntaxWarning)
 
 Este filtro de warnings es una solución pragmática para un bug en las docstrings de QDisLib: usan `\(` en notación matemática LaTeX sin escapar, lo cual Python 3.12+ interpreta como secuencia de escape inválida. El filtro suprime el warning sin modificar el código de QDisLib.
 
-La comprobación de disponibilidad es temprana y terminante:
+#### PyCOMPSs en el entorno Docker
+
+QDisLib soporta **PyCOMPSs** como backend de paralelismo distribuido: cuando está instalado, puede delegar la ejecución de subcircuitos a un runtime COMPSs en lugar de ejecutarlos localmente. Para que este backend esté disponible en la imagen Docker, el `Dockerfile` instala PyCOMPSs en la fase `python-deps` mediante:
+
+```dockerfile
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        pip install pycompss || echo "WARN: pycompss install failed, skipping"; \
+    fi
+```
+
+La instalación solo ocurre en la imagen `amd64`: la imagen `arm64` no incluye PyCOMPSs, coherentemente con la limitación de plataforma que ya aplica al propio QDisLib (sección 1.4). El `|| echo "WARN: ..."` actúa como fallback no bloqueante: si la instalación de PyCOMPSs falla (por ejemplo, por incompatibilidad de versión de Python o paquete no disponible en PyPI en ese momento), el build de la imagen continúa sin error. En versiones anteriores de la imagen, esta dependencia no se instalaba, y cada ejecución del worker mostraba el mensaje `PyCOMPSs is NOT installed` en stderr. Con este cambio, ese mensaje desaparece en la imagen amd64 cuando la instalación tiene éxito.
+
+La comprobación de disponibilidad de QDisLib es temprana y terminante:
 
 ```python
 try:

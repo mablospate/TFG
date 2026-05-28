@@ -320,6 +320,101 @@ sv = np.zeros(1 << n, dtype=np.complex128)
 # sv[i] en Python devuelve un objeto Python temporal con refcount
 ```
 
+### 3.5 Ownership determinista y medición de memoria pico: `getrusage` vs RSS actual
+
+El mismo modelo RAII que elimina pausas GC introduce un efecto sutil al *medir*
+el uso de memoria de un binario Rust: **la memoria ya no existe cuando se intenta
+leerla** con las herramientas habituales.
+
+#### El problema: RSS actual no refleja el pico real
+
+Una estrategia natural para medir memoria pico es leer el RSS (*Resident Set
+Size*) del proceso justo antes de terminar, usando `ps -o rss=` en macOS o
+`/proc/self/status` en Linux. Pero con Rust esto no funciona:
+
+```rust
+// El statevector se libera ANTES de que se llame a peak_rss_mb()
+{
+    let sv: Vec<Complex<f64>> = vec![Complex::new(0.0, 0.0); 1 << n];
+    // ... simulación completa ...
+    // sv se libera aquí, determinísticamente, al salir del scope
+}
+// En este punto, peak_rss_mb() solo ve ~2-3 MB (el binario en reposo)
+println!("{}", peak_rss_mb());  // incorrecto: nunca captura el pico
+```
+
+En Python, el GC libera la memoria de forma diferida: cuando se llama a
+`peak_rss_mb()` al final del proceso, los objetos aún pueden estar vivos (o el
+GC aún no los ha reclamado), por lo que el RSS actual sí es representativo del
+pico. En Rust, la liberación es determinista y predecible: la ventaja de
+rendimiento se convierte en obstáculo para la medición post-hoc.
+
+Este fenómeno se observó en los 7 binarios del proyecto (q1tsim, quantr,
+quantrs2, qcgpu — variantes de Grover y Shor): todos reportaban ~2–3 MB
+independientemente del tamaño del circuito, lo que claramente no correspondía
+al statevector de 2ⁿ amplitudes de doble precisión.
+
+#### La solución: `getrusage(RUSAGE_SELF)` mediante syscall directa
+
+El kernel del sistema operativo mantiene una marca de agua interna —
+`ru_maxrss` — que registra el RSS máximo histórico del proceso desde su inicio.
+Este valor persiste hasta que el proceso termina, incluso después de que la
+memoria haya sido liberada. La función POSIX `getrusage(RUSAGE_SELF, ...)` lo
+expone directamente.
+
+Rust no incluye un wrapper estándar para `getrusage`, pero su FFI permite
+llamar a la función C sin overhead:
+
+```rust
+use std::mem::MaybeUninit;
+
+#[repr(C)]
+struct MinRusage {
+    ru_utime:  [i64; 2],   // struct timeval (utime)
+    ru_stime:  [i64; 2],   // struct timeval (stime)
+    ru_maxrss: i64,         // RSS máximo histórico (high-water mark)
+    // el resto del struct no nos interesa
+    _padding:  [i64; 14],
+}
+
+extern "C" {
+    fn getrusage(who: i32, usage: *mut MinRusage) -> i32;
+}
+
+pub fn peak_rss_mb() -> f64 {
+    let mut usage = MaybeUninit::<MinRusage>::uninit();
+    unsafe {
+        if getrusage(0 /* RUSAGE_SELF */, usage.as_mut_ptr()) == 0 {
+            let ru_maxrss = usage.assume_init().ru_maxrss;
+            // Diferencia crítica entre plataformas:
+            #[cfg(target_os = "macos")]
+            { return ru_maxrss as f64 / (1024.0 * 1024.0); }  // macOS: bytes → MB
+            #[cfg(target_os = "linux")]
+            { return ru_maxrss as f64 / 1024.0; }              // Linux: KiB → MB
+        }
+    }
+    0.0
+}
+```
+
+La diferencia entre plataformas es un detalle histórico de UNIX: Linux heredó
+la semántica de BSD original donde `ru_maxrss` se expresa en **kilobytes**,
+mientras que macOS (derivado de BSD 4.4) lo expresa en **bytes**. Ignorar esta
+diferencia produce lecturas erróneas de factor ×1 024.
+
+#### Contraste con Python
+
+En Python, `resource.getrusage(resource.RUSAGE_SELF).ru_maxrss` accede al mismo
+campo del kernel, pero como el GC aún no ha reclamado los objetos al final de la
+función de medición, el RSS actual y el RSS máximo histórico suelen coincidir.
+Rust no tiene esa "suerte": la precisión determinista obliga a usar la API
+correcta desde el principio.
+
+Esta asimetría ilustra un principio general: **lo que es una ventaja de Rust
+para rendimiento — liberación inmediata y predecible de memoria — puede ser un
+obstáculo para la introspección y el perfilado si se usan las herramientas
+diseñadas para entornos con GC**.
+
 ---
 
 ## 4. Paralelismo sin Miedo ("Fearless Concurrency")

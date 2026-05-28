@@ -417,7 +417,35 @@ la ausencia de OpenCL es intentar crear un `State` y capturar el panic. El
 pipeline del TFG usa `catch_unwind` para esto y, si falla, emite el error JSON
 correspondiente y el orquestador Python lo registra como `framework_unavailable`.
 
-### 4.5 Fallback si no hay GPU OpenCL
+### 4.5 Manejo del campo `"error"` en `_run_rust_binary()`
+
+El binario Rust ya emitía `{"error": "..."}` en stdout con exit code 0 cuando
+OpenCL no está disponible (gracias a `catch_unwind`). Sin embargo, la función
+`_run_rust_binary()` del pipeline Python no comprobaba este campo: parseaba el
+JSON y continuaba con las 11 repeticiones de benchmarking, todas con datos cero,
+generando 11 mensajes de error en el log en lugar de uno.
+
+El fix corrige dos problemas encadenados:
+
+1. **Comprobación del campo `"error"`**: inmediatamente tras parsear el JSON de
+   la primera repetición, se verifica `if "error" in payload`. Si existe, se
+   captura el stderr del proceso (que contiene el mensaje de panic de OpenCL) y
+   se lanza `RuntimeError`. Esto aborta el framework completo tras el primer
+   fallo y el llamador lo registra como `ERROR`/`SKIP`.
+
+2. **Supresión del spam de OpenCL**: se cambió `stderr=sys.stderr` por
+   `stderr=subprocess.PIPE` en la llamada al subproceso. OpenCL emite el mensaje
+   `thread 'main' panicked` en stderr incluso cuando el proceso termina con exit
+   code 0 (porque el panic es capturado por `catch_unwind`). Con
+   `stderr=subprocess.PIPE` ese spam ya no contamina la salida del pipeline; el
+   stderr se guarda en el objeto `CompletedProcess` y sólo se muestra si se
+   produce un error real.
+
+El efecto combinado es que un entorno sin OpenCL produce exactamente **1 mensaje
+de error** (en lugar de 11) y el resto de frameworks del benchmark continúan con
+normalidad.
+
+### 4.6 Fallback si no hay GPU OpenCL
 
 qcgpu v0.1 no tiene modo CPU de fallback. Si no hay plataforma OpenCL, el
 crate no puede funcionar. Esto contrasta con frameworks como `quantrs2`, que
@@ -426,6 +454,39 @@ puede usar CUDA opcionalmente pero funciona en CPU si no hay GPU disponible.
 En el TFG, cuando qcgpu falla por falta de OpenCL, el benchmark se marca como
 `"error": "OpenCL not available on this platform"` y se excluye de la
 comparativa de rendimiento.
+
+### 4.7 Soporte NVIDIA en Docker
+
+La imagen Docker `base-amd64` usa `nvidia/cuda:12.6.0-runtime-ubuntu22.04`
+como imagen base e incluye el paquete `ocl-icd-libopencl1`, que proporciona el
+ICD loader de OpenCL. Con **NVIDIA Container Toolkit** instalado en el host, el
+flag `--gpus all` hace que el runtime de Docker inyecte automáticamente el ICD
+de NVIDIA dentro del contenedor, lo que permite a qcgpu descubrir la GPU a
+través de OpenCL.
+
+Para ejecutar qcgpu con GPU NVIDIA en Docker se necesita:
+
+| Requisito | Descripción |
+|---|---|
+| Host | NVIDIA Container Toolkit instalado (`nvidia-container-toolkit`) |
+| Imagen | `mablospate/tfg-bench` (ya incluye `ocl-icd-libopencl1`) |
+| Flag Docker | `--gpus all` (inyecta el ICD de NVIDIA) |
+
+Invocación directa:
+
+```bash
+docker run --gpus all mablospate/tfg-bench <argumentos>
+```
+
+Los scripts `bench.ps1` (Windows/PowerShell) y `bench` (Linux/macOS) del
+repositorio detectan automáticamente si hay GPU NVIDIA disponible en el host y
+añaden el flag `--gpus all` cuando corresponde, sin necesidad de intervención
+manual.
+
+Si la imagen detecta GPU NVIDIA en el host pero `libOpenCL` no está accesible
+dentro del contenedor (por ejemplo, si el ICD no se inyectó correctamente),
+`run.py` muestra un **warning al inicio** indicando que qcgpu puede fallar, en
+lugar de producir un error silencioso más adelante.
 
 ---
 

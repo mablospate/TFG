@@ -73,7 +73,27 @@ docker run --rm -it \
 
 El flag `BENCH_HOSTNAME` merece atención especial. Dentro del contenedor, `platform.node()` devuelve un identificador generado por Docker (algo como `a3f2c1b0d8e5`) en lugar del hostname real de la máquina. Para que los resultados queden etiquetados con la máquina física que los generó, el script `bench` inyecta el hostname real como variable de entorno, que `hardware.py` lee con prioridad sobre `platform.node()`.
 
-### 2.3 `entrypoint.sh`: selección del `platform_id`
+### 2.3 `bench.ps1`: comando único en Windows
+
+En Windows, el script equivalente es `bench.ps1`. Al igual que el script Unix, construye y ejecuta el comando `docker run`, pero además resuelve automáticamente las credenciales de Supabase sin que el usuario tenga que configurar nada.
+
+Al arrancar, `bench.ps1` busca el fichero `.env` en tres ubicaciones por orden de prioridad: el directorio donde reside el propio script, el directorio de trabajo actual, y `~/tfg-bench/.env`. Si no lo encuentra en ninguna de ellas, lo descarga automáticamente:
+
+```powershell
+Invoke-WebRequest `
+    -Uri "https://raw.githubusercontent.com/mablospate/TFG/main/.env" `
+    -OutFile "$HOME\tfg-bench\.env"
+```
+
+Esto habilita el flujo de uso mínimo en Windows: el usuario ejecuta una sola línea en PowerShell sin haber clonado el repositorio ni descargado ningún fichero previamente:
+
+```powershell
+irm https://raw.githubusercontent.com/mablospate/TFG/main/bench.ps1 | iex
+```
+
+`irm` (alias de `Invoke-RestMethod`) descarga el script, `iex` (alias de `Invoke-Expression`) lo ejecuta en memoria. El script detecta que no hay `.env` local, lo descarga en `~/tfg-bench/.env`, y lanza el contenedor Docker con las credenciales ya inyectadas. En ejecuciones posteriores, el `.env` ya está en disco y no se vuelve a descargar.
+
+### 2.4 `entrypoint.sh`: selección del `platform_id`
 
 El `entrypoint.sh` del contenedor recibe como argumento el `platform_id` elegido por `bench` y lo reenvía a `run.py`:
 
@@ -186,7 +206,35 @@ def detect_hardware() -> HardwareInfo:
 
 ## 4. El Orquestador `run.py`
 
-### 4.1 `PLATFORM_CONFIGS`: las diez plataformas
+### 4.0 Carga de credenciales con `python-dotenv`
+
+La primera instrucción ejecutable de `run.py` es:
+
+```python
+load_dotenv(Path(__file__).parent / ".env")
+```
+
+Esta llamada carga las variables de entorno desde el fichero `.env` situado en el mismo directorio que el script, independientemente del directorio de trabajo actual del proceso. El comportamiento es relevante en Windows: cuando el usuario ejecuta `bench.ps1` desde un directorio arbitrario (por ejemplo `C:\Users\usuario\`), el directorio de trabajo no coincide con el directorio del script, y una búsqueda implícita del `.env` en el directorio de trabajo fallaría silenciosamente. Usar `Path(__file__).parent` resuelve el `.env` relativo al script, no al CWD.
+
+Dentro del contenedor Docker, donde las credenciales se inyectan como variables de entorno mediante `-e` o `env_file` (ver §8.4), `load_dotenv` no sobreescribe variables ya definidas: si `SUPABASE_URL` ya existe en el entorno del proceso, el valor del `.env` se ignora. Esto garantiza que Docker y el entorno local usen la misma ruta de código sin conflictos.
+
+### 4.1 Warning de OpenCL cuando hay GPU NVIDIA sin libOpenCL
+
+Inmediatamente después de `detect_hardware()`, `main()` comprueba si la combinación GPU NVIDIA + ausencia de libOpenCL crearía un fallo silencioso más adelante:
+
+```python
+if hw.gpu_model and ctypes.util.find_library("OpenCL") is None:
+    print(
+        "WARNING: GPU NVIDIA detectada pero libOpenCL no está disponible. "
+        "qcgpu no funcionará. Instala ocl-icd-libopencl1 para habilitarlo."
+    )
+```
+
+La comprobación usa `ctypes.util.find_library("OpenCL")`, que busca la biblioteca en las rutas de búsqueda del enlazador dinámico del sistema (`LD_LIBRARY_PATH`, `/etc/ld.so.cache`, etc.) sin necesidad de abrir ningún descriptor de fichero ni cargar código de GPU. Si devuelve `None`, el driver OpenCL no está instalado y `qcgpu` fallará al intentar crear un contexto de plataforma.
+
+El warning se emite antes de que el benchmark arranque para que el usuario pueda instalar `ocl-icd-libopencl1` (el paquete de Debian/Ubuntu que provee `libOpenCL.so.1`) y relanzar sin perder tiempo de ejecución. La detección no aborta el programa: el resto de frameworks pueden ejecutarse correctamente sin OpenCL; solo `qcgpu` quedará con resultados de tipo `error` si se incluye en la plataforma seleccionada.
+
+### 4.2 `PLATFORM_CONFIGS`: las diez plataformas
 
 `run.py` define diez configuraciones de plataforma que mapean cada combinación de OS/arquitectura/GPU a la lista exacta de frameworks que pueden ejecutarse en ella:
 
@@ -279,15 +327,19 @@ def _run_rust_binary(binary, n, target, num_shots, timeout_s=300.0) -> dict:
         [str(binary), "--n", str(n), "--target", str(target),
          "--shots", str(num_shots)],
         stdout=subprocess.PIPE,
-        stderr=sys.stderr,
+        stderr=subprocess.PIPE,
         text=True,
     )
     ...
     payload = json.loads(lines[-1])
+    if "error" in payload:
+        raise RuntimeError(payload["error"])
     return payload
 ```
 
-El binario imprime líneas de progreso en stderr (que hereda el terminal del usuario) y, como última línea en stdout, un único objeto JSON con todos los resultados. El `time_ms` que reporta el binario es el tiempo medido internamente en Rust con su reloj de alta resolución (`std::time::Instant`), no el tiempo que tardó `subprocess.Popen` en ejecutar el proceso. Esta distinción es fundamental: el overhead de Python al lanzar el subproceso (típicamente 50-200 ms) no contamina las mediciones de los frameworks Rust.
+El binario imprime líneas de progreso en stderr y, como última línea en stdout, un único objeto JSON con todos los resultados. El `time_ms` que reporta el binario es el tiempo medido internamente en Rust con su reloj de alta resolución (`std::time::Instant`), no el tiempo que tardó `subprocess.Popen` en ejecutar el proceso. Esta distinción es fundamental: el overhead de Python al lanzar el subproceso (típicamente 50-200 ms) no contamina las mediciones de los frameworks Rust.
+
+Un detalle de robustez: `stderr` se captura con `subprocess.PIPE` en lugar de heredarse del terminal. El contenido de stderr solo se imprime si el JSON contiene el campo `"error"`, evitando que líneas de progreso normales contaminen la salida del orquestador. Además, si el JSON contiene `"error"`, `_run_rust_binary` lanza `RuntimeError` inmediatamente, antes de continuar con las repeticiones restantes. Esto es especialmente relevante para `qcgpu` cuando falla la inicialización del contexto OpenCL: sin esta comprobación, el orquestador podría ejecutar las diez repeticiones obteniendo JSON de error en cada una y acumular diez resultados inválidos en lugar de abortar al primer fallo.
 
 ### 4.5 El timeout de 600 segundos
 
@@ -312,6 +364,14 @@ Tras completar cada tamaño de n, el orquestador escribe dos archivos en `result
 Cuando el benchmark termina, se escribe el documento final `grover_{timestamp}.json` y se elimina el `_partial.json` (ya obsoleto). Esta estrategia garantiza que incluso un fallo catastrófico al final del benchmark no pierde más de los resultados del último tamaño de n.
 
 En modo Supabase (cuando `SUPABASE_URL` y `SUPABASE_KEY` están definidos), los checkpoints se reemplazan por inserciones directas en la base de datos tras cada tamaño, eliminando la necesidad de archivos locales.
+
+Si al iniciar `main()` se detecta que `USE_SUPABASE` es `True` pero alguna de las dos credenciales está ausente y no se ha pasado `--dev`, el programa aborta inmediatamente con el mensaje:
+
+```
+Error: SUPABASE_URL y SUPABASE_KEY son requeridos para ejecutar el benchmark.
+```
+
+Este guard evita un escenario silencioso que ocurría en versiones anteriores: el benchmark completaba todas las ejecuciones —a veces durante horas— y solo al intentar el insert final descubría que las credenciales eran inválidas, perdiendo todos los resultados. Con el abort temprano el usuario recibe el error en los primeros segundos, antes de que el benchmark arranque.
 
 ---
 
@@ -628,6 +688,28 @@ El `Dockerfile` del proyecto usa un build multi-stage para minimizar el tamaño 
 CUDA-Q y QDisLib no están disponibles en PyPI para todas las plataformas. CUDA-Q solo tiene wheels para Linux x86_64 y Linux aarch64; en macOS Intel no existen wheels y el intento de instalación falla con un error de plataforma no soportada. QDisLib requiere MPI, que en Docker necesita configuración especial del entorno de red.
 
 Por esta razón, el `Dockerfile` instala CUDA-Q y QDisLib condicionalmente según el `--build-arg PLATFORM` pasado durante `docker build`. Si la plataforma no los soporta, la imagen no los incluye, y `PLATFORM_CONFIGS` en `run.py` tampoco los lista para esa plataforma.
+
+### 8.4 Docker Compose: inyección automática del `.env`
+
+El fichero `docker-compose.yml` incluye la directiva `env_file` en el servicio del benchmark:
+
+```yaml
+services:
+  benchmark:
+    env_file:
+      - path: .env
+        required: false
+```
+
+El campo `required: false` es deliberado: si el fichero `.env` no existe (por ejemplo, en un entorno de CI donde las credenciales se inyectan mediante variables de entorno del sistema), Docker Compose no falla con error sino que continúa sin él. Las variables definidas en el entorno del sistema tienen precedencia sobre las del `.env`, de forma que las credenciales de producción en CI no pueden ser sobreescritas accidentalmente por un `.env` local dejado en el repositorio.
+
+Con esta configuración, el usuario solo necesita tener el `.env` en el mismo directorio que `docker-compose.yml` y ejecutar:
+
+```bash
+docker compose up
+```
+
+sin ningún flag `-e` adicional ni exportación manual de variables en la sesión de shell. Esto simplifica el flujo de uso en entornos locales donde antes era necesario ejecutar `export SUPABASE_URL=...` o pasar `-e SUPABASE_URL="$SUPABASE_URL"` explícitamente al comando `docker compose`.
 
 ---
 
