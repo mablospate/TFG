@@ -673,8 +673,9 @@ def _run_rust_binary(
                 print(_err, file=sys.stderr)
         raise RuntimeError(f"{binary.name}: {payload['error']}")
     payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
-    peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
-    payload["mem_mb"] = peak_rss
+    rust_mem_mb = float(payload.get("mem_mb", 0.0))
+    python_mem_mb = max(rss_samples) / (1024 * 1024) if rss_samples else 0.0
+    payload["mem_mb"] = max(rust_mem_mb, python_mem_mb)
     payload["subprocess_wall_time_ms"] = (time.perf_counter() - _t_start) * 1000.0
     return payload
 
@@ -937,8 +938,9 @@ def _run_rust_shor_binary(
                 print(_err, file=sys.stderr)
         raise RuntimeError(f"{binary.name}: {payload['error']}")
     payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
-    peak_rss = max(rss_samples) / (1024 * 1024) if rss_samples else float(payload.get("mem_mb", 0.0))
-    payload["mem_mb"] = peak_rss
+    rust_mem_mb = float(payload.get("mem_mb", 0.0))
+    python_mem_mb = max(rss_samples) / (1024 * 1024) if rss_samples else 0.0
+    payload["mem_mb"] = max(rust_mem_mb, python_mem_mb)
     return payload
 
 
