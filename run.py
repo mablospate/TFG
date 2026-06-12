@@ -739,16 +739,17 @@ def benchmark_rust_grover(
         last_payload = payload
 
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
+    sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
 
     jsd = _jsd_from_payload(last_payload, n, target, framework_name) if last_payload else 0.0
 
     return {
         **_rust_meta(contributor_name, hw, config),
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
-        "wall_time_median_ms": median_ms,
-        "wall_time_iqr_ms": iqr_ms,
+        "wall_time_median_ms": sub_median_ms,
+        "wall_time_iqr_ms": sub_iqr_ms,
         "peak_memory_rss_mb": peak_mem_mb,
-        "cv": cv,
+        "cv": sub_cv,
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
         "simulation_time_ms": median_ms,
@@ -761,9 +762,9 @@ def benchmark_rust_grover(
         "python_version": None,
         "platform_info": platform.platform(),
         "raw_times_ms": times_ms,
-        "wall_time_mean_ms": mean_ms,
-        "wall_time_std_ms": std_ms,
-        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
+        "wall_time_mean_ms": sub_mean_ms,
+        "wall_time_std_ms": sub_std_ms,
+        "subprocess_wall_time_ms": sub_median_ms,
     }
 
 
@@ -804,6 +805,7 @@ def benchmark_rust_shor_at_n(
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición")
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
+    sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
 
     factor_found = max(set(factors), key=factors.count) if factors else 1
     success_rate = 1.0 if factor_found not in (1, N) else 0.0
@@ -814,10 +816,10 @@ def benchmark_rust_shor_at_n(
         "n_to_factor": N,
         "factor_found": factor_found,
         "success_rate": success_rate,
-        "wall_time_median_ms": median_ms,
-        "wall_time_iqr_ms": iqr_ms,
+        "wall_time_median_ms": sub_median_ms,
+        "wall_time_iqr_ms": sub_iqr_ms,
         "peak_memory_rss_mb": peak_mem_mb,
-        "cv": cv,
+        "cv": sub_cv,
         "startup_time_ms": 0.0,
         "build_time_ms": 0.0,
         "simulation_time_ms": median_ms,
@@ -830,9 +832,9 @@ def benchmark_rust_shor_at_n(
         "python_version": None,
         "platform_info": platform.platform(),
         "raw_times_ms": times_ms,
-        "wall_time_mean_ms": mean_ms,
-        "wall_time_std_ms": std_ms,
-        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
+        "wall_time_mean_ms": sub_mean_ms,
+        "wall_time_std_ms": sub_std_ms,
+        "subprocess_wall_time_ms": sub_median_ms,
     }
 
 
