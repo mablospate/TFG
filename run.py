@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import importlib.metadata
 import json
 import math
 import os
@@ -18,7 +17,6 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -32,6 +30,7 @@ import psutil
 
 from python.benchmark_core import (
     BenchmarkConfig,
+    _stats_from_times,
     compute_jsd,
 )
 from python.hardware import HardwareInfo, detect_hardware
@@ -133,9 +132,6 @@ _PLATFORM_EXCLUSIONS: dict[tuple[str, str], set[str]] = {
     },  # no native support / no wheel / no CI
 }
 
-# Frameworks that run but produce results not directly comparable across platforms.
-# Each entry: framework → (condition, warning message)
-_PLATFORM_WARNINGS: dict[str, tuple[bool, str]] = {}  # populated at runtime
 
 
 # ---------------------------------------------------------------------------
@@ -483,6 +479,43 @@ def _error_result(
     }
 
 
+def _rust_meta(contributor_name: str, hw: HardwareInfo, config: BenchmarkConfig) -> dict:
+    """Common hardware/run metadata for all Rust benchmark result dicts."""
+    return {
+        "contributor_name": contributor_name,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_gflops": hw.cpu_gflops,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": "rust (cargo --release)",
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+    }
+
+
+def _jsd_from_payload(
+    payload: dict, n: int, target: int, framework_name: str
+) -> float:
+    """Extract distribution from a Rust binary payload and compute JSD."""
+    if "distribution" not in payload:
+        return 0.0
+    dist = payload["distribution"] or {}
+    total = sum(dist.values())
+    empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
+    theoretical = {format(target, f"0{n}b"): 1.0}
+    try:
+        return compute_jsd(empirical, theoretical)
+    except Exception as e:
+        print(f"  [WARN] Could not compute JSD for {framework_name}: {e}")
+        return 0.0
+
+
 def _run_python_worker(
     framework: str,
     algo: str,
@@ -591,23 +624,29 @@ def _run_python_worker(
 
 
 
+def _drain_stderr(proc: subprocess.Popen) -> None:
+    """Read, decode, strip, and print proc stderr if non-empty."""
+    if proc.stderr:
+        _raw = proc.stderr.read()
+        _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
+        if _err:
+            print(_err, file=sys.stderr)
+
+
 def _run_rust_binary(
     binary: pathlib.Path,
-    n: int,
-    target: int,
-    num_shots: int,
+    cli_args: list[str],
     timeout_s: float = 300.0,
 ) -> dict:
-    """Invoke a Rust Grover binary and return its parsed JSON output.
+    """Invoke a Rust binary with given CLI args, sample memory/CPU, parse JSON result.
 
-    Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
-    failure (caller is expected to catch and convert to a SKIP/ERROR row).
+    Always sets payload["subprocess_wall_time_ms"] for diagnostics.
+    The binary-reported payload["time_ms"] is the authoritative simulation time.
     """
     _t_start = time.perf_counter()
     _usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
-    _t_wall = time.perf_counter()
     proc = subprocess.Popen(
-        [str(binary), "--n", str(n), "--target", str(target), "--shots", str(num_shots)],
+        [str(binary)] + cli_args,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -635,7 +674,6 @@ def _run_rust_binary(
         line = line.rstrip("\n")
         if line.strip():
             lines.append(line)
-            # Print progress lines; the last line is JSON and will look like garbage — skip it
             try:
                 json.loads(line)
             except json.JSONDecodeError:
@@ -648,7 +686,7 @@ def _run_rust_binary(
     except subprocess.TimeoutExpired:
         proc.kill()
         raise
-    _wall_s = time.perf_counter() - _t_wall
+    _wall_s = time.perf_counter() - _t_start
     _usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
     _cpu_s = (
         (_usage_after.ru_utime - _usage_before.ru_utime) +
@@ -656,21 +694,13 @@ def _run_rust_binary(
     )
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
-            if proc.stderr:
-                _raw = proc.stderr.read()
-                _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
-                if _err:
-                    print(_err, file=sys.stderr)
-            raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
+        _drain_stderr(proc)
+        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
     if "error" in payload:
-        if proc.stderr:
-            _raw = proc.stderr.read()
-            _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
-            if _err:
-                print(_err, file=sys.stderr)
+        _drain_stderr(proc)
         raise RuntimeError(f"{binary.name}: {payload['error']}")
     payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
     rust_mem_mb = float(payload.get("mem_mb", 0.0))
@@ -680,100 +710,9 @@ def _run_rust_binary(
     return payload
 
 
+
+
 def benchmark_rust_grover(
-    framework_name: str,
-    binary: pathlib.Path,
-    config: BenchmarkConfig,
-    hw: HardwareInfo,
-    contributor_name: str,
-) -> dict:
-    """Run the full Grover sweep against a Rust binary.
-
-    Mirrors the structure of `benchmark_grover()` so the resulting dict can be
-    appended to the same results list and rendered by `print_summary_table`.
-    Uses the framework-reported `time_ms` (not subprocess wall time) for all
-    timing fields.
-    """
-    n_main = 5
-    target_main = 5
-    times_ms: list[float] = []
-    subprocess_wall_times_ms: list[float] = []
-    cpu_percents: list[float] = []
-    last_payload: dict | None = None
-
-    # Warmup + repetitions (matches benchmark_run semantics).
-    for _ in range(max(0, config.warmup_runs)):
-        _run_rust_binary(binary, n_main, target_main, config.num_shots)
-    for _ in range(config.n_repetitions):
-        payload = _run_rust_binary(binary, n_main, target_main, config.num_shots)
-        times_ms.append(float(payload.get("time_ms", 0.0)))
-        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
-        cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
-        last_payload = payload
-
-    arr = np.array(times_ms) if times_ms else np.array([0.0])
-    median_ms = float(np.median(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr_ms = float(q75 - q25)
-    mean_ms = float(np.mean(arr))
-    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
-
-    # JSD vs. theoretical δ on |target⟩.
-    jsd = 0.0
-    if last_payload is not None and "distribution" in last_payload:
-        dist = last_payload["distribution"] or {}
-        total = sum(dist.values())
-        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
-        theoretical = {format(target_main, f"0{n_main}b"): 1.0}
-        try:
-            jsd = compute_jsd(empirical, theoretical)
-        except Exception as e:
-            print(f"  [WARN] Could not compute JSD for {framework_name}: {e}")
-
-    enriched = {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_gflops": hw.cpu_gflops,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": "rust (cargo --release)",
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
-        "wall_time_median_ms": median_ms,
-        "wall_time_iqr_ms": iqr_ms,
-        "peak_memory_rss_mb": float(last_payload.get("mem_mb", 0.0)) if last_payload else 0.0,
-        "cv": cv,
-        "startup_time_ms": 0.0,
-        "build_time_ms": 0.0,
-        "simulation_time_ms": median_ms,
-        "cpu_percent_mean": float(np.mean(cpu_percents)) if cpu_percents else 0.0,
-        "jsd": jsd,
-        "framework": framework_name,
-        "algorithm": "grover",
-        "n_qubits": n_main,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "python_version": None,
-        "platform_info": platform.platform(),
-        "raw_times_ms": times_ms,
-        "wall_time_mean_ms": mean_ms,
-        "wall_time_std_ms": std_ms,
-        "subprocess_wall_time_ms": float(np.median(subprocess_wall_times_ms)) if subprocess_wall_times_ms else 0.0,
-    }
-    return enriched
-
-
-
-
-
-def benchmark_rust_grover_at_n(
     framework_name: str,
     binary: pathlib.Path,
     n: int,
@@ -790,49 +729,21 @@ def benchmark_rust_grover_at_n(
     last_payload: dict | None = None
 
     for _ in range(max(0, config.warmup_runs)):
-        _run_rust_binary(binary, n, target, config.num_shots)
+        _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
     for _ in range(config.n_repetitions):
-        payload = _run_rust_binary(binary, n, target, config.num_shots)
+        payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
 
-    arr = np.array(times_ms) if times_ms else np.array([0.0])
-    median_ms = float(np.median(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr_ms = float(q75 - q25)
-    mean_ms = float(np.mean(arr))
-    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+    median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
 
-    jsd = 0.0
-    if last_payload and "distribution" in last_payload:
-        dist = last_payload["distribution"] or {}
-        total = sum(dist.values())
-        empirical = {k: v / total for k, v in dist.items()} if total > 0 else {}
-        theoretical = {format(target, f"0{n}b"): 1.0}
-        try:
-            jsd = compute_jsd(empirical, theoretical)
-        except Exception as e:
-            print(f"  [WARN] JSD failed for {framework_name} n={n}: {e}")
+    jsd = _jsd_from_payload(last_payload, n, target, framework_name) if last_payload else 0.0
 
     return {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_gflops": hw.cpu_gflops,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": "rust (cargo --release)",
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
+        **_rust_meta(contributor_name, hw, config),
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
         "wall_time_median_ms": median_ms,
         "wall_time_iqr_ms": iqr_ms,
@@ -861,89 +772,6 @@ def benchmark_rust_grover_at_n(
 # ---------------------------------------------------------------------------
 
 
-def _run_rust_shor_binary(
-    binary: pathlib.Path, N: int, shots: int = 10, tries: int = 3, timeout_s: float = 300.0
-) -> dict:
-    """Invoke a Rust Shor binary and return its parsed JSON output.
-
-    Raises subprocess.TimeoutExpired, FileNotFoundError or ValueError on
-    failure (caller is expected to catch and convert to a SKIP/ERROR row).
-    """
-    _usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
-    _t_wall = time.perf_counter()
-    proc = subprocess.Popen(
-        [str(binary), "--N", str(N), "--shots", str(shots), "--tries", str(tries)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    rss_samples: list[int] = []
-    _stop = threading.Event()
-    _cpu_thread: threading.Thread | None = None
-    try:
-        _psutil_proc = psutil.Process(proc.pid)
-        _psutil_proc.cpu_percent()
-        def _sample() -> None:
-            while not _stop.is_set():
-                try:
-                    rss_samples.append(_psutil_proc.memory_info().rss)
-                except psutil.NoSuchProcess:
-                    break
-                _stop.wait(0.001)
-        _cpu_thread = threading.Thread(target=_sample, daemon=True)
-        _cpu_thread.start()
-    except psutil.NoSuchProcess:
-        pass
-    lines: list[str] = []
-    assert proc.stdout is not None
-    for line in proc.stdout:
-        line = line.rstrip("\n")
-        if line.strip():
-            lines.append(line)
-            # Print progress lines; the last line is JSON and will look like garbage — skip it
-            try:
-                json.loads(line)
-            except json.JSONDecodeError:
-                print(line)
-    _stop.set()
-    if _cpu_thread is not None:
-        _cpu_thread.join(timeout=1.0)
-    try:
-        proc.wait(timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        raise
-    _wall_s = time.perf_counter() - _t_wall
-    _usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
-    _cpu_s = (
-        (_usage_after.ru_utime - _usage_before.ru_utime) +
-        (_usage_after.ru_stime - _usage_before.ru_stime)
-    )
-    _ncpu = psutil.cpu_count(logical=True) or 1
-    if proc.returncode != 0:
-            if proc.stderr:
-                _raw = proc.stderr.read()
-                _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
-                if _err:
-                    print(_err, file=sys.stderr)
-            raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
-    if not lines:
-        raise ValueError(f"{binary.name} produced no stdout")
-    payload = json.loads(lines[-1])
-    if "error" in payload:
-        if proc.stderr:
-            _raw = proc.stderr.read()
-            _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
-            if _err:
-                print(_err, file=sys.stderr)
-        raise RuntimeError(f"{binary.name}: {payload['error']}")
-    payload["cpu_percent_mean"] = min(_cpu_s / _wall_s * 100.0, _ncpu * 100.0) if _wall_s > 0 else 0.0
-    rust_mem_mb = float(payload.get("mem_mb", 0.0))
-    python_mem_mb = max(rss_samples) / (1024 * 1024) if rss_samples else 0.0
-    payload["mem_mb"] = max(rust_mem_mb, python_mem_mb)
-    return payload
-
-
 
 
 
@@ -965,9 +793,8 @@ def benchmark_rust_shor_at_n(
 
     cpu_percents_shor: list[float] = []
     for _ in range(config.n_repetitions):
-        _t_sub = time.perf_counter()
-        payload = _run_rust_shor_binary(binary, N, shots=config.num_shots, tries=3)
-        subprocess_wall_times_ms.append((time.perf_counter() - _t_sub) * 1000.0)
+        payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
+        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
         cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
@@ -976,32 +803,13 @@ def benchmark_rust_shor_at_n(
 
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición")
-    arr = np.array(times_ms) if times_ms else np.array([0.0])
-    median_ms = float(np.median(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr_ms = float(q75 - q25)
-    mean_ms = float(np.mean(arr))
-    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+    median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
 
     factor_found = max(set(factors), key=factors.count) if factors else 1
     success_rate = 1.0 if factor_found not in (1, N) else 0.0
 
     return {
-        "contributor_name": contributor_name,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_gflops": hw.cpu_gflops,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": "rust (cargo --release)",
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
+        **_rust_meta(contributor_name, hw, config),
         "framework_version": last_payload.get("framework_version", "rust-binary") if last_payload else "rust-binary",
         "n_to_factor": N,
         "factor_found": factor_found,
@@ -1105,35 +913,6 @@ def _build_output_doc(
         },
         "results": results,
     }
-
-
-def to_db_rows(doc: dict) -> list[dict]:
-    """Convert output doc to flat rows for DB upload (drops raw_times_ms, hostname, etc.)."""
-    run_meta = {
-        "contributor": doc.get("contributor_name"),
-        "platform_id": doc.get("platform_id"),
-        "gpu_enabled": doc.get("gpu_enabled", False),
-        "benchmark_image": doc.get("benchmark_image", "dev"),
-        "cpu_model": doc.get("hardware", {}).get("cpu_model"),
-        "cpu_physical_cores": doc.get("hardware", {}).get("cpu_cores_physical"),
-        "cpu_logical_cores": doc.get("hardware", {}).get("cpu_cores_logical"),
-        "cpu_gflops": doc.get("hardware", {}).get("cpu_gflops"),
-        "ram_total_gb": doc.get("hardware", {}).get("ram_total_gb"),
-        "gpu_model": doc.get("hardware", {}).get("gpu_model"),
-        "gpu_vram_gb": doc.get("hardware", {}).get("gpu_vram_gb"),
-    }
-    rows = []
-    for r in doc.get("results", []):
-        row = {**run_meta}
-        for field in [
-            "framework", "framework_version", "algorithm", "n_qubits",
-            "wall_time_median_ms", "wall_time_iqr_ms", "build_time_ms",
-            "simulation_time_ms", "startup_time_ms", "peak_memory_rss_mb",
-            "cpu_percent_mean", "jsd", "cv", "timestamp",
-        ]:
-            row[field] = r.get(field)
-        rows.append(row)
-    return rows
 
 
 def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
@@ -1266,6 +1045,38 @@ def print_summary_table(results: list[dict], statuses: dict[str, str]) -> None:
     )
 
 
+def _run_rust_fw(
+    fw_name: str,
+    run_fn,
+    statuses: dict,
+    results: list,
+) -> None:
+    """Call run_fn(), append result to results, update statuses. Handles all errors."""
+    try:
+        result = run_fn()
+        results.append(result)
+        statuses[fw_name] = "OK"
+    except OSError as e:
+        if e.errno in (8, 2):
+            statuses[fw_name] = "SKIP"
+            print(f"  [SKIP] {fw_name}: binary not found or format mismatch ({e})")
+        else:
+            statuses[fw_name] = "ERROR"
+            print(f"  [ERROR] {fw_name}: OS error {e}")
+    except FileNotFoundError as e:
+        statuses[fw_name] = "SKIP"
+        print(f"  [SKIP] {fw_name}: {e}")
+    except subprocess.TimeoutExpired as e:
+        statuses[fw_name] = "ERROR"
+        print(f"  [TIMEOUT] {fw_name}: {e}")
+    except (json.JSONDecodeError, RuntimeError, ValueError) as e:
+        statuses[fw_name] = "ERROR"
+        print(f"  [ERROR] {fw_name}: {e}")
+    except Exception as e:
+        statuses[fw_name] = "ERROR"
+        print(f"  [ERROR] {fw_name}: unexpected error: {e}")
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1301,6 +1112,16 @@ def parse_args():
         default=False,
         help="Dev mode: 1 rep, smallest n only, fast exit",
     )
+    p.add_argument("--n-reps", type=int, default=10, metavar="N",
+                   help="Repetitions per data point (default: 10)")
+    p.add_argument("--shots", type=int, default=1024, metavar="N",
+                   help="Shots per simulation (default: 1024)")
+    p.add_argument("--warmup", type=int, default=1, metavar="N",
+                   help="Warmup runs before measurement (default: 1)")
+    p.add_argument("--n-values", type=int, nargs="+", metavar="N",
+                   help="Qubit counts for Grover (default: 3 5 7 9 11)")
+    p.add_argument("--n-values-shor", type=int, nargs="+", metavar="N",
+                   help="Factorization targets for Shor (default: 15 21 35 77 143)")
     return p.parse_args()
 
 
@@ -1323,13 +1144,21 @@ def main() -> None:
     print("Se agradece dar el máximo tiempo posible para obtener datos más completos.")
     print()
 
-    config = BenchmarkConfig(n_repetitions=10, n_values=[3, 5, 7, 9, 11], num_shots=1024)
-
+    _n_values = args.n_values if args.n_values else [3, 5, 7, 9, 11]
+    _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35, 77, 143]
+    config = BenchmarkConfig(
+        n_repetitions=args.n_reps,  # 30 is for research; 10 is the production shortcut
+        warmup_runs=args.warmup,
+        n_values=_n_values,
+        n_values_shor=_n_values_shor,
+        num_shots=args.shots,
+    )
     if args.dev:
         config = BenchmarkConfig(
             n_repetitions=1,
-            n_values=[config.n_values[0]],
-            n_values_shor=[config.n_values_shor[0]],
+            warmup_runs=0,
+            n_values=[_n_values[0]],
+            n_values_shor=[_n_values_shor[0]],
             num_shots=10,
         )
         print("[DEV] Modo desarrollo: 1 repetición, n mínimo, 10 shots")
@@ -1428,9 +1257,8 @@ def main() -> None:
     }
     final_path = os.path.join("results", f"grover_{timestamp}.json")
     partial_path = os.path.join("results", f"grover_{timestamp}_partial.json")
-    shor_timestamp = timestamp
-    shor_final_path = os.path.join("results", f"shor_{shor_timestamp}.json")
-    shor_partial_path = os.path.join("results", f"shor_{shor_timestamp}_partial.json")
+    shor_final_path = os.path.join("results", f"shor_{timestamp}.json")
+    shor_partial_path = os.path.join("results", f"shor_{timestamp}_partial.json")
 
     # ---- Grover state ----
     results: list[dict] = []
@@ -1509,32 +1337,16 @@ def main() -> None:
                 binary = RUST_FRAMEWORKS[fw_name]
                 print()
                 print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...")
-                try:
-                    result = benchmark_rust_grover_at_n(
-                        fw_name, binary, n, config, hw, contributor_name,
-                    )
-                    results.append(result)
-                    n_series_results.append(result)
-                    statuses[fw_name] = "OK"
-                except OSError as e:
-                    if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
-                        statuses[fw_name] = "SKIP"
-                        print(f"  [SKIP] {fw_name}: binario incompatible con esta arquitectura (errno {e.errno})")
-                    else:
-                        statuses[fw_name] = "ERROR"
-                        print(f"[ERROR] {fw_name} grover n={n}: {e}")
-                except FileNotFoundError as e:
-                    statuses[fw_name] = "SKIP"
-                    print(f"  [SKIP] {fw_name}: binario no encontrado ({e})")
-                except subprocess.TimeoutExpired as e:
-                    statuses[fw_name] = "ERROR"
-                    print(f"[ERROR] {fw_name} grover n={n}: timed out after {e.timeout}s")
-                except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-                    statuses[fw_name] = "ERROR"
-                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
-                except Exception as e:
-                    statuses[fw_name] = "ERROR"
-                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
+                rust_grover_result: list[dict] = []
+                _run_rust_fw(
+                    fw_name,
+                    lambda fw=fw_name, b=binary, _n=n: benchmark_rust_grover(fw, b, _n, config, hw, contributor_name),
+                    statuses,
+                    rust_grover_result,
+                )
+                if rust_grover_result:
+                    results.append(rust_grover_result[0])
+                    n_series_results.append(rust_grover_result[0])
 
             if USE_SUPABASE:
                 _rows = []
@@ -1591,24 +1403,16 @@ def main() -> None:
                 shor_idx += 1
                 binary = RUST_FRAMEWORKS_SHOR[fw]
                 print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...")
-                try:
-                    r = benchmark_rust_shor_at_n(fw, binary, N_shor, config, hw, contributor_name)
-                    shor_results.append(r)
-                    shor_n_series.append(r)
-                    shor_statuses[fw] = "OK"
-                except OSError as e:
-                    if e.errno in (8, 2):  # ENOEXEC, ENOENT — binary incompatible with this arch
-                        shor_statuses[fw] = "SKIP"
-                        print(f"  [SKIP] {fw}: binario incompatible con esta arquitectura (errno {e.errno})")
-                    else:
-                        shor_statuses.setdefault(fw, "ERROR")
-                        print(f"[ERROR] {fw} shor N={N_shor}: {e}")
-                except FileNotFoundError as e:
-                    shor_statuses[fw] = "SKIP"
-                    print(f"  [SKIP] {fw}: binario no encontrado ({e})")
-                except Exception as e:
-                    shor_statuses.setdefault(fw, "ERROR")
-                    print(f"[ERROR] {fw} shor N={N_shor}: {e}")
+                rust_shor_result: list[dict] = []
+                _run_rust_fw(
+                    fw,
+                    lambda _fw=fw, b=binary, _N=N_shor: benchmark_rust_shor_at_n(_fw, b, _N, config, hw, contributor_name),
+                    shor_statuses,
+                    rust_shor_result,
+                )
+                if rust_shor_result:
+                    shor_results.append(rust_shor_result[0])
+                    shor_n_series.append(rust_shor_result[0])
 
             if USE_SUPABASE:
                 _rows = []
@@ -1616,7 +1420,7 @@ def main() -> None:
                     _rows.extend(_expand_result_to_rows(r, _supabase_run_meta))
                 _supabase_insert(_rows, _supabase_url, _supabase_key)
             else:
-                checkpoint_path = os.path.join("results", f"shor_{shor_timestamp}_N{N_shor}.json")
+                checkpoint_path = os.path.join("results", f"shor_{timestamp}_N{N_shor}.json")
                 _save_json(checkpoint_path, {
                     "schema_version": "1.0",
                     "generated_at": datetime.now(timezone.utc).isoformat(),

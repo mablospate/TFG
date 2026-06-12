@@ -7,8 +7,8 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "numpy==2.2.4",
     "scipy==1.15.2",
-    "qiskit==2.0.0",
-    "qiskit-aer==0.17.0",
+    "qiskit==2.4.1",
+    "qiskit-aer==0.17.2",
     "cirq>=1.6.1",
     "psutil>=5.9",
     "python-dotenv",
@@ -22,7 +22,7 @@ x86only = [
 ]
 # NVIDIA GPU acceleration (x86_64 only, requires CUDA 13)
 gpu = [
-    "cuda-quantum-cu13==0.14.0",
+    "cuda-quantum-cu13==0.14.2",
 ]
 dev = [
     "pytest==8.3.5",

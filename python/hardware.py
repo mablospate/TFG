@@ -154,7 +154,7 @@ def detect_hardware() -> HardwareInfo:
                                         str(psutil.cpu_count(logical=False) or 1))),
         cpu_cores_logical=int(_env_or("BENCH_CPU_CORES_LOGICAL",
                                        str(psutil.cpu_count(logical=True) or 1))),
-        cpu_gflops=float(os.environ["BENCH_CPU_GFLOPS"]) if float(os.environ.get("BENCH_CPU_GFLOPS") or 0) > 0 else _measure_cpu_gflops(),
+        cpu_gflops=float(os.environ.get("BENCH_CPU_GFLOPS") or 0) or _measure_cpu_gflops(),
         ram_total_gb=float(_env_or("BENCH_RAM_GB",
                                     str(round(psutil.virtual_memory().total / (1024**3), 1)))),
         gpu_model=gpu_model,

@@ -39,6 +39,41 @@ def _n_qubits_shor(N: int) -> int:
     return math.ceil(math.log2(N)) * 2
 
 
+def _get_framework_version(framework: str) -> str:
+    """Return the installed package version, or 'unknown' if not found."""
+    try:
+        return importlib.metadata.version(framework)
+    except Exception:
+        return "unknown"
+
+
+def _build_base_envelope(
+    hw: HardwareInfo,
+    config: BenchmarkConfig,
+    contributor: str,
+    framework_version: str,
+) -> dict:
+    """Return the 14 hw/config keys shared by all result dicts."""
+    return {
+        "status": "ok",
+        "contributor_name": contributor,
+        "hostname": hw.hostname,
+        "os": hw.os,
+        "os_version": hw.os_version,
+        "cpu_model": hw.cpu_model,
+        "cpu_cores_physical": hw.cpu_cores_physical,
+        "cpu_cores_logical": hw.cpu_cores_logical,
+        "cpu_gflops": hw.cpu_gflops,
+        "ram_total_gb": hw.ram_total_gb,
+        "gpu_model": hw.gpu_model,
+        "gpu_vram_gb": hw.gpu_vram_gb,
+        "runtime_version": hw.python_version,
+        "num_shots": config.num_shots,
+        "n_repetitions": config.n_repetitions,
+        "framework_version": framework_version,
+    }
+
+
 def run_grover_worker(
     framework: str,
     n: int,
@@ -90,28 +125,10 @@ def run_grover_worker(
         print(f"  [WARN] JSD failed for {framework} n={n}: {e}", file=sys.stderr)
         result.jsd = 0.0
 
-    try:
-        framework_version = importlib.metadata.version(framework)
-    except Exception:
-        framework_version = "unknown"
+    framework_version = _get_framework_version(framework)
 
     return {
-        "status": "ok",
-        "contributor_name": contributor,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_gflops": hw.cpu_gflops,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": hw.python_version,
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": framework_version,
+        **_build_base_envelope(hw, config, contributor, framework_version),
         **dataclasses.asdict(result),
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
@@ -170,10 +187,7 @@ def run_shor_worker(
     success_rate = sum(1 for f in factors if f not in (1, N)) / len(factors)
     factor_found = max(set(factors), key=factors.count)
 
-    try:
-        framework_version = importlib.metadata.version(framework)
-    except Exception:
-        framework_version = "unknown"
+    framework_version = _get_framework_version(framework)
 
     result = BenchmarkResult(
         wall_time_median_ms=median_ms,
@@ -195,22 +209,7 @@ def run_shor_worker(
     )
 
     return {
-        "status": "ok",
-        "contributor_name": contributor,
-        "hostname": hw.hostname,
-        "os": hw.os,
-        "os_version": hw.os_version,
-        "cpu_model": hw.cpu_model,
-        "cpu_cores_physical": hw.cpu_cores_physical,
-        "cpu_cores_logical": hw.cpu_cores_logical,
-        "cpu_gflops": hw.cpu_gflops,
-        "ram_total_gb": hw.ram_total_gb,
-        "gpu_model": hw.gpu_model,
-        "gpu_vram_gb": hw.gpu_vram_gb,
-        "runtime_version": hw.python_version,
-        "num_shots": config.num_shots,
-        "n_repetitions": config.n_repetitions,
-        "framework_version": framework_version,
+        **_build_base_envelope(hw, config, contributor, framework_version),
         "n_to_factor": N,
         "factor_found": factor_found,
         "success_rate": success_rate,
@@ -218,3 +217,74 @@ def run_shor_worker(
         "wall_time_mean_ms": mean_ms,
         "wall_time_std_ms": std_ms,
     }
+
+
+def worker_main(
+    framework_name: str,
+    setup_grover_fn,
+    setup_shor_fn,
+    *,
+    import_check=None,
+    extra_cfg: dict | None = None,
+) -> None:
+    """Generic worker entry point — handles config parsing, routing, and error reporting.
+
+    Args:
+        framework_name: Name of the framework (e.g. "qiskit", "cirq").
+        setup_grover_fn: Callable(config, **extra) -> (startup_ms, search_call, build_call).
+        setup_shor_fn: Callable(config, **extra) -> (startup_ms, factor_call, shor_build_call).
+        import_check: Optional callable that imports the framework and raises ImportError if unavailable.
+        extra_cfg: Dict of {key: default_value} for extra cfg fields to extract (e.g. {"cudaq_target": "qpp-cpu"}).
+    """
+    import traceback
+
+    try:
+        cfg = read_config()
+    except Exception as e:
+        write_error(f"failed to read config: {e}")
+        return
+
+    try:
+        hw = detect_hardware()
+        config = BenchmarkConfig(
+            n_repetitions=cfg["n_repetitions"],
+            num_shots=cfg["num_shots"],
+        )
+        algo = cfg["algo"]
+        n = cfg["n"]
+        contributor = cfg.get("contributor", "")
+        extra = {k: cfg.get(k, v) for k, v in (extra_cfg or {}).items()}
+    except Exception as e:
+        write_error(f"invalid config: {e}")
+        return
+
+    if import_check is not None:
+        try:
+            import_check()
+        except ImportError as e:
+            write_error(f"{framework_name} not available: {e}")
+            return
+
+    try:
+        if algo == "grover":
+            startup_ms, search_call, build_call = setup_grover_fn(config, **extra)
+            result = run_grover_worker(
+                framework_name, n, config, hw, contributor,
+                startup_ms, search_call, build_call,
+            )
+        elif algo == "shor":
+            startup_ms, factor_call, shor_build_call = setup_shor_fn(config, **extra)
+            result = run_shor_worker(
+                framework_name, n, config, hw, contributor,
+                startup_ms, factor_call,
+                shor_build_call=shor_build_call,
+            )
+        else:
+            write_error(f"unknown algo: {algo}")
+            return
+    except Exception as e:
+        traceback.print_exc(file=sys.stderr)
+        write_error(f"{framework_name} {algo} n={n} failed: {e}")
+        return
+
+    write_result(result)

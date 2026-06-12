@@ -22,6 +22,19 @@ for _env_candidate in "$_BENCH_DIR/.env" "$PWD/.env" "$HOME/tfg-bench/.env"; do
         break
     fi
 done
+if [[ "$_ENV_LOADED" -eq 0 ]]; then
+    _FALLBACK_ENV="$HOME/tfg-bench/.env"
+    mkdir -p "$(dirname "$_FALLBACK_ENV")"
+    if curl -fsSL \
+        "https://raw.githubusercontent.com/mablospate/TFG/main/.env" \
+        -o "$_FALLBACK_ENV" 2>/dev/null; then
+        # shellcheck disable=SC1090
+        source "$_FALLBACK_ENV" && _ENV_LOADED=1
+        echo "[INFO] Downloaded .env from GitHub to $_FALLBACK_ENV"
+    else
+        echo "[WARN] Could not load .env from any candidate path or GitHub fallback"
+    fi
+fi
 unset _env_candidate _ENV_LOADED
 
 CPU_MODEL="unknown"
@@ -195,18 +208,15 @@ _start_docker_macos() {
 }
 
 _start_docker_linux() {
-    if command -v systemctl &>/dev/null; then
-        sudo systemctl start docker
-        sleep 2
-    elif command -v service &>/dev/null; then
-        sudo service docker start
-        sleep 2
-    fi
-
-    if ! docker info &>/dev/null 2>&1; then
-        echo "ERROR: Docker failed to start. Install Docker: https://docs.docker.com/engine/install/" >&2
-        exit 1
-    fi
+    systemctl start docker 2>/dev/null || service docker start 2>/dev/null || true
+    local _deadline=$(( SECONDS + 90 ))
+    until docker info &>/dev/null; do
+        if [[ $SECONDS -ge $_deadline ]]; then
+            echo "ERROR: Docker did not become ready within 90 seconds" >&2
+            exit 1
+        fi
+        sleep 3
+    done
 }
 
 ensure_docker() {
@@ -370,6 +380,23 @@ collect_run_args() {
     if [[ "$DEV_MODE" -ne 1 && "$TEST_MODE" -ne 1 ]]; then
         ask_time_budget
     fi
+
+    if [[ "$DEV_MODE" -ne 1 && "$TEST_MODE" -ne 1 ]]; then
+        local n_reps=""
+        read -r -p "Repeticiones por punto de datos [10]: " n_reps
+        n_reps="${n_reps:-10}"
+        if [[ "$n_reps" =~ ^[0-9]+$ && "$n_reps" -ge 1 ]]; then
+            EXTRA_ARGS+=(--n-reps "$n_reps")
+        fi
+
+        local shots=""
+        read -r -p "Shots por simulación [1024]: " shots
+        shots="${shots:-1024}"
+        if [[ "$shots" =~ ^[0-9]+$ && "$shots" -ge 1 ]]; then
+            EXTRA_ARGS+=(--shots "$shots")
+        fi
+    fi
+
     if [[ "$DEV_MODE" -eq 1 ]]; then EXTRA_ARGS+=("--dev"); fi
 }
 

@@ -48,10 +48,11 @@ function Import-EnvFile([string]$path) {
     }
 }
 
+$TFGBENCH_DIR = Join-Path $env:USERPROFILE "tfg-bench"
 $_envCandidates = @(
     if ($PSCommandPath) { Join-Path (Split-Path $PSCommandPath) ".env" } else { $null }
     Join-Path (Get-Location).Path ".env"
-    Join-Path $env:USERPROFILE "tfg-bench\.env"
+    Join-Path $TFGBENCH_DIR ".env"
 ) | Where-Object { $_ }
 $_envLoaded = $false
 foreach ($_envFile in $_envCandidates) {
@@ -63,7 +64,7 @@ foreach ($_envFile in $_envCandidates) {
 }
 if (-not $_envLoaded) {
     Write-Host "-> .env no encontrado localmente, descargando del repositorio..."
-    $_envDest = Join-Path $env:USERPROFILE "tfg-bench\.env"
+    $_envDest = Join-Path $TFGBENCH_DIR ".env"
     New-Item -ItemType Directory -Path (Split-Path $_envDest) -Force | Out-Null
     try {
         Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mablospate/TFG/main/.env" `
@@ -80,7 +81,7 @@ if (-not $_envLoaded) {
 $RESULTS_DIR = if ($PSCommandPath) {
     Join-Path (Split-Path $PSCommandPath) "results"
 } else {
-    Join-Path $env:USERPROFILE "tfg-bench\results"
+    Join-Path $TFGBENCH_DIR "results"
 }
 if (-not (Test-Path $RESULTS_DIR)) {
     New-Item -ItemType Directory -Path $RESULTS_DIR -Force | Out-Null
@@ -239,11 +240,12 @@ function Run-Benchmark {
         "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
         "-e", "BENCH_OS=Windows",
         "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
-        "-e", "SUPABASE_URL=$($env:SUPABASE_URL)",
-        "-e", "SUPABASE_KEY=$($env:SUPABASE_KEY)",
         "-v", "${RESULTS_DIR}:/app/results",
         $IMAGE
     )
+
+    if ($env:SUPABASE_URL)  { $dockerRunArgs += "-e", "SUPABASE_URL=$($env:SUPABASE_URL)" }
+    if ($env:SUPABASE_KEY)  { $dockerRunArgs += "-e", "SUPABASE_KEY=$($env:SUPABASE_KEY)" }
 
     if ($Emulated) {
         $dockerRunArgs += "--emulated"
@@ -323,6 +325,20 @@ if (-not $TEST_MODE -and -not $DEV_MODE -and $args -notcontains "--time-budget")
     }
 }
 
+if (-not $DEV_MODE -and -not $TEST_MODE) {
+    $nReps = Read-Host "Repeticiones por punto de datos [10]"
+    if ([string]::IsNullOrWhiteSpace($nReps)) { $nReps = "10" }
+    if ($nReps -match '^\d+$' -and [int]$nReps -ge 1) {
+        $extraArgs += "--n-reps", $nReps
+    }
+
+    $shots = Read-Host "Shots por simulación [1024]"
+    if ([string]::IsNullOrWhiteSpace($shots)) { $shots = "1024" }
+    if ($shots -match '^\d+$' -and [int]$shots -ge 1) {
+        $extraArgs += "--shots", $shots
+    }
+}
+
 if ($DEV_MODE) { $extraArgs += "--dev" }
 
 Pull-Image
@@ -332,7 +348,7 @@ Write-Host "Docker:   --memory ${DOCKER_MEM_GB}g --cpus $DOCKER_CPUS"
 
 try {
     if ($TEST_MODE) {
-        Run-Benchmark @extraArgs --test
+        Run-Benchmark @extraArgs @args --test
     } elseif ($HAS_NVIDIA) {
         Write-Host "-> Primera pasada: con GPU (CUDA)..."
         Run-Benchmark @extraArgs @args

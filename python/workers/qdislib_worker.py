@@ -73,24 +73,57 @@ def _setup_shor(config: BenchmarkConfig):
     return startup_ms, factor_call, cutting_factor_call, shor_build_call
 
 
-def main() -> None:
+def _run_cutting_loop(
+    call_fn,
+    n_reps: int,
+    result: dict,
+) -> None:
+    """Run call_fn n_reps times, collect wall times and last outputs, write 3 cutting keys.
+
+    call_fn must return (exp_val, _cuts, find_ms).
+    """
+    cutting_times: list[float] = []
+    last_exp = 0.0
+    last_find_ms = 0.0
+    for _ in range(n_reps):
+        t0 = time.perf_counter()
+        exp_val, _cuts, find_ms = call_fn()
+        cutting_times.append((time.perf_counter() - t0) * 1000.0)
+        last_exp = exp_val
+        last_find_ms = find_ms
+    result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
+    result["cutting_find_time_ms"] = round(last_find_ms, 3)
+    result["cutting_expectation_value"] = round(last_exp, 6)
+
+
+def _parse_config():
+    """Parse stdin JSON config. Returns (cfg, config, algo, n, contributor) or None on error."""
     try:
         cfg = read_config()
     except Exception as e:
         write_error(f"failed to read config: {e}")
-        return
-
+        return None
     try:
-        hw = detect_hardware()
         config = BenchmarkConfig(
             n_repetitions=cfg["n_repetitions"],
             num_shots=cfg["num_shots"],
         )
-        algo = cfg["algo"]
-        n = cfg["n"]
-        contributor = cfg.get("contributor", "")
+        return cfg, config, cfg["algo"], cfg["n"], cfg.get("contributor", "")
     except Exception as e:
         write_error(f"invalid config: {e}")
+        return None
+
+
+def main() -> None:
+    parsed = _parse_config()
+    if parsed is None:
+        return
+    cfg, config, algo, n, contributor = parsed
+
+    try:
+        hw = detect_hardware()
+    except Exception as e:
+        write_error(f"hardware detection failed: {e}")
         return
 
     try:
@@ -123,35 +156,21 @@ def main() -> None:
 
     if algo == "grover":
         try:
-            cutting_times: list[float] = []
-            last_exp = 0.0
-            last_find_ms = 0.0
-            for _ in range(config.n_repetitions):
-                t0 = time.perf_counter()
-                exp_val, _cuts, find_ms = cutting_call(n, n, config.num_shots)
-                cutting_times.append((time.perf_counter() - t0) * 1000.0)
-                last_exp = exp_val
-                last_find_ms = find_ms
-            result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
-            result["cutting_find_time_ms"] = round(last_find_ms, 3)
-            result["cutting_expectation_value"] = round(last_exp, 6)
+            _run_cutting_loop(
+                lambda: cutting_call(n, n, config.num_shots),
+                config.n_repetitions,
+                result,
+            )
         except Exception as e:
             traceback.print_exc(file=sys.stderr)
             print(f"[QDisLib cutting] grover n={n} failed: {e}", file=sys.stderr)
     elif algo == "shor":
         try:
-            cutting_times = []
-            last_exp = 0.0
-            last_find_ms = 0.0
-            for _ in range(config.n_repetitions):
-                t0 = time.perf_counter()
-                exp_val, _cuts, find_ms = cutting_factor_call(n)
-                cutting_times.append((time.perf_counter() - t0) * 1000.0)
-                last_exp = exp_val
-                last_find_ms = find_ms
-            result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
-            result["cutting_find_time_ms"] = round(last_find_ms, 3)
-            result["cutting_expectation_value"] = round(last_exp, 6)
+            _run_cutting_loop(
+                lambda: cutting_factor_call(n),
+                config.n_repetitions,
+                result,
+            )
         except Exception as e:
             traceback.print_exc(file=sys.stderr)
             print(f"[QDisLib cutting] shor n={n} failed: {e}", file=sys.stderr)

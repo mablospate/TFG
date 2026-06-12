@@ -5,19 +5,10 @@ emits a single enriched JSON result dict on stdout.
 """
 from __future__ import annotations
 
-import sys
 import time
-import traceback
 
 from python.benchmark_core import BenchmarkConfig
-from python.hardware import detect_hardware
-from python.workers._base import (
-    read_config,
-    run_grover_worker,
-    run_shor_worker,
-    write_error,
-    write_result,
-)
+from python.workers._base import worker_main
 
 
 def _setup_grover(config: BenchmarkConfig):
@@ -65,55 +56,12 @@ def _setup_shor(config: BenchmarkConfig):
 
 
 def main() -> None:
-    try:
-        cfg = read_config()
-    except Exception as e:
-        write_error(f"failed to read config: {e}")
-        return
-
-    try:
-        hw = detect_hardware()
-        config = BenchmarkConfig(
-            n_repetitions=cfg["n_repetitions"],
-            num_shots=cfg["num_shots"],
-        )
-        algo = cfg["algo"]
-        n = cfg["n"]
-        contributor = cfg.get("contributor", "")
-    except Exception as e:
-        write_error(f"invalid config: {e}")
-        return
-
-    try:
-        import qiskit  # noqa: F401
-        import qiskit_aer  # noqa: F401
-    except ImportError as e:
-        write_error(f"qiskit not available: {e}")
-        return
-
-    try:
-        if algo == "grover":
-            startup_ms, search_call, build_call = _setup_grover(config)
-            result = run_grover_worker(
-                "qiskit", n, config, hw, contributor,
-                startup_ms, search_call, build_call,
-            )
-        elif algo == "shor":
-            startup_ms, factor_call, shor_build_call = _setup_shor(config)
-            result = run_shor_worker(
-                "qiskit", n, config, hw, contributor,
-                startup_ms, factor_call,
-                shor_build_call=shor_build_call,
-            )
-        else:
-            write_error(f"unknown algo: {algo}")
-            return
-    except Exception as e:
-        traceback.print_exc(file=sys.stderr)
-        write_error(f"qiskit {algo} n={n} failed: {e}")
-        return
-
-    write_result(result)
+    worker_main(
+        "qiskit",
+        _setup_grover,
+        _setup_shor,
+        import_check=lambda: (__import__("qiskit"), __import__("qiskit_aer")),
+    )
 
 
 if __name__ == "__main__":

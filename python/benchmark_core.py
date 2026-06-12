@@ -133,13 +133,7 @@ def benchmark_run(
     cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 
     # --- Estadísticas ---
-    arr = np.array(times_ms)
-    median_ms = float(np.median(arr))
-    q75, q25 = np.percentile(arr, [75, 25])
-    iqr_ms = float(q75 - q25)
-    mean_ms = float(np.mean(arr))
-    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+    median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
 
     result = BenchmarkResult(
         wall_time_median_ms=median_ms,
@@ -156,27 +150,6 @@ def benchmark_run(
         raw_times_ms=times_ms,
     )
     return result
-
-
-# ---------------------------------------------------------------------------
-# Medición de startup del framework
-# ---------------------------------------------------------------------------
-
-
-def measure_startup_time(import_fn: Callable[[], None]) -> float:
-    """
-    Mide el tiempo de importar e inicializar un framework en frío.
-
-    `import_fn` debe realizar los imports y cualquier inicialización del
-    simulador (p. ej. crear el backend, compilar JIT) pero no construir
-    ningún circuito.
-
-    Retorna el tiempo en milisegundos.
-    """
-    t0 = time.perf_counter()
-    import_fn()
-    t1 = time.perf_counter()
-    return (t1 - t0) * 1000.0
 
 
 # ---------------------------------------------------------------------------
@@ -232,23 +205,19 @@ def compute_jsd(
 
 
 # ---------------------------------------------------------------------------
-# Serialización
+# Estadísticas de tiempos
 # ---------------------------------------------------------------------------
 
 
-def save_results(results: list[BenchmarkResult], path: str) -> None:
-    """
-    Guarda una lista de BenchmarkResult en un fichero JSON.
-
-    El JSON incluye una cabecera de metadatos del sistema y la lista de
-    resultados con todos los campos de la dataclass.
-    """
-    output = {
-        "schema_version": "1.0",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "python_version": sys.version,
-        "platform": platform.platform(),
-        "results": [asdict(r) for r in results],
-    }
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(output, fh, indent=2, ensure_ascii=False)
+def _stats_from_times(
+    times_ms: list[float],
+) -> tuple[float, float, float, float, float]:
+    """Compute (median, iqr, mean, std, cv) from a list of wall times in ms."""
+    arr = np.array(times_ms) if times_ms else np.array([0.0])
+    median_ms = float(np.median(arr))
+    q75, q25 = np.percentile(arr, [75, 25])
+    iqr_ms = float(q75 - q25)
+    mean_ms = float(np.mean(arr))
+    std_ms = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    cv = std_ms / mean_ms if mean_ms > 0 else 0.0
+    return median_ms, iqr_ms, mean_ms, std_ms, cv
