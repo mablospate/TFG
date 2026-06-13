@@ -150,12 +150,28 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi
 
 # pycompss 3.4 on PyPI has name=unknown in metadata — pip rejects it; download via curl.
-# Three patches before installing:
-#   1. setup.py: add --no-c-binding to skip the C API binding (separate from bindings-common).
-#   2. bindings-common/Makefile.am: remove tests from SUBDIRS — tests SIGSEGV under QEMU
-#      (compss_sockets.cc), but the main libbindings_common.so compiles fine without them.
+# Patches needed:
+#   1. setup.py: add --no-c-binding to skip the C API binding.
+#   2. setup.py: inject a sed call to remove tests from bindings-common/Makefile.am BEFORE
+#      the COMPSs install script runs. bindings-common/Makefile.am doesn't exist until
+#      setup.py downloads the COMPSs tarball at build time — so we patch setup.py to run
+#      the sed itself. tests/ SIGSEGV under QEMU (compss_sockets.cc); the main
+#      libbindings_common.so compiles fine and is all that's needed for the Python binding.
 #   3. venv seeded with pip so COMPSs install script can call python3 -m pip.
 # --no-build-isolation lets the build use the venv Python (where pip is now available).
+COPY <<'PYEOF' /tmp/patch_pycompss_setup.py
+import pathlib
+f = pathlib.Path('/tmp/pycompss-3.4/setup.py')
+c = f.read_text()
+old = 'if command_runner(["./COMPSs/install", "--no-c-binding", pref]) != 0:'
+fix = ('import subprocess as _s\n'
+       '        _s.run(["sed", "-i", "/^SUBDIRS/s/ tests//",\n'
+       '                "./COMPSs/Bindings/bindings-common/Makefile.am"], check=False)\n'
+       '        ')
+assert old in c, 'Pattern not found: ' + repr(old[:60])
+f.write_text(c.replace(old, fix + old, 1))
+print('Patched setup.py: will skip bindings-common tests at build time')
+PYEOF
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv pip install pip && \
         curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
@@ -164,8 +180,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
-        sed -i '/^SUBDIRS/s/ tests//' \
-            /tmp/pycompss-3.4/COMPSs/Bindings/bindings-common/Makefile.am && \
+        python3.12 /tmp/patch_pycompss_setup.py && \
         env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS -u LD_LIBRARY_PATH \
             uv pip install --no-build-isolation /tmp/pycompss-3.4; \
     fi
