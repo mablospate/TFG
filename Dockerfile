@@ -152,8 +152,11 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 # pycompss 3.4 on PyPI has name=unknown in metadata — pip rejects it with strict name checks.
 # Bypass by downloading the sdist directly via curl (URL from PyPI simple index).
 # Patch setup.py to pass --no-c-binding: C binding segfaults under QEMU (cc1plus SIGSEGV).
+# Seed the venv with pip so COMPSs install script can call `python3 -m pip` during setup.
+# --no-build-isolation avoids uv's isolated build env, which lacks pip.
 # Python binding is sufficient for qdislib's Python-level parallelism.
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        uv pip install pip && \
         curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
             -o /tmp/pycompss-3.4.tar.gz && \
         tar xzf /tmp/pycompss-3.4.tar.gz -C /tmp && \
@@ -161,7 +164,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
         env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS -u LD_LIBRARY_PATH \
-            uv pip install /tmp/pycompss-3.4; \
+            uv pip install --no-build-isolation /tmp/pycompss-3.4; \
     fi
 
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
