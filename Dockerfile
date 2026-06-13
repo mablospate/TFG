@@ -149,12 +149,13 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
-# pycompss 3.4 on PyPI has name=unknown in metadata — pip rejects it with strict name checks.
-# Bypass by downloading the sdist directly via curl (URL from PyPI simple index).
-# Patch setup.py to pass --no-c-binding: C binding segfaults under QEMU (cc1plus SIGSEGV).
-# Seed the venv with pip so COMPSs install script can call `python3 -m pip` during setup.
-# --no-build-isolation avoids uv's isolated build env, which lacks pip.
-# Python binding is sufficient for qdislib's Python-level parallelism.
+# pycompss 3.4 on PyPI has name=unknown in metadata — pip rejects it; download via curl.
+# Three patches before installing:
+#   1. setup.py: add --no-c-binding to skip the C API binding (separate from bindings-common).
+#   2. bindings-common/Makefile.am: remove tests from SUBDIRS — tests SIGSEGV under QEMU
+#      (compss_sockets.cc), but the main libbindings_common.so compiles fine without them.
+#   3. venv seeded with pip so COMPSs install script can call python3 -m pip.
+# --no-build-isolation lets the build use the venv Python (where pip is now available).
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv pip install pip && \
         curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
@@ -163,6 +164,8 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
+        sed -i '/^SUBDIRS/s/ tests//' \
+            /tmp/pycompss-3.4/COMPSs/Bindings/bindings-common/Makefile.am && \
         env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS -u LD_LIBRARY_PATH \
             uv pip install --no-build-isolation /tmp/pycompss-3.4; \
     fi
