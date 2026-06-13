@@ -138,7 +138,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        pip install pycompss; \
+        uv pip install pycompss; \
     fi
 
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
