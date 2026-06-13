@@ -165,7 +165,7 @@ f = pathlib.Path('/tmp/pycompss-3.4/setup.py')
 c = f.read_text()
 patched = False
 for indent in ['    ', '        ']:
-    old = indent + 'if command_runner(["./COMPSs/install", "--no-c-binding", pref]) != 0:'
+    old = indent + 'if command_runner(["./COMPSs/install", "--no-c-binding", "--no-tracing", pref]) != 0:'
     if old in c:
         fix = (indent + 'import subprocess as _s;'
                '_s.run(["sed","-i","/^SUBDIRS/s/ tests//","./COMPSs/Bindings/bindings-common/Makefile.am"],check=False)\n')
@@ -181,7 +181,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
             -o /tmp/pycompss-3.4.tar.gz && \
         tar xzf /tmp/pycompss-3.4.tar.gz -C /tmp && \
-        sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
+        sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", "--no-tracing", pref|' \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
         python3.12 /tmp/patch_pycompss_setup.py && \
