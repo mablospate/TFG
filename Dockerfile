@@ -156,7 +156,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
             -o /tmp/pycompss-3.4.tar.gz && \
-        cd /tmp && tar xzf /tmp/pycompss-3.4.tar.gz && \
+        tar xzf /tmp/pycompss-3.4.tar.gz -C /tmp && \
         sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
