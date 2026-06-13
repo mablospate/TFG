@@ -107,7 +107,7 @@ FROM --platform=linux/amd64 nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y software-properties-common curl ocl-icd-libopencl1 && \
+    apt-get install -y software-properties-common curl ocl-icd-libopencl1 pocl-opencl-icd && \
     add-apt-repository ppa:deadsnakes/ppa -y && \
     apt-get update && \
     apt-get install -y libgomp1 python3.12 python3.12-venv python3.12-dev && \
@@ -118,7 +118,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
 # ── Stage 2b: arm64 base — Python slim (CPU only; no CUDA wheels for arm64) ───
 FROM --platform=linux/arm64 python:3.12-slim-bookworm AS base-arm64
 
-RUN apt-get update && apt-get install -y libgomp1 curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libgomp1 curl pocl-opencl-icd ocl-icd-libopencl1 && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 
 # ── Stage 3: Python dependencies — runs in parallel with rust-builder ─────────
