@@ -149,10 +149,17 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
-# Clear CUDA-injected compiler/linker env vars so pycompss configure tests work.
+# pycompss C binding segfaults under QEMU (cc1plus SIGSEGV on BindingExecutor.cc).
+# Download source, patch setup.py to skip C binding, install from patched source.
+# Python binding is sufficient for qdislib's Python-level parallelism.
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        uv pip download 'pycompss==3.4' --no-deps -d /tmp/pcsrc && \
+        cd /tmp && tar xzf /tmp/pcsrc/pycompss-3.4.tar.gz && \
+        sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
+            /tmp/pycompss-3.4/setup.py && \
+        grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
         env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS -u LD_LIBRARY_PATH \
-        uv pip install pycompss; \
+            uv pip install /tmp/pycompss-3.4; \
     fi
 
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
