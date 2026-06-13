@@ -137,6 +137,15 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv sync --no-dev --no-install-project; \
     fi
 
+# Build-only deps for pycompss C bindings (autoconf toolchain + gcc).
+# NOT inherited by the runtime stage (which inherits base-${TARGETARCH} directly).
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            autoconf automake libtool build-essential libxml2-dev && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv pip install pycompss; \
     fi
