@@ -163,13 +163,17 @@ COPY <<'PYEOF' /tmp/patch_pycompss_setup.py
 import pathlib
 f = pathlib.Path('/tmp/pycompss-3.4/setup.py')
 c = f.read_text()
-old = 'if command_runner(["./COMPSs/install", "--no-c-binding", pref]) != 0:'
-fix = ('import subprocess as _s\n'
-       '        _s.run(["sed", "-i", "/^SUBDIRS/s/ tests//",\n'
-       '                "./COMPSs/Bindings/bindings-common/Makefile.am"], check=False)\n'
-       '        ')
-assert old in c, 'Pattern not found: ' + repr(old[:60])
-f.write_text(c.replace(old, fix + old, 1))
+patched = False
+for indent in ['    ', '        ']:
+    old = indent + 'if command_runner(["./COMPSs/install", "--no-c-binding", pref]) != 0:'
+    if old in c:
+        fix = (indent + 'import subprocess as _s;'
+               '_s.run(["sed","-i","/^SUBDIRS/s/ tests//","./COMPSs/Bindings/bindings-common/Makefile.am"],check=False)\n')
+        f.write_text(c.replace(old, fix + old, 1))
+        patched = True
+        break
+if not patched:
+    raise AssertionError('Pattern not found in setup.py')
 print('Patched setup.py: will skip bindings-common tests at build time')
 PYEOF
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
