@@ -107,11 +107,13 @@ FROM --platform=linux/amd64 nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base-amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y software-properties-common curl ocl-icd-libopencl1 pocl-opencl-icd && \
+    apt-get install -y software-properties-common curl ocl-icd-libopencl1 pocl-opencl-icd default-jdk && \
     add-apt-repository ppa:deadsnakes/ppa -y && \
     apt-get update && \
     apt-get install -y libgomp1 python3.12 python3.12-venv python3.12-dev && \
     rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/default-java
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
@@ -136,7 +138,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        pip install pycompss || echo "WARN: pycompss install failed, skipping"; \
+        pip install pycompss; \
     fi
 
 # ── Stage 4: runtime — assembles Python venv + Rust binaries ─────────────────
