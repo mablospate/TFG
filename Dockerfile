@@ -145,16 +145,18 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             autoconf automake libtool build-essential \
-            libxml2-dev libbz2-dev maven python3-pip && \
+            libxml2-dev libbz2-dev maven && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
-# pycompss C binding segfaults under QEMU (cc1plus SIGSEGV on BindingExecutor.cc).
-# Download source, patch setup.py to skip C binding, install from patched source.
+# pycompss 3.4 on PyPI has name=unknown in metadata — pip rejects it with strict name checks.
+# Bypass by downloading the sdist directly via curl (URL from PyPI simple index).
+# Patch setup.py to pass --no-c-binding: C binding segfaults under QEMU (cc1plus SIGSEGV).
 # Python binding is sufficient for qdislib's Python-level parallelism.
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        pip3 download 'pycompss==3.4' --no-deps -d /tmp/pcsrc && \
-        cd /tmp && tar xzf /tmp/pcsrc/pycompss-3.4.tar.gz && \
+        curl -fsSL 'https://files.pythonhosted.org/packages/7e/08/342dde0d4b7c030abae6068396a604a0b14c6bd7a10d390bee7e617aad1e/pycompss-3.4.tar.gz' \
+            -o /tmp/pycompss-3.4.tar.gz && \
+        cd /tmp && tar xzf /tmp/pycompss-3.4.tar.gz && \
         sed -i 's|"./COMPSs/install", pref|"./COMPSs/install", "--no-c-binding", pref|' \
             /tmp/pycompss-3.4/setup.py && \
         grep -q 'no-c-binding' /tmp/pycompss-3.4/setup.py && \
