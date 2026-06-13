@@ -694,8 +694,15 @@ def _run_rust_binary(
     )
     _ncpu = psutil.cpu_count(logical=True) or 1
     if proc.returncode != 0:
-        _drain_stderr(proc)
-        raise RuntimeError(f"{binary.name} exited with code {proc.returncode}: (see stderr above)")
+        _err = ""
+        if proc.stderr:
+            _raw = proc.stderr.read()
+            _err = (_raw.decode(errors="replace") if isinstance(_raw, bytes) else _raw).strip()
+            if _err:
+                print(_err, file=sys.stderr)
+        raise RuntimeError(
+            f"{binary.name} exited with code {proc.returncode}: {_err[:300] if _err else '(no stderr)'}"
+        )
     if not lines:
         raise ValueError(f"{binary.name} produced no stdout")
     payload = json.loads(lines[-1])
@@ -1072,8 +1079,13 @@ def _run_rust_fw(
         statuses[fw_name] = "ERROR"
         print(f"  [TIMEOUT] {fw_name}: {e}")
     except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-        statuses[fw_name] = "ERROR"
-        print(f"  [ERROR] {fw_name}: {e}")
+        _emsg = str(e).lower()
+        if any(kw in _emsg for kw in ("opencl", "platform id list", "unable to get platform", "ocl")):
+            statuses[fw_name] = "SKIP"
+            print(f"  [SKIP] {fw_name}: OpenCL not available on this platform")
+        else:
+            statuses[fw_name] = "ERROR"
+            print(f"  [ERROR] {fw_name}: {e}")
     except Exception as e:
         statuses[fw_name] = "ERROR"
         print(f"  [ERROR] {fw_name}: unexpected error: {e}")
