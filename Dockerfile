@@ -137,16 +137,21 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         uv sync --no-dev --no-install-project; \
     fi
 
-# Build-only deps for pycompss C bindings (autoconf toolchain + gcc).
+# Build-only deps for pycompss C bindings (autoconf toolchain + gcc + bzip2 + maven).
+# libbz2-dev: explicitly required by pycompss C binding install script.
+# maven: required by COMPSs Java runtime build.
 # NOT inherited by the runtime stage (which inherits base-${TARGETARCH} directly).
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends \
-            autoconf automake libtool build-essential libxml2-dev && \
+            autoconf automake libtool build-essential \
+            libxml2-dev libbz2-dev maven && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
+# Clear CUDA-injected compiler/linker env vars so pycompss configure tests work.
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS -u LD_LIBRARY_PATH \
         uv pip install pycompss; \
     fi
 
