@@ -108,6 +108,7 @@ RUST_FRAMEWORKS: dict[str, pathlib.Path] = {
     "qcgpu":    _rust_bin("qcgpu-grover"),
 }
 
+_OPENCL_REQUIRED_FRAMEWORKS: frozenset[str] = frozenset({"qcgpu"})
 
 RUST_FRAMEWORKS_SHOR: dict[str, pathlib.Path] = {
     "q1tsim":   _rust_bin("q1tsim-shor"),
@@ -1079,8 +1080,13 @@ def _run_rust_fw(
         statuses[fw_name] = "ERROR"
         print(f"  [TIMEOUT] {fw_name}: {e}")
     except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-        _emsg = str(e).lower()
-        if any(kw in _emsg for kw in ("opencl", "platform id list", "unable to get platform", "ocl")):
+        _emsg = str(e).strip().lower()
+        _opencl_kws = (
+            "opencl", "platform id list", "unable to get platform",
+            "ocl", "no platform", "icd loader", "libopencl",
+            "cl_platform_not_found", "unable to initialize",
+        )
+        if any(kw in _emsg for kw in _opencl_kws) or fw_name in _OPENCL_REQUIRED_FRAMEWORKS:
             statuses[fw_name] = "SKIP"
             print(f"  [SKIP] {fw_name}: OpenCL not available on this platform")
         else:
