@@ -240,12 +240,13 @@ function Run-Benchmark {
         "-e", "BENCH_RAM_GB=$DOCKER_MEM_GB",
         "-e", "BENCH_OS=Windows",
         "-e", "BENCH_OS_VERSION=$([System.Environment]::OSVersion.Version)",
-        "-v", "${RESULTS_DIR}:/app/results",
-        $IMAGE
+        "-v", "${RESULTS_DIR}:/app/results"
     )
 
     if ($env:SUPABASE_URL)  { $dockerRunArgs += "-e", "SUPABASE_URL=$($env:SUPABASE_URL)" }
     if ($env:SUPABASE_KEY)  { $dockerRunArgs += "-e", "SUPABASE_KEY=$($env:SUPABASE_KEY)" }
+
+    $dockerRunArgs += $IMAGE
 
     if ($Emulated) {
         $dockerRunArgs += "--emulated"
