@@ -1,0 +1,111 @@
+@startuml
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+skinparam roundcorner 5
+autonumber
+
+actor Usuario
+participant "bench /\nbench.ps1" as bench
+participant "Docker" as docker
+control "run.py\n(Orquestador)" as run
+collections "Simulador\n(x framework x tamaño)" as sim
+database "Supabase" as db
+
+Usuario -> bench : ejecutar benchmark
+bench -> bench : detectar hardware del host\n(CPU, RAM, GPU, OS)
+bench -> bench : cargar .env\n(SUPABASE_URL, SUPABASE_KEY)
+
+alt Docker no activo
+    bench -> docker : arrancar Docker Desktop
+    docker --> bench : listo
+end
+
+bench -> docker : cap de CPU y memoria\nsegun los limites de Docker
+
+bench -> Usuario : solicitar contribuidor\ny tiempo limite
+Usuario -> bench : nombre + limite
+
+alt imagen no en cache
+    bench -> docker : docker pull tfg-bench
+    docker --> bench : imagen descargada
+end
+
+alt host con GPU NVIDIA
+    bench -> docker : docker run --gpus all\n+ env vars
+    activate docker
+    docker -> run ** : pasada 1 - con GPU
+    activate run
+    run --> bench : completado
+    deactivate run
+    destroy run
+    deactivate docker
+
+    bench -> docker : docker run sin GPU\n+ env vars
+    activate docker
+    docker -> run ** : pasada 2 - sin GPU
+    activate run
+    run --> bench : completado
+    deactivate run
+    destroy run
+    deactivate docker
+
+else host ARM64
+    bench -> docker : docker run nativo arm64\n+ env vars
+    activate docker
+    docker -> run ** : pasada 1 - nativo arm64
+    activate run
+    run --> bench : completado
+    deactivate run
+    destroy run
+    deactivate docker
+
+    opt QEMU disponible
+        bench -> docker : docker pull imagen amd64
+        bench -> docker : docker run --platform linux/amd64\n+ env vars
+        activate docker
+        docker -> run ** : pasada 2 - emulado amd64
+        activate run
+        run --> bench : completado
+        deactivate run
+        destroy run
+        deactivate docker
+    end
+
+else host x86_64 sin GPU
+    bench -> docker : docker run + env vars
+    activate docker
+    docker -> run ** : pasada unica
+    activate run
+    run --> bench : completado
+    deactivate run
+    destroy run
+    deactivate docker
+end
+
+group Ejecucion interna (run.py)
+    run -> run : verificar hardware con env vars
+    run -> run : medir GFLOPS del CPU
+
+    loop por cada framework x tamaño de entrada
+        run -> sim ** : lanzar subproceso aislado\n(Grover o Shor)
+        activate sim
+        alt ejecucion correcta
+            sim --> run : stdout JSON\n(wall time, memoria pico, resultado)
+        else subproceso fallido
+            sim --> run : error
+            run -> run : registrar y continuar
+        end
+        destroy sim
+    end
+
+    alt modo produccion
+        run -> db : HTTPS POST resultados
+        db --> run : 200 OK
+    else modo --dev
+        run -> run : guardar en results/*.json
+    end
+end
+
+bench -> docker : docker rmi tfg-bench
+
+@enduml

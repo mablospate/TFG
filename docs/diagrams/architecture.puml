@@ -1,0 +1,46 @@
+@startuml
+left to right direction
+
+node "Host" as host {
+    component "bench\n(Linux/macOS)" as bench
+    component "bench.ps1\n(Windows)" as benchps1
+}
+
+node "Contenedor Docker\nmablospate/tfg-bench:latest" as container {
+    node "Simuladores Python" as py_group {
+        component "Qiskit" as qiskit
+        component "Cirq" as cirq
+        component "CudaQ" as cudaq
+        component "QDisLib" as qdislib
+    }
+
+    component "run.py\n(Orquestador)" as orchestrator
+
+    node "Simuladores Rust" as rs_group {
+        component "q1tsim" as q1tsim
+        component "quantr" as quantr
+        component "quantrs2" as quantrs2
+        component "qcgpu" as qcgpu
+    }
+}
+
+database "Supabase" as db
+file "results/*.json" as results
+
+bench -left-> orchestrator : docker run
+benchps1 -left-> orchestrator : docker run
+
+orchestrator -up-> qiskit : subprocess + JSON
+orchestrator -up-> cirq : subprocess + JSON
+orchestrator -up-> cudaq : subprocess + JSON
+orchestrator -up-> qdislib : subprocess + JSON
+
+orchestrator -down-> q1tsim : subprocess + JSON
+orchestrator -down-> quantr : subprocess + JSON
+orchestrator -down-> quantrs2 : subprocess + JSON
+orchestrator -down-> qcgpu : subprocess + JSON
+
+orchestrator -left-> db : HTTPS POST
+orchestrator -left-> results : escritura local\n(modo dev)
+
+@enduml
