@@ -123,7 +123,7 @@ def search(
     return found, dist
 
 
-_FIND_CUT_TIMEOUT_S = 60
+_FIND_CUT_TIMEOUT_S = 30
 _WIRE_CUTTING_TIMEOUT_S = 120
 
 

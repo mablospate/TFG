@@ -74,6 +74,9 @@ def _setup_shor(config: BenchmarkConfig):
     return startup_ms, factor_call, cutting_factor_call, shor_build_call
 
 
+_FIND_CUT_TIMEOUT_S = 30  # must match grover.py / shor/shor.py
+
+
 def _run_cutting_loop(
     call_fn,
     n_reps: int,
@@ -97,6 +100,12 @@ def _run_cutting_loop(
         exec_times.append(exec_ms)
         exp_vals.append(exp_val)
         print(f"  rep {i + 1}/{n_reps}  {cutting_times[-1]:.1f}ms  [cutting]", file=sys.stderr, flush=True)
+        # If find_cut timed out on this rep it will also hang on all remaining
+        # reps for the same n — skip them to avoid wasting minutes.
+        if i == 0 and find_ms >= (_FIND_CUT_TIMEOUT_S - 1) * 1000:
+            print(f"  [cutting] find_cut timed out, skipping remaining {n_reps - 1} reps",
+                  file=sys.stderr, flush=True)
+            break
 
     if not cutting_times:
         return

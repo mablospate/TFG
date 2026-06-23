@@ -107,7 +107,7 @@ def find_order(
     return r, dist
 
 
-_FIND_CUT_TIMEOUT_S = 60
+_FIND_CUT_TIMEOUT_S = 30
 _WIRE_CUTTING_TIMEOUT_S = 120
 
 
@@ -145,13 +145,13 @@ def find_order_with_cutting(
     if not hasattr(qc_isa, 'nqubits'):
         qc_isa.nqubits = qc_isa.num_qubits
 
-    max_sub_qubits = max(2, math.ceil(qc_isa.num_qubits / 2))
+    max_sub_qubits = max(4, qc_isa.num_qubits - 2)
     _find_holder: list = [[], None]  # [cuts, exc]
 
     def _find_worker() -> None:
         try:
             _find_holder[0] = find_cut(qc_isa, max_qubits=max_sub_qubits,
-                                       max_cuts=max_cuts, wire_cut=True, gate_cut=False)
+                                       max_cuts=max_cuts, wire_cut=True, gate_cut=True)
         except Exception as e:
             _find_holder[1] = e
 
