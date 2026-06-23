@@ -173,6 +173,7 @@ def run_shor_worker(
         peak_rss_mb = max(peak_rss_mb, _proc.memory_info().rss / 1024 / 1024)
         cpu_samples.append(min(_proc.cpu_percent(), _max_cpu_pct))
         print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", file=sys.stderr, flush=True)
+    print(file=sys.stderr)
 
     cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 

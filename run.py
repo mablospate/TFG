@@ -773,6 +773,7 @@ def benchmark_rust_grover(
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
         print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
+    print()
 
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
     sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
@@ -838,6 +839,7 @@ def benchmark_rust_shor_at_n(
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
         print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
+    print()
 
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición")

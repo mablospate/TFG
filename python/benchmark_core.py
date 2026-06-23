@@ -130,6 +130,7 @@ def benchmark_run(
         peak_rss_mb = max(peak_rss_mb, rss_mb)
         cpu_samples.append(cpu_pct)
         print(f"  rep {i + 1}/{config.n_repetitions}  {elapsed_ms:.1f}ms", end="\r", file=sys.stderr, flush=True)
+    print(file=sys.stderr)
 
     cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 

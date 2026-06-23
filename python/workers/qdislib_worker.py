@@ -85,6 +85,7 @@ def _run_cutting_loop(
     cutting_times: list[float] = []
     find_times: list[float] = []
     exp_vals: list[float] = []
+    print(file=sys.stderr)  # start cutting reps on a fresh line
     for i in range(n_reps):
         t0 = time.perf_counter()
         exp_val, _cuts, find_ms = call_fn()
@@ -92,6 +93,7 @@ def _run_cutting_loop(
         find_times.append(find_ms)
         exp_vals.append(exp_val)
         print(f"  rep {i + 1}/{n_reps}  {cutting_times[-1]:.1f}ms  [cutting]", end="\r", file=sys.stderr, flush=True)
+    print(file=sys.stderr)  # commit last cutting rep line before parent prints summary
     result["raw_cutting_times_ms"] = [round(t, 3) for t in cutting_times]
     result["raw_cutting_find_times_ms"] = [round(t, 3) for t in find_times]
     result["raw_cutting_exp_values"] = [round(v, 6) for v in exp_vals]
