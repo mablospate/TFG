@@ -107,17 +107,24 @@ def find_order(
     return r, dist
 
 
+_WIRE_CUTTING_TIMEOUT_S = 120
+
+
 def find_order_with_cutting(
     A: int,
     N: int,
     pass_manager=None,
     num_shots: int = 10,
     max_cuts: int = 2,
-) -> tuple[float, list, float]:
+) -> tuple[float, list, float, float]:
     """Find order of A in Z_N using QDisLib circuit cutting.
 
-    Returns (expectation_value, cuts, find_cut_time_ms).
+    Returns (expectation_value, cuts, find_cut_time_ms, exec_time_ms).
+    find_cut_time_ms: time to find cuts (always captured).
+    exec_time_ms: time for wire_cutting execution (0.0 if no cuts or timed out).
     """
+    import sys as _sys
+    import threading
     import time
     from Qdislib.api import find_cut, wire_cutting
     from qiskit_aer import AerSimulator
@@ -126,7 +133,7 @@ def find_order_with_cutting(
     m = 2 * math.ceil(math.log2(N))
     qc = order_finding_circuit(A, N, precision=m)
     if qc == 0:
-        return 0.0, [], 0.0
+        return 0.0, [], 0.0, 0.0
 
     _pm = (
         pass_manager
@@ -143,20 +150,38 @@ def find_order_with_cutting(
         cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
                        wire_cut=True, gate_cut=False)
     except Exception as e:
-        print(f"[QDisLib cutting] find_cut error: {e}")
+        print(f"[QDisLib cutting] find_cut error: {e}", file=_sys.stderr)
         cuts = []
     find_time_ms = (time.perf_counter() - t0) * 1000.0
 
     if not cuts:
-        return 0.0, [], find_time_ms
+        return 0.0, [], find_time_ms, 0.0
 
-    try:
-        exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
-    except Exception as e:
-        print(f"[QDisLib cutting] wire_cutting error: {e}")
-        exp_val = 0.0
+    _holder: list = [None]
+    _exc: list = [None]
 
-    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms
+    def _wire_worker() -> None:
+        try:
+            _holder[0] = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+        except Exception as e:
+            _exc[0] = e
+
+    t_exec = time.perf_counter()
+    t = threading.Thread(target=_wire_worker, daemon=True)
+    t.start()
+    t.join(timeout=_WIRE_CUTTING_TIMEOUT_S)
+    exec_time_ms = (time.perf_counter() - t_exec) * 1000.0
+
+    if t.is_alive():
+        print(f"[QDisLib cutting] wire_cutting timed out after {_WIRE_CUTTING_TIMEOUT_S}s", file=_sys.stderr, flush=True)
+        return 0.0, cuts, find_time_ms, 0.0
+
+    if _exc[0] is not None:
+        print(f"[QDisLib cutting] wire_cutting error: {_exc[0]}", file=_sys.stderr)
+        return 0.0, cuts, find_time_ms, 0.0
+
+    exp_val = _holder[0]
+    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms, exec_time_ms
 
 
 def find_factor_with_cutting(
@@ -165,15 +190,15 @@ def find_factor_with_cutting(
     num_tries: int = 3,
     num_shots_per_trial: int = 10,
     max_cuts: int = 2,
-) -> tuple[float, list, float]:
+) -> tuple[float, list, float, float]:
     """Run Shor's order-finding via QDisLib cutting for benchmarking purposes.
 
     Uses a=2 as fixed base (timing benchmark, not correctness).
-    Returns (expectation_value, cuts, find_cut_time_ms).
+    Returns (expectation_value, cuts, find_cut_time_ms, exec_time_ms).
     """
     a = 2
     if math.gcd(a, N) > 1:
-        return 0.0, [], 0.0
+        return 0.0, [], 0.0, 0.0
     return find_order_with_cutting(a, N, pass_manager=pass_manager,
                                    num_shots=num_shots_per_trial, max_cuts=max_cuts)
 

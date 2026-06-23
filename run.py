@@ -450,7 +450,8 @@ def _make_cutting_result(qdislib_result: dict) -> dict | None:
     q75, q25 = np.percentile(arr, [75, 25])
     result = {k: v for k, v in qdislib_result.items()
               if k not in ("framework", "raw_times_ms", "raw_cutting_times_ms",
-                           "raw_cutting_find_times_ms", "raw_cutting_exp_values",
+                           "raw_cutting_find_times_ms", "raw_cutting_exec_times_ms",
+                           "raw_cutting_exp_values",
                            "wall_time_median_ms", "wall_time_iqr_ms",
                            "wall_time_mean_ms", "wall_time_std_ms", "cv")}
     result.update({
@@ -996,6 +997,7 @@ def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
         "factor_found":                 result.get("factor_found"),
         "success_rate":                 result.get("success_rate"),
         "cutting_find_time_ms":         result.get("cutting_find_time_ms"),
+        "cutting_exec_time_ms":         result.get("cutting_exec_time_ms"),
         "cutting_expectation_value":    result.get("cutting_expectation_value"),
     }
     if status == "error":

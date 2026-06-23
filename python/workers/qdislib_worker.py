@@ -1,8 +1,8 @@
 """QDisLib benchmark worker subprocess."""
 from __future__ import annotations
 
+import multiprocessing
 import sys
-import threading
 import time
 import traceback
 import warnings
@@ -74,9 +74,6 @@ def _setup_shor(config: BenchmarkConfig):
     return startup_ms, factor_call, cutting_factor_call, shor_build_call
 
 
-_CUTTING_TIMEOUT_S = 120  # seconds per rep before giving up
-
-
 def _run_cutting_loop(
     call_fn,
     n_reps: int,
@@ -84,43 +81,20 @@ def _run_cutting_loop(
 ) -> None:
     """Run call_fn n_reps times and store per-rep cutting data.
 
-    call_fn must return (exp_val, _cuts, find_ms).
-    Each rep has a _CUTTING_TIMEOUT_S timeout; if it expires the loop stops
-    and stores whatever partial data was collected.
+    call_fn must return (exp_val, _cuts, find_ms, exec_ms).
+    wire_cutting timeout is handled inside call_fn; exec_ms=0 when it times out.
     """
     cutting_times: list[float] = []
     find_times: list[float] = []
+    exec_times: list[float] = []
     exp_vals: list[float] = []
     for i in range(n_reps):
         print(f"  [cutting] rep {i + 1}/{n_reps}...", file=sys.stderr, flush=True)
-        _holder: list = [None]
-        _exc: list = [None]
-
-        def _worker() -> None:
-            try:
-                _holder[0] = call_fn()
-            except Exception as e:
-                _exc[0] = e
-
         t0 = time.perf_counter()
-        t = threading.Thread(target=_worker, daemon=True)
-        t.start()
-        t.join(timeout=_CUTTING_TIMEOUT_S)
-
-        if t.is_alive():
-            elapsed = time.perf_counter() - t0
-            print(
-                f"  [cutting] rep {i + 1} timed out after {elapsed:.0f}s — stopping cutting for this n",
-                file=sys.stderr, flush=True,
-            )
-            break
-
-        if _exc[0] is not None:
-            raise _exc[0]
-
-        exp_val, _cuts, find_ms = _holder[0]
+        exp_val, _cuts, find_ms, exec_ms = call_fn()
         cutting_times.append((time.perf_counter() - t0) * 1000.0)
         find_times.append(find_ms)
+        exec_times.append(exec_ms)
         exp_vals.append(exp_val)
         print(f"  rep {i + 1}/{n_reps}  {cutting_times[-1]:.1f}ms  [cutting]", file=sys.stderr, flush=True)
 
@@ -128,8 +102,11 @@ def _run_cutting_loop(
         return
     result["raw_cutting_times_ms"] = [round(t, 3) for t in cutting_times]
     result["raw_cutting_find_times_ms"] = [round(t, 3) for t in find_times]
+    result["raw_cutting_exec_times_ms"] = [round(t, 3) for t in exec_times]
     result["raw_cutting_exp_values"] = [round(v, 6) for v in exp_vals]
     result["cutting_find_time_ms"] = round(float(np.median(find_times)), 3)
+    exec_nonzero = [t for t in exec_times if t > 0]
+    result["cutting_exec_time_ms"] = round(float(np.median(exec_nonzero)), 3) if exec_nonzero else 0.0
     result["cutting_expectation_value"] = round(float(np.mean(exp_vals)), 6)
 
 
@@ -190,6 +167,13 @@ def main() -> None:
         traceback.print_exc(file=sys.stderr)
         write_error(f"qdislib {algo} n={n} failed: {e}")
         return
+
+    # Use 'spawn' so wire_cutting's internal multiprocessing doesn't inherit
+    # locks from this process (which is already a subprocess of run.py).
+    try:
+        multiprocessing.set_start_method("spawn", force=True)
+    except RuntimeError:
+        pass
 
     if algo == "grover":
         try:

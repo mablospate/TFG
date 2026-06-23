@@ -123,23 +123,26 @@ def search(
     return found, dist
 
 
+_WIRE_CUTTING_TIMEOUT_S = 120
+
+
 def search_with_cutting(
     n: int,
     target: int,
     pass_manager=None,
     num_shots: int = 1024,
     max_cuts: int = 2,
-) -> tuple[float, list, float]:
+) -> tuple[float, list, float, float]:
     """Execute Grover via QDisLib circuit cutting.
 
-    Returns (expectation_value, cuts, find_cut_time_ms).
-    find_cut_time_ms is the time spent finding the cuts (not executing).
+    Returns (expectation_value, cuts, find_cut_time_ms, exec_time_ms).
+    find_cut_time_ms: time to find cuts (always captured).
+    exec_time_ms: time for wire_cutting execution (0.0 if no cuts or timed out).
     """
     import sys as _sys
+    import threading
     import time
-    print(f"  [diag] importing Qdislib.api...", file=_sys.stderr, flush=True)
     from Qdislib.api import find_cut, wire_cutting
-    print(f"  [diag] import done", file=_sys.stderr, flush=True)
     from qiskit_aer import AerSimulator
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
@@ -151,14 +154,11 @@ def search_with_cutting(
         if pass_manager is not None
         else generate_preset_pass_manager(backend=AerSimulator())
     )
-    print(f"  [diag] transpiling...", file=_sys.stderr, flush=True)
     qc_isa = _pm.run(qc)
-    print(f"  [diag] transpile done", file=_sys.stderr, flush=True)
     if not hasattr(qc_isa, 'nqubits'):
         qc_isa.nqubits = qc_isa.num_qubits
 
     max_sub_qubits = max(2, math.ceil(n / 2))
-    print(f"  [diag] find_cut(max_qubits={max_sub_qubits}, max_cuts={max_cuts})...", file=_sys.stderr, flush=True)
     t0 = time.perf_counter()
     try:
         cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
@@ -167,17 +167,32 @@ def search_with_cutting(
         print(f"[QDisLib cutting] find_cut error: {e}", file=_sys.stderr)
         cuts = []
     find_time_ms = (time.perf_counter() - t0) * 1000.0
-    print(f"  [diag] find_cut done in {find_time_ms:.0f}ms, {len(cuts)} cuts", file=_sys.stderr, flush=True)
 
     if not cuts:
-        exp_val = 0.0
-    else:
-        print(f"  [diag] wire_cutting(shots={num_shots}, backend=numpy)...", file=_sys.stderr, flush=True)
-        try:
-            exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
-        except Exception as e:
-            print(f"[QDisLib cutting] wire_cutting error: {e}", file=_sys.stderr)
-            exp_val = 0.0
-        print(f"  [diag] wire_cutting done", file=_sys.stderr, flush=True)
+        return 0.0, cuts, find_time_ms, 0.0
 
-    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms
+    _holder: list = [None]
+    _exc: list = [None]
+
+    def _wire_worker() -> None:
+        try:
+            _holder[0] = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
+        except Exception as e:
+            _exc[0] = e
+
+    t_exec = time.perf_counter()
+    t = threading.Thread(target=_wire_worker, daemon=True)
+    t.start()
+    t.join(timeout=_WIRE_CUTTING_TIMEOUT_S)
+    exec_time_ms = (time.perf_counter() - t_exec) * 1000.0
+
+    if t.is_alive():
+        print(f"[QDisLib cutting] wire_cutting timed out after {_WIRE_CUTTING_TIMEOUT_S}s", file=_sys.stderr, flush=True)
+        return 0.0, cuts, find_time_ms, 0.0
+
+    if _exc[0] is not None:
+        print(f"[QDisLib cutting] wire_cutting error: {_exc[0]}", file=_sys.stderr)
+        return 0.0, cuts, find_time_ms, 0.0
+
+    exp_val = _holder[0]
+    return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms, exec_time_ms
