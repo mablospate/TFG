@@ -765,13 +765,14 @@ def benchmark_rust_grover(
 
     for _ in range(max(0, config.warmup_runs)):
         _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
-    for _ in range(config.n_repetitions):
+    for i in range(config.n_repetitions):
         payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
+        print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
 
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
     sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
@@ -828,7 +829,7 @@ def benchmark_rust_shor_at_n(
     last_payload: dict | None = None
 
     cpu_percents_shor: list[float] = []
-    for _ in range(config.n_repetitions):
+    for i in range(config.n_repetitions):
         payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         times_ms.append(float(payload.get("time_ms", 0.0)))
@@ -836,6 +837,7 @@ def benchmark_rust_shor_at_n(
         cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
+        print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
 
     if not times_ms:
         raise RuntimeError("No se completó ninguna repetición")
@@ -991,7 +993,6 @@ def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
         "n_to_factor":                  result.get("n_to_factor"),
         "factor_found":                 result.get("factor_found"),
         "success_rate":                 result.get("success_rate"),
-        "cutting_wall_time_ms":         result.get("cutting_wall_time_ms"),
         "cutting_find_time_ms":         result.get("cutting_find_time_ms"),
         "cutting_expectation_value":    result.get("cutting_expectation_value"),
     }

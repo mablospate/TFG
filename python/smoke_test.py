@@ -70,7 +70,7 @@ _HW_RANGES: dict[str, tuple[float, float]] = {
 PYTHON_SHOR_EXTRA_NONZERO = {"n_to_factor", "build_time_ms"}
 PYTHON_SHOR_EXTRA_PRESENT = {"factor_found"}
 
-QDISLIB_CUTTING_NONZERO = {"cutting_wall_time_ms", "cutting_find_time_ms"}
+QDISLIB_CUTTING_NONZERO = {"cutting_find_time_ms"}
 QDISLIB_CUTTING_PRESENT = {"cutting_expectation_value"}
 
 RUST_GROVER_NONZERO = {"time_ms", "mem_mb"}
