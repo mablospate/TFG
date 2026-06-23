@@ -165,13 +165,14 @@ def run_shor_worker(
     factors: list[int] = []
     peak_rss_mb: float = 0.0
     cpu_samples: list[float] = []
-    for _ in range(config.n_repetitions):
+    for i in range(config.n_repetitions):
         t0 = time.perf_counter()
         f = factor_call(N)
         times_ms.append((time.perf_counter() - t0) * 1000)
         factors.append(f)
         peak_rss_mb = max(peak_rss_mb, _proc.memory_info().rss / 1024 / 1024)
         cpu_samples.append(min(_proc.cpu_percent(), _max_cpu_pct))
+        print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", file=sys.stderr, flush=True)
 
     cpu_mean = float(np.mean(cpu_samples)) if cpu_samples else 0.0
 
