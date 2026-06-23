@@ -123,6 +123,7 @@ def search(
     return found, dist
 
 
+_FIND_CUT_TIMEOUT_S = 60
 _WIRE_CUTTING_TIMEOUT_S = 120
 
 
@@ -159,14 +160,27 @@ def search_with_cutting(
         qc_isa.nqubits = qc_isa.num_qubits
 
     max_sub_qubits = max(2, math.ceil(n / 2))
+    _find_holder: list = [[], None]  # [cuts, exc]
+
+    def _find_worker() -> None:
+        try:
+            _find_holder[0] = find_cut(qc_isa, max_qubits=max_sub_qubits,
+                                       max_cuts=max_cuts, wire_cut=True, gate_cut=False)
+        except Exception as e:
+            _find_holder[1] = e
+
     t0 = time.perf_counter()
-    try:
-        cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
-                       wire_cut=True, gate_cut=False)
-    except Exception as e:
-        print(f"[QDisLib cutting] find_cut error: {e}", file=_sys.stderr)
-        cuts = []
+    _ft = threading.Thread(target=_find_worker, daemon=True)
+    _ft.start()
+    _ft.join(timeout=_FIND_CUT_TIMEOUT_S)
     find_time_ms = (time.perf_counter() - t0) * 1000.0
+
+    if _ft.is_alive():
+        print(f"[QDisLib cutting] find_cut timed out after {_FIND_CUT_TIMEOUT_S}s", file=_sys.stderr, flush=True)
+        return 0.0, [], find_time_ms, 0.0
+    if _find_holder[1] is not None:
+        print(f"[QDisLib cutting] find_cut error: {_find_holder[1]}", file=_sys.stderr)
+    cuts = _find_holder[0]
 
     if not cuts:
         return 0.0, cuts, find_time_ms, 0.0
