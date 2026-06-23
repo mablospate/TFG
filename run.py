@@ -1132,8 +1132,8 @@ def parse_args():
         default=False,
         help="Dev mode: 1 rep, smallest n only, fast exit",
     )
-    p.add_argument("--n-reps", type=int, default=10, metavar="N",
-                   help="Repetitions per data point (default: 10)")
+    p.add_argument("--n-reps", type=int, default=30, metavar="N",
+                   help="Repetitions per data point (default: 30)")
     p.add_argument("--shots", type=int, default=1024, metavar="N",
                    help="Shots per simulation (default: 1024)")
     p.add_argument("--warmup", type=int, default=1, metavar="N",
@@ -1150,6 +1150,19 @@ def main() -> None:
 
     if not args.emulated:
         args.emulated = _detect_emulated()
+
+    os.makedirs("results", exist_ok=True)
+    _pass_sentinel = pathlib.Path("results") / ".last_pass_end"
+    _cooldown_secs = 600
+    if _pass_sentinel.exists():
+        _elapsed = time.time() - _pass_sentinel.stat().st_mtime
+        if _elapsed < _cooldown_secs:
+            _remaining = int(_cooldown_secs - _elapsed)
+            print(
+                f"⏳ Enfriando componentes entre pasadas "
+                f"({_remaining // 60}m {_remaining % 60:02d}s restantes)..."
+            )
+            time.sleep(_remaining)
 
     print(BANNER)
 
@@ -1492,6 +1505,8 @@ def main() -> None:
             os.remove(shor_partial_path)
         if not USE_SUPABASE:
             print(f"\nResultados Shor guardados en: {shor_final_path}")
+
+    _pass_sentinel.touch()
 
 
 if __name__ == "__main__":
