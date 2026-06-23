@@ -86,6 +86,7 @@ def _run_cutting_loop(
     find_times: list[float] = []
     exp_vals: list[float] = []
     for i in range(n_reps):
+        print(f"  [cutting] calling rep {i + 1}/{n_reps}...", file=sys.stderr, flush=True)
         t0 = time.perf_counter()
         exp_val, _cuts, find_ms = call_fn()
         cutting_times.append((time.perf_counter() - t0) * 1000.0)
