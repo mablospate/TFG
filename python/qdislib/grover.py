@@ -153,22 +153,27 @@ def search_with_cutting(
         qc_isa.nqubits = qc_isa.num_qubits
 
     max_sub_qubits = max(2, math.ceil(n / 2))
+    import sys as _sys
+    print(f"  [diag] find_cut(max_qubits={max_sub_qubits}, max_cuts={max_cuts})...", file=_sys.stderr, flush=True)
     t0 = time.perf_counter()
     try:
         cuts = find_cut(qc_isa, max_qubits=max_sub_qubits, max_cuts=max_cuts,
                        wire_cut=True, gate_cut=False)
     except Exception as e:
-        print(f"[QDisLib cutting] find_cut error: {e}")
+        print(f"[QDisLib cutting] find_cut error: {e}", file=_sys.stderr)
         cuts = []
     find_time_ms = (time.perf_counter() - t0) * 1000.0
+    print(f"  [diag] find_cut done in {find_time_ms:.0f}ms, {len(cuts)} cuts", file=_sys.stderr, flush=True)
 
     if not cuts:
         exp_val = 0.0
     else:
+        print(f"  [diag] wire_cutting(shots={num_shots}, backend=numpy)...", file=_sys.stderr, flush=True)
         try:
             exp_val = wire_cutting(qc_isa, cuts, shots=num_shots, backend="numpy")
         except Exception as e:
-            print(f"[QDisLib cutting] wire_cutting error: {e}")
+            print(f"[QDisLib cutting] wire_cutting error: {e}", file=_sys.stderr)
             exp_val = 0.0
+        print(f"  [diag] wire_cutting done", file=_sys.stderr, flush=True)
 
     return float(exp_val) if not isinstance(exp_val, tuple) else 0.0, cuts, find_time_ms
