@@ -135,8 +135,11 @@ def search_with_cutting(
     Returns (expectation_value, cuts, find_cut_time_ms).
     find_cut_time_ms is the time spent finding the cuts (not executing).
     """
+    import sys as _sys
     import time
+    print(f"  [diag] importing Qdislib.api...", file=_sys.stderr, flush=True)
     from Qdislib.api import find_cut, wire_cutting
+    print(f"  [diag] import done", file=_sys.stderr, flush=True)
     from qiskit_aer import AerSimulator
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
@@ -148,12 +151,13 @@ def search_with_cutting(
         if pass_manager is not None
         else generate_preset_pass_manager(backend=AerSimulator())
     )
+    print(f"  [diag] transpiling...", file=_sys.stderr, flush=True)
     qc_isa = _pm.run(qc)
+    print(f"  [diag] transpile done", file=_sys.stderr, flush=True)
     if not hasattr(qc_isa, 'nqubits'):
         qc_isa.nqubits = qc_isa.num_qubits
 
     max_sub_qubits = max(2, math.ceil(n / 2))
-    import sys as _sys
     print(f"  [diag] find_cut(max_qubits={max_sub_qubits}, max_cuts={max_cuts})...", file=_sys.stderr, flush=True)
     t0 = time.perf_counter()
     try:
