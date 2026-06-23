@@ -1132,10 +1132,6 @@ def parse_args():
         default=False,
         help="Dev mode: 1 rep, smallest n only, fast exit",
     )
-    p.add_argument("--n-reps", type=int, default=30, metavar="N",
-                   help="Repetitions per data point (default: 30)")
-    p.add_argument("--shots", type=int, default=1024, metavar="N",
-                   help="Shots per simulation (default: 1024)")
     p.add_argument("--warmup", type=int, default=1, metavar="N",
                    help="Warmup runs before measurement (default: 1)")
     p.add_argument("--n-values", type=int, nargs="+", metavar="N",
@@ -1180,11 +1176,11 @@ def main() -> None:
     _n_values = args.n_values if args.n_values else [3, 5, 7, 9, 11]
     _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35, 77, 143]
     config = BenchmarkConfig(
-        n_repetitions=args.n_reps,  # 30 is for research; 10 is the production shortcut
+        n_repetitions=30,
         warmup_runs=args.warmup,
         n_values=_n_values,
         n_values_shor=_n_values_shor,
-        num_shots=args.shots,
+        num_shots=1024,
     )
     if args.dev:
         config = BenchmarkConfig(

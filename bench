@@ -381,22 +381,6 @@ collect_run_args() {
         ask_time_budget
     fi
 
-    if [[ "$DEV_MODE" -ne 1 && "$TEST_MODE" -ne 1 ]]; then
-        local n_reps=""
-        read -r -p "Repeticiones por punto de datos [10]: " n_reps
-        n_reps="${n_reps:-10}"
-        if [[ "$n_reps" =~ ^[0-9]+$ && "$n_reps" -ge 1 ]]; then
-            EXTRA_ARGS+=(--n-reps "$n_reps")
-        fi
-
-        local shots=""
-        read -r -p "Shots por simulación [1024]: " shots
-        shots="${shots:-1024}"
-        if [[ "$shots" =~ ^[0-9]+$ && "$shots" -ge 1 ]]; then
-            EXTRA_ARGS+=(--shots "$shots")
-        fi
-    fi
-
     if [[ "$DEV_MODE" -eq 1 ]]; then EXTRA_ARGS+=("--dev"); fi
 }
 
@@ -432,6 +416,8 @@ main() {
         run_benchmark "${EXTRA_ARGS[@]}" "$@"
 
         echo ""
+        echo "⏳ Enfriando componentes 10 min antes de la segunda pasada..."
+        sleep 600
         echo "→ Segunda pasada: sin GPU (CPU only)..."
         GPU_FLAGS=""
         run_benchmark --no-gpu "${EXTRA_ARGS[@]}" "$@" \
@@ -443,6 +429,8 @@ main() {
 
         if _qemu_available; then
             echo ""
+            echo "⏳ Enfriando componentes 10 min antes de la segunda pasada..."
+            sleep 600
             echo "→ Segunda pasada: build amd64 vía emulación (Rosetta 2 / QEMU)..."
             echo "  Descargando variante amd64..."
             if docker pull --platform linux/amd64 "$IMAGE" >/dev/null 2>&1; then

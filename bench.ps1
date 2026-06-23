@@ -326,20 +326,6 @@ if (-not $TEST_MODE -and -not $DEV_MODE -and $args -notcontains "--time-budget")
     }
 }
 
-if (-not $DEV_MODE -and -not $TEST_MODE) {
-    $nReps = Read-Host "Repeticiones por punto de datos [10]"
-    if ([string]::IsNullOrWhiteSpace($nReps)) { $nReps = "10" }
-    if ($nReps -match '^\d+$' -and [int]$nReps -ge 1) {
-        $extraArgs += "--n-reps", $nReps
-    }
-
-    $shots = Read-Host "Shots por simulación [1024]"
-    if ([string]::IsNullOrWhiteSpace($shots)) { $shots = "1024" }
-    if ($shots -match '^\d+$' -and [int]$shots -ge 1) {
-        $extraArgs += "--shots", $shots
-    }
-}
-
 if ($DEV_MODE) { $extraArgs += "--dev" }
 
 Pull-Image
@@ -355,6 +341,8 @@ try {
         Run-Benchmark @extraArgs @args
 
         Write-Host ""
+        Write-Host "⏳ Enfriando componentes 10 min antes de la segunda pasada..."
+        Start-Sleep -Seconds 600
         Write-Host "-> Segunda pasada: sin GPU (CPU only)..."
         $GPU_FLAGS = @()
         Run-Benchmark -NoGpu @extraArgs @args
@@ -364,6 +352,8 @@ try {
 
         if (Test-QemuAvailable) {
             Write-Host ""
+            Write-Host "⏳ Enfriando componentes 10 min antes de la segunda pasada..."
+            Start-Sleep -Seconds 600
             Write-Host "-> Segunda pasada: build amd64 via emulacion..."
             Write-Host "  Descargando variante amd64..."
             & docker pull --platform linux/amd64 $IMAGE 2>$null
