@@ -78,22 +78,24 @@ def _run_cutting_loop(
     n_reps: int,
     result: dict,
 ) -> None:
-    """Run call_fn n_reps times, collect wall times and last outputs, write 3 cutting keys.
+    """Run call_fn n_reps times and store per-rep cutting data.
 
     call_fn must return (exp_val, _cuts, find_ms).
     """
     cutting_times: list[float] = []
-    last_exp = 0.0
-    last_find_ms = 0.0
+    find_times: list[float] = []
+    exp_vals: list[float] = []
     for _ in range(n_reps):
         t0 = time.perf_counter()
         exp_val, _cuts, find_ms = call_fn()
         cutting_times.append((time.perf_counter() - t0) * 1000.0)
-        last_exp = exp_val
-        last_find_ms = find_ms
-    result["cutting_wall_time_ms"] = round(float(np.median(cutting_times)), 3)
-    result["cutting_find_time_ms"] = round(last_find_ms, 3)
-    result["cutting_expectation_value"] = round(last_exp, 6)
+        find_times.append(find_ms)
+        exp_vals.append(exp_val)
+    result["raw_cutting_times_ms"] = [round(t, 3) for t in cutting_times]
+    result["raw_cutting_find_times_ms"] = [round(t, 3) for t in find_times]
+    result["raw_cutting_exp_values"] = [round(v, 6) for v in exp_vals]
+    result["cutting_find_time_ms"] = round(float(np.median(find_times)), 3)
+    result["cutting_expectation_value"] = round(float(np.mean(exp_vals)), 6)
 
 
 def _parse_config():

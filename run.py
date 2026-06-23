@@ -438,6 +438,33 @@ def print_hardware_summary(hw: HardwareInfo) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _make_cutting_result(qdislib_result: dict) -> dict | None:
+    """Build a qdislib-cutting result dict from the raw cutting data in a qdislib result.
+
+    Returns None if no cutting data is present (e.g. error or skip).
+    """
+    raw = qdislib_result.get("raw_cutting_times_ms")
+    if not raw:
+        return None
+    arr = np.array(raw)
+    q75, q25 = np.percentile(arr, [75, 25])
+    result = {k: v for k, v in qdislib_result.items()
+              if k not in ("framework", "raw_times_ms", "raw_cutting_times_ms",
+                           "raw_cutting_find_times_ms", "raw_cutting_exp_values",
+                           "wall_time_median_ms", "wall_time_iqr_ms",
+                           "wall_time_mean_ms", "wall_time_std_ms", "cv")}
+    result.update({
+        "framework": "qdislib-cutting",
+        "raw_times_ms": raw,
+        "wall_time_median_ms": round(float(np.median(arr)), 3),
+        "wall_time_iqr_ms": round(float(q75 - q25), 3),
+        "wall_time_mean_ms": round(float(np.mean(arr)), 3),
+        "wall_time_std_ms": round(float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0, 3),
+        "cv": round(float(np.std(arr, ddof=1) / np.mean(arr)) if np.mean(arr) > 0 else 0.0, 6),
+    })
+    return result
+
+
 def _error_result(
     framework: str,
     algo: str,
@@ -860,6 +887,8 @@ def print_shor_summary_table(results: list[dict], statuses: dict[str, str]) -> N
     ordered_names: list[str] = list(FRAMEWORKS) + [
         n for n in RUST_FRAMEWORKS_SHOR if n not in FRAMEWORKS
     ]
+    if any(r.get("framework") == "qdislib-cutting" for r in results):
+        ordered_names.append("qdislib-cutting")
     by_pair: dict[tuple[str, int], dict] = {
         (r["framework"], r.get("n_to_factor", 0)): r for r in results
     }
@@ -1030,10 +1059,11 @@ def print_summary_table(results: list[dict], statuses: dict[str, str]) -> None:
         "╠══════════════╬═══════════╬══════════════════╬═══════════╬══════════╬═══════════╣"
     )
     by_name = {r["framework"]: r for r in results}
-    # Python frameworks first, then Rust binaries — keeps the table readable.
     ordered_names: list[str] = list(FRAMEWORKS) + [
         n for n in RUST_FRAMEWORKS if n not in FRAMEWORKS
     ]
+    if "qdislib-cutting" in by_name:
+        ordered_names.append("qdislib-cutting")
     for fw_name in ordered_names:
         status = statuses.get(fw_name, "SKIP")
         if fw_name in by_name and status == "OK":
@@ -1357,6 +1387,13 @@ def main() -> None:
                         print(f"[ERROR] {fw_name} grover n={n}: {result.get('error', 'unknown')}")
                     else:
                         statuses[fw_name] = "OK"
+                        cutting_r = _make_cutting_result(result)
+                        if cutting_r is not None:
+                            _c_median = cutting_r["wall_time_median_ms"]
+                            print(f"  └─ qdislib-cutting  n={n}  {config.n_repetitions} reps  median={_c_median:.1f}ms")
+                            results.append(cutting_r)
+                            n_series_results.append(cutting_r)
+                            statuses["qdislib-cutting"] = "OK"
                 except Exception as e:
                     statuses[fw_name] = "ERROR"
                     print(f"[ERROR] {fw_name} grover n={n}: {e}")
@@ -1424,6 +1461,13 @@ def main() -> None:
                         print(f"[ERROR] {fw} shor N={N_shor}: {r.get('error', 'unknown')}")
                     else:
                         shor_statuses[fw] = "OK"
+                        cutting_r = _make_cutting_result(r)
+                        if cutting_r is not None:
+                            _c_median = cutting_r["wall_time_median_ms"]
+                            print(f"  └─ qdislib-cutting  N={N_shor}  {config.n_repetitions} reps  median={_c_median:.1f}ms")
+                            shor_results.append(cutting_r)
+                            shor_n_series.append(cutting_r)
+                            shor_statuses["qdislib-cutting"] = "OK"
                 except Exception as e:
                     shor_statuses.setdefault(fw, "ERROR")
                     print(f"[ERROR] {fw} shor N={N_shor}: {e}")
