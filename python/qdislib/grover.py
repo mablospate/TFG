@@ -147,6 +147,12 @@ def search_with_cutting(
     from qiskit_aer import AerSimulator
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
+    if n < 5:
+        import sys as _sys
+        print(f"[QDisLib cutting] n={n} too small for cutting (Grover oracle too dense), skipping",
+              file=_sys.stderr, flush=True)
+        return 0.0, [], 0.0, 0.0
+
     iters = math.floor(math.pi / 4 * math.sqrt(2**n))
     qc = grover_circuit(n, target, num_iterations=iters)
 
