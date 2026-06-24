@@ -61,16 +61,13 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     factor_found                INT,
     success_rate                REAL,
 
-    -- QDisLib circuit cutting (NULL for non qdislib-cutting rows)
-    cutting_find_time_ms        REAL,
-    cutting_exec_time_ms        REAL,
-    cutting_expectation_value   REAL
+
 );
 
 
 -- Migration (already applied): ALTER TABLE benchmark_runs RENAME COLUMN cpu_freq_mhz TO cpu_gflops;
--- Migration: ALTER TABLE benchmark_runs DROP COLUMN IF EXISTS cutting_wall_time_ms;
--- Migration: ALTER TABLE benchmark_runs ADD COLUMN IF NOT EXISTS cutting_exec_time_ms REAL;
+-- Migration (already applied): ALTER TABLE benchmark_runs DROP COLUMN IF EXISTS cutting_wall_time_ms;
+-- Migration: ALTER TABLE benchmark_runs DROP COLUMN IF EXISTS cutting_find_time_ms, DROP COLUMN IF EXISTS cutting_exec_time_ms, DROP COLUMN IF EXISTS cutting_expectation_value;
 
 CREATE INDEX IF NOT EXISTS idx_br_run_id  ON benchmark_runs (run_id);
 CREATE INDEX IF NOT EXISTS idx_br_fw_algo ON benchmark_runs (framework, algorithm);

@@ -976,9 +976,6 @@ def _expand_result_to_rows(result: dict, run_meta: dict) -> list[dict]:
         "n_to_factor":                  result.get("n_to_factor"),
         "factor_found":                 result.get("factor_found"),
         "success_rate":                 result.get("success_rate"),
-        "cutting_find_time_ms":         result.get("cutting_find_time_ms"),
-        "cutting_exec_time_ms":         result.get("cutting_exec_time_ms"),
-        "cutting_expectation_value":    result.get("cutting_expectation_value"),
     }
     if status == "error":
         return [{**base, "repetition_index": 0, "wall_time_ms": None}]
