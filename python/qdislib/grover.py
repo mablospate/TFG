@@ -159,6 +159,9 @@ def search_with_cutting(
     if not hasattr(qc_isa, 'nqubits'):
         qc_isa.nqubits = qc_isa.num_qubits
 
+    if qc_isa.num_qubits < 5:
+        return 0.0, [], 0.0, 0.0
+
     max_sub_qubits = max(3, qc_isa.num_qubits - 1)
     _find_holder: list = [[], None]  # [cuts, exc]
 
