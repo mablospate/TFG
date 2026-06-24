@@ -159,7 +159,7 @@ def search_with_cutting(
     if not hasattr(qc_isa, 'nqubits'):
         qc_isa.nqubits = qc_isa.num_qubits
 
-    max_sub_qubits = max(2, math.ceil(n / 2))
+    max_sub_qubits = max(3, qc_isa.num_qubits - 1)
     _find_holder: list = [[], None]  # [cuts, exc]
 
     def _find_worker() -> None:

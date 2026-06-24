@@ -151,7 +151,7 @@ def find_order_with_cutting(
     def _find_worker() -> None:
         try:
             _find_holder[0] = find_cut(qc_isa, max_qubits=max_sub_qubits,
-                                       max_cuts=max_cuts, wire_cut=True, gate_cut=True)
+                                       max_cuts=max_cuts, wire_cut=True, gate_cut=False)
         except Exception as e:
             _find_holder[1] = e
 

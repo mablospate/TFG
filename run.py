@@ -1042,6 +1042,10 @@ def _supabase_insert(rows: list[dict], url: str, key: str) -> bool:
         with urllib.request.urlopen(req, timeout=30) as resp:
             print(f"  → Supabase: {len(rows)} filas insertadas ({resp.status})")
             return True
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")
+        print(f"  ⚠ Supabase insert falló ({exc.code}): {body[:500]}")
+        return False
     except Exception as exc:
         print(f"  ⚠ Supabase insert falló: {exc}")
         return False
