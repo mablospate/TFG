@@ -37,6 +37,8 @@ from python.hardware import HardwareInfo, detect_hardware
 
 
 DOCKER_IMAGE: str = os.getenv("DOCKER_IMAGE", "dev")
+FRAMEWORK_TIME_LIMIT_S: float = 2 * 3600  # 2 horas — frameworks que superen este tiempo se desactivan
+MIN_REPS_FOR_SAVE: int = 5  # mínimo de reps completados para guardar en DB
 
 
 def _detect_emulated() -> bool:
@@ -533,7 +535,7 @@ def _run_python_worker(
     contributor_name: str,
     hw: HardwareInfo,
     cudaq_target: str = "qpp-cpu",
-    timeout_s: float = 600.0,
+    timeout_s: float = 7200.0,
 ) -> dict:
     """Launch a framework worker subprocess, return its result dict.
 
@@ -738,6 +740,7 @@ def benchmark_rust_grover(
 ) -> dict:
     """Run config.n_repetitions of Grover at qubit count n using a Rust binary."""
     target = n
+    _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
     times_ms: list[float] = []
     subprocess_wall_times_ms: list[float] = []
     cpu_percents: list[float] = []
@@ -746,14 +749,35 @@ def benchmark_rust_grover(
 
     for _ in range(max(0, config.warmup_runs)):
         _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
+    t0_fw = time.perf_counter()
+    should_disable = False
     for i in range(config.n_repetitions):
         payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
+        if payload.get("status") == "timeout":
+            should_disable = True
+            break
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
         print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
+        elapsed = time.perf_counter() - t0_fw
+        if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
+            should_disable = True
+            break
+    # If time exceeded but not enough reps, keep going until _min_reps
+    elapsed = time.perf_counter() - t0_fw
+    while elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) < _min_reps and not should_disable:
+        payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
+        if payload.get("status") == "timeout":
+            break
+        times_ms.append(float(payload.get("time_ms", 0.0)))
+        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
+        cpu_percents.append(float(payload.get("cpu_percent_mean", 0.0)))
+        peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
+        last_payload = payload
+        elapsed = time.perf_counter() - t0_fw
     print()
 
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
@@ -783,6 +807,8 @@ def benchmark_rust_grover(
         "wall_time_mean_ms": sub_mean_ms,
         "wall_time_std_ms": sub_std_ms,
         "subprocess_wall_time_ms": sub_median_ms,
+        "should_disable": should_disable,
+        "n_repetitions": len(times_ms),
     }
 
 
@@ -804,6 +830,7 @@ def benchmark_rust_shor_at_n(
     contributor_name: str,
 ) -> dict:
     n_qubits = _n_qubits_shor(N)
+    _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
     times_ms: list[float] = []
     subprocess_wall_times_ms: list[float] = []
     factors: list[int] = []
@@ -811,8 +838,13 @@ def benchmark_rust_shor_at_n(
     last_payload: dict | None = None
 
     cpu_percents_shor: list[float] = []
+    t0_fw = time.perf_counter()
+    should_disable = False
     for i in range(config.n_repetitions):
         payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
+        if payload.get("status") == "timeout":
+            should_disable = True
+            break
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         times_ms.append(float(payload.get("time_ms", 0.0)))
         factors.append(int(payload.get("factor", 1)))
@@ -820,6 +852,23 @@ def benchmark_rust_shor_at_n(
         peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
         last_payload = payload
         print(f"  rep {i + 1}/{config.n_repetitions}  {times_ms[-1]:.1f}ms", end="\r", flush=True)
+        elapsed = time.perf_counter() - t0_fw
+        if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
+            should_disable = True
+            break
+    # If time exceeded but not enough reps, keep going until _min_reps
+    elapsed = time.perf_counter() - t0_fw
+    while elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) < _min_reps and not should_disable:
+        payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
+        if payload.get("status") == "timeout":
+            break
+        subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
+        times_ms.append(float(payload.get("time_ms", 0.0)))
+        factors.append(int(payload.get("factor", 1)))
+        cpu_percents_shor.append(float(payload.get("cpu_percent_mean", 0.0)))
+        peak_mem_mb = max(peak_mem_mb, float(payload.get("mem_mb", 0.0)))
+        last_payload = payload
+        elapsed = time.perf_counter() - t0_fw
     print()
 
     if not times_ms:
@@ -855,6 +904,8 @@ def benchmark_rust_shor_at_n(
         "wall_time_mean_ms": sub_mean_ms,
         "wall_time_std_ms": sub_std_ms,
         "subprocess_wall_time_ms": sub_median_ms,
+        "should_disable": should_disable,
+        "n_repetitions": len(times_ms),
     }
 
 
@@ -1157,6 +1208,97 @@ def parse_args():
     return p.parse_args()
 
 
+def _run_framework_reps(
+    fw_name: str,
+    algo: str,
+    n_or_N: int,
+    config: "BenchmarkConfig",
+    contributor_name: str,
+    hw: "HardwareInfo",
+    cudaq_target: str = "qpp-cpu",
+) -> tuple[dict | None, bool]:
+    """Run a Python framework rep-by-rep with time-limit and min-reps logic.
+
+    Returns (result_dict, should_disable).
+    result_dict is None if fewer than MIN_REPS_FOR_SAVE completed.
+    should_disable is True if the framework hit the time limit or a rep timeout.
+    """
+    times_ms: list[float] = []
+    peak_mem: float = 0.0
+    cpu_means: list[float] = []
+    build_time: float | None = None
+    sim_time: float | None = None
+    startup_time: float | None = None
+    last_rep_result: dict | None = None
+    should_disable = False
+    t0_fw = time.perf_counter()
+    _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
+
+    for rep_i in range(config.n_repetitions):
+        elapsed = time.perf_counter() - t0_fw
+        if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
+            should_disable = True
+            break
+
+        warmup = 1 if rep_i == 0 else 0
+        rep_config = dataclasses.replace(config, n_repetitions=1, warmup_runs=warmup)
+        rep_result = _run_python_worker(
+            fw_name, algo, n_or_N, rep_config, contributor_name, hw,
+            cudaq_target=cudaq_target,
+        )
+        last_rep_result = rep_result
+
+        if rep_result.get("status") == "timeout":
+            should_disable = True
+            break
+        if rep_result.get("status") == "error":
+            break  # quick error — don't disable, just stop collecting
+
+        times_ms.append(float(rep_result.get("wall_time_median_ms", 0.0)))
+        peak_mem = max(peak_mem, float(rep_result.get("peak_memory_rss_mb", 0.0)))
+        cpu_means.append(float(rep_result.get("cpu_percent_mean", 0.0)))
+        if build_time is None:
+            build_time = rep_result.get("build_time_ms")
+            sim_time = rep_result.get("simulation_time_ms")
+            startup_time = rep_result.get("startup_time_ms")
+
+    # If time exceeded but we don't have _min_reps yet, keep going
+    elapsed = time.perf_counter() - t0_fw
+    while elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) < _min_reps and should_disable:
+        rep_config = dataclasses.replace(config, n_repetitions=1, warmup_runs=0)
+        rep_result = _run_python_worker(
+            fw_name, algo, n_or_N, rep_config, contributor_name, hw,
+            cudaq_target=cudaq_target,
+        )
+        last_rep_result = rep_result
+        if rep_result.get("status") in ("timeout", "error"):
+            break
+        times_ms.append(float(rep_result.get("wall_time_median_ms", 0.0)))
+        elapsed = time.perf_counter() - t0_fw
+
+    if len(times_ms) < _min_reps:
+        return None, True  # not enough data — disable but don't save
+
+    median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
+    base = last_rep_result or {}
+    result = {
+        **base,
+        "n_repetitions": len(times_ms),
+        "wall_time_median_ms": median_ms,
+        "wall_time_iqr_ms": iqr_ms,
+        "wall_time_mean_ms": mean_ms,
+        "wall_time_std_ms": std_ms,
+        "cv": cv,
+        "peak_memory_rss_mb": peak_mem,
+        "cpu_percent_mean": float(sum(cpu_means) / len(cpu_means)) if cpu_means else 0.0,
+        "build_time_ms": build_time,
+        "simulation_time_ms": sim_time,
+        "startup_time_ms": startup_time,
+        "status": "ok",
+    }
+    return result, should_disable
+
+
 def main() -> None:
     args = parse_args()
 
@@ -1189,8 +1331,8 @@ def main() -> None:
     print("Se agradece dar el máximo tiempo posible para obtener datos más completos.")
     print()
 
-    _n_values = args.n_values if args.n_values else [3, 5, 7]
-    _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35]
+    _n_values = args.n_values if args.n_values else [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
+    _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35, 77, 143, 221, 323, 437, 667, 899, 1147]
     config = BenchmarkConfig(
         n_repetitions=15,
         warmup_runs=args.warmup,
@@ -1342,6 +1484,9 @@ def main() -> None:
     n_shor_list = list(config.n_values_shor)
     max_steps = max(len(n_grover_list), len(n_shor_list))
 
+    disabled_grover: set[str] = set()
+    disabled_shor: set[str] = set()
+
     for i in range(max_steps):
         n = n_grover_list[i] if i < len(n_grover_list) else None
         N_shor = n_shor_list[i] if i < len(n_shor_list) else None
@@ -1359,13 +1504,19 @@ def main() -> None:
 
             for fw_name in python_enabled:
                 idx += 1
+                if fw_name in disabled_grover:
+                    continue
                 print()
                 print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...")
-                try:
-                    result = _run_python_worker(
-                        fw_name, "grover", n, config, contributor_name, hw,
-                        cudaq_target=cudaq_target,
-                    )
+                result, should_disable = _run_framework_reps(
+                    fw_name, "grover", n, config, contributor_name, hw,
+                    cudaq_target=cudaq_target,
+                )
+                if should_disable:
+                    disabled_grover.add(fw_name)
+                    reps_done = result.get("n_repetitions", 0) if result else 0
+                    print(f"  ! {fw_name} desactivado para Grover ({reps_done} reps guardados)")
+                if result is not None:
                     results.append(result)
                     n_series_results.append(result)
                     if result.get("status") == "error":
@@ -1373,12 +1524,11 @@ def main() -> None:
                         print(f"[ERROR] {fw_name} grover n={n}: {result.get('error', 'unknown')}")
                     else:
                         statuses[fw_name] = "OK"
-                except Exception as e:
-                    statuses[fw_name] = "ERROR"
-                    print(f"[ERROR] {fw_name} grover n={n}: {e}")
 
             for fw_name in rust_enabled:
                 idx += 1
+                if fw_name in disabled_grover:
+                    continue
                 binary = RUST_FRAMEWORKS[fw_name]
                 print()
                 print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...")
@@ -1390,8 +1540,13 @@ def main() -> None:
                     rust_grover_result,
                 )
                 if rust_grover_result:
-                    results.append(rust_grover_result[0])
-                    n_series_results.append(rust_grover_result[0])
+                    r = rust_grover_result[0]
+                    if r.pop("should_disable", False):
+                        disabled_grover.add(fw_name)
+                        print(f"  ! {fw_name} desactivado para Grover ({r.get('n_repetitions', 0)} reps guardados)")
+                    if r.get("n_repetitions", 0) >= min(MIN_REPS_FOR_SAVE, config.n_repetitions):
+                        results.append(r)
+                        n_series_results.append(r)
 
             if USE_SUPABASE:
                 _rows = []
@@ -1427,12 +1582,18 @@ def main() -> None:
 
             for fw in shor_python_enabled:
                 shor_idx += 1
+                if fw in disabled_shor:
+                    continue
                 print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...")
-                try:
-                    r = _run_python_worker(
-                        fw, "shor", N_shor, config, contributor_name, hw,
-                        cudaq_target=cudaq_target,
-                    )
+                r, should_disable = _run_framework_reps(
+                    fw, "shor", N_shor, config, contributor_name, hw,
+                    cudaq_target=cudaq_target,
+                )
+                if should_disable:
+                    disabled_shor.add(fw)
+                    reps_done = r.get("n_repetitions", 0) if r else 0
+                    print(f"  ! {fw} desactivado para Shor ({reps_done} reps guardados)")
+                if r is not None:
                     shor_results.append(r)
                     shor_n_series.append(r)
                     if r.get("status") == "error":
@@ -1440,12 +1601,11 @@ def main() -> None:
                         print(f"[ERROR] {fw} shor N={N_shor}: {r.get('error', 'unknown')}")
                     else:
                         shor_statuses[fw] = "OK"
-                except Exception as e:
-                    shor_statuses.setdefault(fw, "ERROR")
-                    print(f"[ERROR] {fw} shor N={N_shor}: {e}")
 
             for fw in shor_rust_enabled:
                 shor_idx += 1
+                if fw in disabled_shor:
+                    continue
                 binary = RUST_FRAMEWORKS_SHOR[fw]
                 print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...")
                 rust_shor_result: list[dict] = []
@@ -1456,8 +1616,13 @@ def main() -> None:
                     rust_shor_result,
                 )
                 if rust_shor_result:
-                    shor_results.append(rust_shor_result[0])
-                    shor_n_series.append(rust_shor_result[0])
+                    r = rust_shor_result[0]
+                    if r.pop("should_disable", False):
+                        disabled_shor.add(fw)
+                        print(f"  ! {fw} desactivado para Shor ({r.get('n_repetitions', 0)} reps guardados)")
+                    if r.get("n_repetitions", 0) >= min(MIN_REPS_FOR_SAVE, config.n_repetitions):
+                        shor_results.append(r)
+                        shor_n_series.append(r)
 
             if USE_SUPABASE:
                 _rows = []
@@ -1482,6 +1647,11 @@ def main() -> None:
                         platform_id=args.platform, emulated=args.emulated, no_gpu=args.no_gpu,
                     )
                     _save_json(shor_partial_path, shor_partial_doc)
+
+    if disabled_grover:
+        print(f"\nFrameworks desactivados (Grover): {', '.join(sorted(disabled_grover))}")
+    if disabled_shor:
+        print(f"Frameworks desactivados (Shor):   {', '.join(sorted(disabled_shor))}")
 
     final_doc = _build_output_doc(
         contributor_name, hw, config, results,
