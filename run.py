@@ -1189,10 +1189,10 @@ def main() -> None:
     print("Se agradece dar el máximo tiempo posible para obtener datos más completos.")
     print()
 
-    _n_values = args.n_values if args.n_values else [3, 5, 7, 9, 11]
-    _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35, 77, 143]
+    _n_values = args.n_values if args.n_values else [2, 3, 5]
+    _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35]
     config = BenchmarkConfig(
-        n_repetitions=30,
+        n_repetitions=15,
         warmup_runs=args.warmup,
         n_values=_n_values,
         n_values_shor=_n_values_shor,
