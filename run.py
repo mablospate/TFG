@@ -1189,7 +1189,7 @@ def main() -> None:
     print("Se agradece dar el máximo tiempo posible para obtener datos más completos.")
     print()
 
-    _n_values = args.n_values if args.n_values else [2, 3, 5]
+    _n_values = args.n_values if args.n_values else [3, 5, 7]
     _n_values_shor = args.n_values_shor if args.n_values_shor else [15, 21, 35]
     config = BenchmarkConfig(
         n_repetitions=15,
