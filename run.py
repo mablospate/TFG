@@ -1544,7 +1544,7 @@ def main() -> None:
                 if fw_name in disabled_grover:
                     continue
                 print()
-                print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...")
+                print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...  [{datetime.now().strftime('%H:%M:%S')}]")
                 result, should_disable = _run_framework_reps(
                     fw_name, "grover", n, config, contributor_name, hw,
                     cudaq_target=cudaq_target,
@@ -1568,7 +1568,7 @@ def main() -> None:
                     continue
                 binary = RUST_FRAMEWORKS[fw_name]
                 print()
-                print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...")
+                print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...  [{datetime.now().strftime('%H:%M:%S')}]")
                 rust_grover_result: list[dict] = []
                 _run_rust_fw(
                     fw_name,
@@ -1621,7 +1621,7 @@ def main() -> None:
                 shor_idx += 1
                 if fw in disabled_shor:
                     continue
-                print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...")
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...  [{datetime.now().strftime('%H:%M:%S')}]")
                 r, should_disable = _run_framework_reps(
                     fw, "shor", N_shor, config, contributor_name, hw,
                     cudaq_target=cudaq_target,
@@ -1644,7 +1644,7 @@ def main() -> None:
                 if fw in disabled_shor:
                     continue
                 binary = RUST_FRAMEWORKS_SHOR[fw]
-                print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...")
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...  [{datetime.now().strftime('%H:%M:%S')}]")
                 rust_shor_result: list[dict] = []
                 _run_rust_fw(
                     fw,
