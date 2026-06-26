@@ -41,6 +41,16 @@ FRAMEWORK_TIME_LIMIT_S: float = 2 * 3600  # 2 horas — frameworks que superen e
 MIN_REPS_FOR_SAVE: int = 5  # mínimo de reps completados para guardar en DB
 PER_REP_TIMEOUT_S: float = 1800.0  # 30 min máximo por rep individual de Python
 
+def _hms() -> str:
+    """Current local time HH:MM:SS, bypassing TZ env var by reading /etc/localtime."""
+    try:
+        from zoneinfo import ZoneInfo
+        tz_link = os.readlink("/etc/localtime")
+        tz_name = tz_link.split("/zoneinfo/")[-1]
+        return datetime.now(ZoneInfo(tz_name)).strftime("%H:%M:%S")
+    except Exception:
+        return datetime.now().astimezone().strftime("%H:%M:%S")
+
 
 def _detect_emulated() -> bool:
     """Detect QEMU (Linux) or Rosetta 2 (macOS) emulation."""
@@ -770,7 +780,7 @@ def benchmark_rust_grover(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
-        print(f"  rep {i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
+        print(f"  rep {i + 1}/{config.n_repetitions}  [{_hms()}]")
         try:
             payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
         except subprocess.TimeoutExpired:
@@ -871,7 +881,7 @@ def benchmark_rust_shor_at_n(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
-        print(f"  rep {i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
+        print(f"  rep {i + 1}/{config.n_repetitions}  [{_hms()}]")
         try:
             payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
         except subprocess.TimeoutExpired:
@@ -1274,7 +1284,7 @@ def _run_framework_reps(
     _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
 
     for rep_i in range(config.n_repetitions):
-        print(f"  rep {rep_i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
+        print(f"  rep {rep_i + 1}/{config.n_repetitions}  [{_hms()}]")
         elapsed = time.perf_counter() - t0_fw
         if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
             should_disable = True
@@ -1548,7 +1558,7 @@ def main() -> None:
                 if fw_name in disabled_grover:
                     continue
                 print()
-                print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...  [{datetime.now().strftime('%H:%M:%S')}]")
+                print(f"[{idx}/{grover_total}] {fw_name} (python)  n={n} ...  [{_hms()}]")
                 result, should_disable = _run_framework_reps(
                     fw_name, "grover", n, config, contributor_name, hw,
                     cudaq_target=cudaq_target,
@@ -1572,7 +1582,7 @@ def main() -> None:
                     continue
                 binary = RUST_FRAMEWORKS[fw_name]
                 print()
-                print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...  [{datetime.now().strftime('%H:%M:%S')}]")
+                print(f"[{idx}/{grover_total}] {fw_name} (rust: {binary.name})  n={n} ...  [{_hms()}]")
                 rust_grover_result: list[dict] = []
                 _run_rust_fw(
                     fw_name,
@@ -1625,7 +1635,7 @@ def main() -> None:
                 shor_idx += 1
                 if fw in disabled_shor:
                     continue
-                print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...  [{datetime.now().strftime('%H:%M:%S')}]")
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (python)  N={N_shor} ...  [{_hms()}]")
                 r, should_disable = _run_framework_reps(
                     fw, "shor", N_shor, config, contributor_name, hw,
                     cudaq_target=cudaq_target,
@@ -1648,7 +1658,7 @@ def main() -> None:
                 if fw in disabled_shor:
                     continue
                 binary = RUST_FRAMEWORKS_SHOR[fw]
-                print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...  [{datetime.now().strftime('%H:%M:%S')}]")
+                print(f"\n[{shor_idx}/{shor_total}] {fw} (rust)  N={N_shor} ...  [{_hms()}]")
                 rust_shor_result: list[dict] = []
                 _run_rust_fw(
                     fw,
