@@ -585,21 +585,30 @@ def _run_python_worker(
 
     lines: list[str] = []
     assert proc.stdout is not None
-    for line in proc.stdout:
-        line = line.rstrip("\n")
-        if line.strip():
-            lines.append(line)
-            try:
-                json.loads(line)
-            except json.JSONDecodeError:
-                print(line)
 
+    def _read_stdout_pw() -> None:
+        for _ln in proc.stdout:
+            _ln = _ln.rstrip("\n")
+            if _ln.strip():
+                lines.append(_ln)
+                try:
+                    json.loads(_ln)
+                except json.JSONDecodeError:
+                    print(_ln)
+
+    _stdout_reader_pw = threading.Thread(target=_read_stdout_pw, daemon=True)
+    _stdout_reader_pw.start()
     try:
         proc.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.wait()
+        _cpu_stop.set()
+        if _cpu_thread is not None:
+            _cpu_thread.join(timeout=1.0)
+        _stdout_reader_pw.join(timeout=5.0)
         return _error_result(framework, algo, n, hw, contributor_name, "timeout")
+    _stdout_reader_pw.join(timeout=5.0)
 
     subprocess_wall_ms = (time.perf_counter() - t_start) * 1000.0
 
@@ -681,22 +690,30 @@ def _run_rust_binary(
         pass
     lines: list[str] = []
     assert proc.stdout is not None
-    for line in proc.stdout:
-        line = line.rstrip("\n")
-        if line.strip():
-            lines.append(line)
-            try:
-                json.loads(line)
-            except json.JSONDecodeError:
-                print(line)
-    _stop.set()
-    if _cpu_thread is not None:
-        _cpu_thread.join(timeout=1.0)
+
+    def _read_stdout() -> None:
+        for _ln in proc.stdout:
+            _ln = _ln.rstrip("\n")
+            if _ln.strip():
+                lines.append(_ln)
+                try:
+                    json.loads(_ln)
+                except json.JSONDecodeError:
+                    print(_ln)
+
+    _stdout_reader = threading.Thread(target=_read_stdout, daemon=True)
+    _stdout_reader.start()
     try:
         proc.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
         proc.kill()
+        proc.wait()
         raise
+    finally:
+        _stop.set()
+        if _cpu_thread is not None:
+            _cpu_thread.join(timeout=1.0)
+        _stdout_reader.join(timeout=5.0)
     _wall_s = time.perf_counter() - _t_start
     _usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
     _cpu_s = (
@@ -752,8 +769,9 @@ def benchmark_rust_grover(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
-        payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
-        if payload.get("status") == "timeout":
+        try:
+            payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
+        except subprocess.TimeoutExpired:
             should_disable = True
             break
         times_ms.append(float(payload.get("time_ms", 0.0)))
@@ -769,8 +787,9 @@ def benchmark_rust_grover(
     # If time exceeded but not enough reps, keep going until _min_reps
     elapsed = time.perf_counter() - t0_fw
     while elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) < _min_reps and not should_disable:
-        payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
-        if payload.get("status") == "timeout":
+        try:
+            payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
+        except subprocess.TimeoutExpired:
             break
         times_ms.append(float(payload.get("time_ms", 0.0)))
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
@@ -779,6 +798,15 @@ def benchmark_rust_grover(
         last_payload = payload
         elapsed = time.perf_counter() - t0_fw
     print()
+
+    if not times_ms:
+        return {
+            "should_disable": True,
+            "n_repetitions": 0,
+            "framework": framework_name,
+            "algorithm": "grover",
+            "n_qubits": n,
+        }
 
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
     sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
@@ -841,8 +869,9 @@ def benchmark_rust_shor_at_n(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
-        payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
-        if payload.get("status") == "timeout":
+        try:
+            payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
+        except subprocess.TimeoutExpired:
             should_disable = True
             break
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
@@ -859,8 +888,9 @@ def benchmark_rust_shor_at_n(
     # If time exceeded but not enough reps, keep going until _min_reps
     elapsed = time.perf_counter() - t0_fw
     while elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) < _min_reps and not should_disable:
-        payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
-        if payload.get("status") == "timeout":
+        try:
+            payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
+        except subprocess.TimeoutExpired:
             break
         subprocess_wall_times_ms.append(float(payload.get("subprocess_wall_time_ms", 0.0)))
         times_ms.append(float(payload.get("time_ms", 0.0)))
@@ -872,7 +902,13 @@ def benchmark_rust_shor_at_n(
     print()
 
     if not times_ms:
-        raise RuntimeError("No se completó ninguna repetición")
+        return {
+            "should_disable": True,
+            "n_repetitions": 0,
+            "framework": framework_name,
+            "algorithm": "shor",
+            "n_qubits": n_qubits,
+        }
     median_ms, iqr_ms, mean_ms, std_ms, cv = _stats_from_times(times_ms)
     sub_median_ms, sub_iqr_ms, sub_mean_ms, sub_std_ms, sub_cv = _stats_from_times(subprocess_wall_times_ms)
 
@@ -1235,6 +1271,7 @@ def _run_framework_reps(
     _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
 
     for rep_i in range(config.n_repetitions):
+        print(f"  rep {rep_i + 1}/{config.n_repetitions}", end="\r", flush=True)
         elapsed = time.perf_counter() - t0_fw
         if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
             should_disable = True
