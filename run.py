@@ -39,6 +39,7 @@ from python.hardware import HardwareInfo, detect_hardware
 DOCKER_IMAGE: str = os.getenv("DOCKER_IMAGE", "dev")
 FRAMEWORK_TIME_LIMIT_S: float = 2 * 3600  # 2 horas — frameworks que superen este tiempo se desactivan
 MIN_REPS_FOR_SAVE: int = 5  # mínimo de reps completados para guardar en DB
+PER_REP_TIMEOUT_S: float = 1800.0  # 30 min máximo por rep individual de Python
 
 
 def _detect_emulated() -> bool:
@@ -769,6 +770,7 @@ def benchmark_rust_grover(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
+        print(f"  rep {i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
         try:
             payload = _run_rust_binary(binary, ["--n", str(n), "--target", str(target), "--shots", str(config.num_shots)])
         except subprocess.TimeoutExpired:
@@ -869,6 +871,7 @@ def benchmark_rust_shor_at_n(
     t0_fw = time.perf_counter()
     should_disable = False
     for i in range(config.n_repetitions):
+        print(f"  rep {i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
         try:
             payload = _run_rust_binary(binary, ["--N", str(N), "--shots", str(config.num_shots), "--tries", "3"])
         except subprocess.TimeoutExpired:
@@ -1271,7 +1274,7 @@ def _run_framework_reps(
     _min_reps = min(MIN_REPS_FOR_SAVE, config.n_repetitions)
 
     for rep_i in range(config.n_repetitions):
-        print(f"  rep {rep_i + 1}/{config.n_repetitions}", end="\r", flush=True)
+        print(f"  rep {rep_i + 1}/{config.n_repetitions}  [{datetime.now().strftime('%H:%M:%S')}]", end="\r", flush=True)
         elapsed = time.perf_counter() - t0_fw
         if elapsed > FRAMEWORK_TIME_LIMIT_S and len(times_ms) >= _min_reps:
             should_disable = True
@@ -1282,6 +1285,7 @@ def _run_framework_reps(
         rep_result = _run_python_worker(
             fw_name, algo, n_or_N, rep_config, contributor_name, hw,
             cudaq_target=cudaq_target,
+            timeout_s=PER_REP_TIMEOUT_S,
         )
         last_rep_result = rep_result
 
