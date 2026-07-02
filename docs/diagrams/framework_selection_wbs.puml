@@ -1,0 +1,82 @@
+@startwbs
+
+skinparam wrapWidth 100
+
+<style>
+wbsDiagram {
+
+  FontName Arial
+  FontSize 12
+  .selected {
+    BackgroundColor #C8E6C9
+    LineColor #2E7D32
+    LineThickness 2
+  }
+  .rejected {
+    BackgroundColor #FFCDD2
+    LineColor #B71C1C
+  }
+  .criteria {
+    BackgroundColor #E3F2FD
+    LineColor #1565C0
+  }
+  .root {
+    BackgroundColor #E8EAF6
+    LineColor #283593
+    LineThickness 2
+  }
+}
+</style>
+
+* Selección de frameworks <<root>>
+
+** Criterio 1: mantenimiento activo <<criteria>>
+*** Superan el criterio <<selected>>
+**** Qiskit <<selected>>
+**** Cirq <<selected>>
+**** CudaQ <<selected>>
+**** QDisLib <<selected>>
+**** ProjectQ <<selected>>
+**** q1tsim <<selected>>
+**** quantr <<selected>>
+**** quantrs2 <<selected>>
+**** qcgpu <<selected>>
+*** No superan el criterio <<rejected>>
+**** Frameworks con repositorio\nabandonado o experimental <<rejected>>
+
+** Criterio 2: soporte de Grover y Shor <<criteria>>
+*** Superan el criterio <<selected>>
+**** Los 9 anteriores <<selected>>
+*** No superan el criterio <<rejected>>
+**** Strawberry Fields <<rejected>>
+**** PennyLane <<rejected>>
+**** Braket <<rejected>>
+
+** Criterio 3: documentación suficiente <<criteria>>
+*** Superan el criterio <<selected>>
+**** Los 9 anteriores <<selected>>
+*** No superan el criterio <<rejected>>
+**** Candidatos con documentación\ninsuficiente o API inestable <<rejected>>
+
+** Criterio 4: diversidad de lenguaje\ny enfoque de simulación <<criteria>>
+*** Python (4) <<selected>>
+**** Qiskit <<selected>>
+**** Cirq <<selected>>
+**** CudaQ <<selected>>
+**** QDisLib <<selected>>
+*** Rust (4) <<selected>>
+**** q1tsim <<selected>>
+**** quantr <<selected>>
+**** quantrs2 <<selected>>
+**** qcgpu <<selected>>
+*** Pendiente de validación <<rejected>>
+**** ProjectQ <<rejected>>
+
+** Criterio 5: compatibilidad con\nPython 3.12 y Docker <<criteria>>
+*** Resultado final (8) <<selected>>
+**** Python: Qiskit, Cirq,\nCudaQ, QDisLib <<selected>>
+**** Rust: q1tsim, quantr,\nquantrs2, qcgpu <<selected>>
+*** Descartado <<rejected>>
+**** ProjectQ\n(incompatibilidad Python 3.12) <<rejected>>
+
+@endwbs

@@ -1,0 +1,99 @@
+@startuml
+
+<style>
+activityDiagram {
+  BackgroundColor #F5F9F5
+  BorderColor #2E7D32
+  FontSize 12
+  FontName Arial
+}
+note {
+  BackgroundColor #FFF3F3
+  BorderColor #B71C1C
+  FontSize 11
+}
+arrow {
+  FontSize 11
+  FontColor #555555
+}
+</style>
+
+skinparam ArrowColor #2E7D32
+
+start
+
+:Identificación de candidatos iniciales
+----
+<b>Python:</b> Qiskit, Cirq, CudaQ, QDisLib,
+ProjectQ, Strawberry Fields,
+PennyLane, Braket
+<b>Rust:</b> q1tsim, quantr, quantrs2, qcgpu; <<#E8F5E9>>
+
+-> Criterio 1: mantenimiento y estabilidad;
+
+:Mantenimiento activo
+y versión estable disponible; <<#E8F5E9>>
+
+note right
+  <b>Descartados</b>
+  ....
+  Frameworks con repositorio
+  abandonado o en estado
+  meramente experimental
+end note
+
+-> Criterio 2: cobertura de algoritmos;
+
+:Soporte nativo para
+Grover y Shor sin modificaciones
+sustanciales del circuito; <<#E8F5E9>>
+
+note right
+  <b>Descartados</b>
+  ....
+  Strawberry Fields
+  PennyLane
+  Braket
+end note
+
+-> Criterio 3: documentación;
+
+:Documentación suficiente
+para implementación autónoma; <<#E8F5E9>>
+
+note right
+  <b>Descartados</b>
+  ....
+  Candidatos adicionales con
+  documentación insuficiente
+  o API inestable
+end note
+
+-> Criterio 4: diversidad;
+
+:Diversidad de lenguaje
+y enfoque de simulación cubiertos; <<#E8F5E9>>
+
+-> 9 candidatos;
+
+:Validación técnica
+en entorno Docker con Python 3.12; <<#E8F5E9>>
+
+note right
+  <b>Descartado</b>
+  ....
+  ProjectQ
+  (incompatibilidad bloqueante
+  con Python 3.12)
+end note
+
+-> Selección final;
+
+:<b>8 frameworks seleccionados</b>
+----
+<b>Python:</b> Qiskit · Cirq · CudaQ · QDisLib
+<b>Rust:</b> q1tsim · quantr · quantrs2 · qcgpu; <<#C8E6C9>>
+
+stop
+
+@enduml

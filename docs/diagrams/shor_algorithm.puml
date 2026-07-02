@@ -1,0 +1,95 @@
+@startuml
+
+skinparam wrapWidth 1000
+
+<style>
+activityDiagram {
+  BorderColor #455A64
+  FontName Arial
+  FontSize 12
+}
+note {
+  BackgroundColor #FFF9C4
+  BorderColor #F57F17
+  FontSize 11
+}
+arrow {
+  FontSize 11
+  FontColor #555555
+}
+</style>
+
+skinparam ArrowColor #455A64
+
+start
+
+:Entrada: N (entero a factorizar); <<#E8EAF6>>
+
+partition "Preprocesado clásico" {
+
+  if (¿N es par?) then (sí)
+    :Devolver factor 2; <<#C8E6C9>>
+    stop
+  endif
+
+  if (¿N es potencia perfecta b^k?) then (sí)
+    :Devolver b; <<#C8E6C9>>
+    stop
+  endif
+
+}
+
+repeat
+
+  :Elegir A aleatorio en [2, N-1]; <<#E8EAF6>>
+
+  if (¿gcd(A, N) > 1?) then (sí)
+    :Devolver gcd(A, N); <<#C8E6C9>>
+    stop
+  endif
+
+  partition "Circuito cuántico — estimación de orden" {
+
+    :Inicializar registros: control 2n qubits en superposición, objetivo n qubits en estado |1>, ancila n+2 qubits en estado |0>; <<#E3F2FD>>
+
+    note right
+      n = techo(log2(N))
+      Total: 4n + 2 qubits
+    end note
+
+    :Exponenciación modular controlada: aplicar A^x mod N sobre registro objetivo controlado por el registro de control, vía multiplicaciones modulares en dominio de Fourier (exponentiate_modulo); <<#E3F2FD>>
+
+    note right
+      Beauregard (2002)
+      Sumas como rotaciones de fase via QFT
+      Sin qubits de carry
+    end note
+
+    :QFT inversa sobre registro de control; <<#E3F2FD>>
+
+    :Medir registro de control, obtener entero clásico m; <<#E3F2FD>>
+
+  }
+
+  partition "Postprocesado clásico — extracción del período" {
+
+    :Fracciones continuas sobre m / 2^{2n}: candidato r = denominador de la convergente; <<#FFF3E0>>
+
+    if (¿A^r = 1 (mod N)?) then (sí)
+      if (¿r par y A^{r/2} != -1 (mod N)?) then (sí)
+        :Calcular gcd(A^{r/2} +/- 1, N); <<#FFF3E0>>
+        if (¿factor no trivial de N?) then (sí)
+          :Devolver factor; <<#C8E6C9>>
+          stop
+        endif
+      endif
+    endif
+
+  }
+
+backward:Reintentar con otro A;
+repeat while (¿factor encontrado?) is (no) not (sí)
+
+stop
+
+@enduml
