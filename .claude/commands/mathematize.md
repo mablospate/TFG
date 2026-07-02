@@ -68,13 +68,18 @@ El agente:
 
 ### Paso 3 — Patch (agente Sonnet)
 
-El agente usa únicamente `replace_text_in_para(para, old, new)` de `patch_doc_equations.py`. **No usa make_omath_eq ni ninguna función que cree m:oMath.**
+El agente escribe un script en el scratchpad que implementa `replace_text_in_para` directamente (no depende de ningún `.py` del proyecto). **No usa m:oMath.**
 
-1. Abre el docx como ZIP
-2. Para cada entrada en `deepl`: aplica `replace_text_in_para(para, old, new)`
-3. Para cada entrada en `prose`: aplica `replace_text_in_para(para, frase, símbolo)`
-4. Guarda el docx modificado en el mismo path
-5. Verifica integridad: `zipfile.ZipFile(...).testzip()` debe devolver `None`
+`replace_text_in_para(para, old, new)` — busca `old` en los `w:t` del párrafo (concatenando runs si es necesario) y sustituye por `new`, preservando la estructura XML.
+
+**IMPORTANTE**: el agente NO debe crear ningún fichero fuera del scratchpad. No crear backups, no `.bak`, nada en el directorio del proyecto.
+
+1. Escribe el script de patch en el scratchpad (nunca en el directorio del proyecto)
+2. Abre el docx como ZIP
+3. Para cada entrada en `deepl`: aplica `replace_text_in_para(para, old, new)`
+4. Para cada entrada en `prose`: aplica `replace_text_in_para(para, frase, símbolo)`
+5. Guarda el docx modificado en el mismo path (sobreescribe, sin backup)
+6. Verifica integridad: `zipfile.ZipFile(...).testzip()` debe devolver `None`
 
 ### Paso 4 — Resumen
 
@@ -88,5 +93,5 @@ El agente usa únicamente `replace_text_in_para(para, old, new)` de `patch_doc_e
 
 - **Documento**: `/Users/pablomateos/TFG/Plantilla_TFG-PROYECTO(1).docx`
 - **Backup**: `/Users/pablomateos/TFG/Plantilla_TFG-PROYECTO(1).docx.backup`
-- **Script base**: `/Users/pablomateos/TFG/patch_doc_equations.py` (solo `replace_text_in_para`)
+- **Script base**: ninguno — el agente implementa `replace_text_in_para` directamente en el script del scratchpad
 - **Scratchpad**: `/private/tmp/claude-501/-Users-pablomateos-TFG/eb9aa27b-4155-4805-aebe-7e9c8d3b95ac/scratchpad/`
