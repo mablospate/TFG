@@ -1,0 +1,47 @@
+@startgantt
+language es
+<style>
+ganttDiagram {
+  task {
+    FontName SansSerif
+    FontSize 11
+    FontColor black
+  }
+  milestone {
+    FontColor DarkRed
+    FontSize 11
+    FontStyle bold
+  }
+  separator {
+    LineColor #888888
+    FontSize 11
+    FontStyle bold
+  }
+  timeline {
+  }
+}
+</style>
+
+
+printscale weekly
+
+Project starts 2026-02-01
+
+[Revisión bibliográfica\ny selección de frameworks] starts 2026-02-01 and ends 2026-03-20
+[Revisión bibliográfica\ny selección de frameworks] is colored in SteelBlue/CornflowerBlue
+
+[Implementación de circuitos\n(Python y Rust)] starts 2026-02-20 and ends 2026-05-20
+[Implementación de circuitos\n(Python y Rust)] is colored in ForestGreen/MediumSeaGreen
+
+[Infraestructura y automatización\n(Docker, CI/CD, Supabase)] starts 2026-03-15 and ends 2026-06-20
+[Infraestructura y automatización\n(Docker, CI/CD, Supabase)] is colored in DarkOrange/Orange
+
+[Ejecución del benchmark] starts 2026-05-01 and ends 2026-06-30
+[Ejecución del benchmark] is colored in MediumPurple/Plum
+
+[Análisis y redacción\nde la memoria] starts 2026-05-15 and ends 2026-07-15
+[Análisis y redacción\nde la memoria] is colored in Crimson/LightCoral
+
+[Entrega TFG] happens 2026-07-15
+
+@endgantt
